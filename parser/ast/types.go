@@ -1,0 +1,132 @@
+package ast
+
+import (
+	"fmt"
+)
+
+type VarWithType struct {
+	Name Variable
+	Type string
+}
+
+func (vt VarWithType) Node() Node {
+	return vt
+}
+
+type Node interface {
+	Node() Node
+	// String() string
+}
+
+type MutStmt struct {
+	Var          VarWithType
+	InitialValue Value
+}
+type LetStmt struct {
+	Var   VarWithType
+	Value Value
+}
+
+func (s LetStmt) Node() Node {
+	return s
+}
+
+type BlockStmt struct {
+	Stmts []Node
+}
+
+func (b BlockStmt) Node() Node {
+	return b
+}
+
+func (b BlockStmt) String() string {
+	if len(b.Stmts) == 0 {
+		return "BlockStmt{}"
+	}
+	ret := "BlockStmt{\n"
+	for _, v := range b.Stmts {
+		ret += fmt.Sprintf("%v\n", v)
+	}
+	return ret + "}"
+}
+
+func (ms MutStmt) String() string {
+	return fmt.Sprintf("MutStmt{Name: %v, InitialValue: %v}", ms.Var.Name.String(), ms.InitialValue)
+}
+
+func (ms MutStmt) Node() Node {
+	return ms
+}
+
+type BoolValue interface {
+	Value
+	BoolValue() bool
+}
+
+type Value interface {
+	Node
+	Value() interface{}
+}
+
+type AssignmentOperator struct {
+	Variable Variable
+	Value    Value
+}
+
+func (ao AssignmentOperator) Node() Node {
+	return ao
+}
+
+type AdditionOperator struct {
+	Left, Right Value
+}
+
+func (ao AdditionOperator) Node() Node {
+	return ao
+}
+
+func (ao AdditionOperator) Value() interface{} {
+	return true
+}
+
+type SubtractionOperator struct {
+	Left, Right Value
+}
+
+func (so SubtractionOperator) Node() Node {
+	return so
+}
+
+func (so SubtractionOperator) Value() interface{} {
+	return true
+}
+
+type ModOperation struct {
+	A, B Value
+}
+
+func (mo ModOperation) Value() interface{} {
+	return 3
+}
+
+func (mo ModOperation) Node() Node {
+	return mo
+}
+
+func (m ModOperation) String() string {
+	return fmt.Sprintf("ModOperation{%v mod %v}", m.A, m.B)
+}
+
+type Variable string
+
+func (v Variable) Value() interface{} {
+	return v
+}
+
+func (v Variable) String() string {
+	return fmt.Sprintf("Variable(%s)", string(v))
+}
+
+func (v Variable) Node() Node {
+	return v
+}
