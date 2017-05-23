@@ -44,12 +44,12 @@ func RunProgram(name, p string) error {
 
 	// FIXME: Make this more robust, or at least move it to a helper. It
 	// will only work on Plan 9 right now.
-	cmd := exec.Command("go", "tool", "asm", "-o", d+"/main.6", d+"/main.s")
+	cmd := exec.Command("6a", "-o", d+"/main.6", d+"/main.s")
 	val, err := cmd.Output()
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-	cmd = exec.Command("go", "tool", "link", "-o", d+"/main", d+"/main.6")
+	cmd = exec.Command("6l", "-o", d+"/main", d+"/main.6")
 	val, err = cmd.Output()
 	if err != nil {
 		fmt.Println(err.Error())
@@ -239,6 +239,16 @@ func ExampleFizzBuzz() {
 	// fizz
 }
 
+func ExampleSomeMath() {
+	if err := RunProgram("somemath", sampleprograms.SomeMath); err != nil {
+		// fmt.Println(err.Error())
+	}
+	// Output: Add: 3
+	// Sub: -1
+	// Mul: 6
+	// Div: 3
+	// Complex: 5
+}
 func TestCompileHelloWorld(t *testing.T) {
 	prgAst, err := ast.Parse(sampleprograms.HelloWorld)
 	if err != nil {

@@ -18,7 +18,7 @@ func Compile(w io.Writer, f ir.Func) error {
 	cpu.clearRegisterMapping()
 	for i := range f.Body {
 		// For debugging, add a comment with the IR serialization
-		//fmt.Fprintf(w, "\t%s // %s", cpu.ConvertInstruction(i, f.Body), f.Body[i])
+		// fmt.Fprintf(w, "\t%s // %s", cpu.ConvertInstruction(i, f.Body), f.Body[i])
 		fmt.Fprintf(w, "\t%s\n", cpu.ConvertInstruction(i, f.Body))
 	}
 	if len(f.Body) == 0 || f.Body[len(f.Body)-1] != (ir.RET{}) {
@@ -61,10 +61,17 @@ func printDataLiteral(w io.Writer, str string) PhysicalRegister {
 	name := fmt.Sprintf(".string%d<>", stringNum)
 	stringNum++
 	str = strings.Replace(str, `\n`, "\n", -1)
+
+	// Ensure that the string is nil terminated, in case it escapes to a
+	// C function.
+	if last := str[len(str)-1]; last != 0 {
+		str += "\000"
+	}
 	for i := 0; i < len(str); i += 8 {
 		if i+8 > len(str) {
 			padding := i + 8 - len(str)
 			toPrint := strings.Replace(str[i:], "\n", `\n`, -1)
+			toPrint = strings.Replace(toPrint, "\000", `\z`, -1)
 			fmt.Fprintf(w, `%vDATA %s+%d(SB)/8, $"%s`, "\t", name, i, toPrint)
 			for j := 0; j < padding; j++ {
 				fmt.Fprintf(w, `\z`)

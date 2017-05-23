@@ -334,7 +334,17 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 			return fmt.Sprintf("INCQ %v", a.ToPhysical(o.Dst))
 		}
 		// Normal subtraction.
-		return fmt.Sprintf("SUBQ %v, %v", a.ToPhysical(o.Src), a.ToPhysical(o.Dst))
+		// FIXME: This is only required if o.Right isn't really a register,
+		// but a fake register like "$15". This also should have a better
+		// way to keep track of what the register is and delete it.
+		r, err := a.nextPhysicalRegister(ir.FuncArg(9999), true)
+		if err != nil {
+			panic(err)
+		}
+
+		v := fmt.Sprintf("MOVQ %v, %v\n\t", a.ToPhysical(o.Src), r)
+
+		return v + fmt.Sprintf("SUBQ %v, %v", r, a.ToPhysical(o.Dst))
 	case ir.MOD:
 		v := ""
 		// DIV clobbers DX with the result of the MOD, so if there's
@@ -363,6 +373,76 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 		v += fmt.Sprintf("MOVQ %v, %v\n\t", a.ToPhysical(o.Right), r)
 		v += fmt.Sprintf("DIVQ %v\n\t", r)
 		v += fmt.Sprintf("MOVQ DX, %v", a.ToPhysical(o.Dst))
+		if popdx {
+			v += "\n\tPOPQ DX"
+		}
+		if popax {
+			v += "\n\tPOPQ AX"
+		}
+		return v
+	case ir.DIV:
+		v := ""
+		// DIV clobbers DX with the result of the MOD, so if there's
+		// anything there preserve it
+		popax, popdx := false, false
+		if a.ax != nil && a.ax != o.Left {
+			v += "PUSHQ AX\n\t"
+			popax = true
+		}
+
+		if a.dx != nil && a.dx != o.Dst {
+			v += "PUSHQ DX\n\t"
+			popdx = true
+		}
+		v += "MOVQ $0, DX\n\t"
+		v += fmt.Sprintf("MOVQ %v, AX // %v\n\t", a.ToPhysical(o.Left), o.Left)
+
+		// FIXME: This is only required if o.Right isn't really a register,
+		// but a fake register like "$15". This also should have a better
+		// way to keep track of what the register is and delete it.
+		r, err := a.nextPhysicalRegister(ir.FuncArg(9999), true)
+		if err != nil {
+			panic(err)
+		}
+
+		v += fmt.Sprintf("MOVQ %v, %v\n\t", a.ToPhysical(o.Right), r)
+		v += fmt.Sprintf("DIVQ %v\n\t", r)
+		v += fmt.Sprintf("MOVQ AX, %v", a.ToPhysical(o.Dst))
+		if popdx {
+			v += "\n\tPOPQ DX"
+		}
+		if popax {
+			v += "\n\tPOPQ AX"
+		}
+		return v
+	case ir.MUL:
+		v := ""
+		// MUL multiples AX by the operand, and puts the overflow in
+		// DX, so preserve them if there's anything there.
+		popax, popdx := false, false
+		if a.ax != nil && a.ax != o.Left {
+			v += "PUSHQ AX\n\t"
+			popax = true
+		}
+
+		if a.dx != nil && a.dx != o.Dst {
+			v += "PUSHQ DX\n\t"
+			popdx = true
+		}
+		//		v += "MOVQ $0, DX\n\t"
+		v += fmt.Sprintf("MOVQ %v, AX // %v\n\t", a.ToPhysical(o.Left), o.Left)
+
+		// FIXME: This is only required if o.Right isn't really a register,
+		// but a fake register like "$15". This also should have a better
+		// way to keep track of what the register is and delete it.
+		r, err := a.nextPhysicalRegister(ir.FuncArg(9999), true)
+		if err != nil {
+			panic(err)
+		}
+
+		v += fmt.Sprintf("MOVQ %v, %v\n\t", a.ToPhysical(o.Right), r)
+		v += fmt.Sprintf("MULQ %v\n\t", r)
+		v += fmt.Sprintf("MOVQ AX, %v", a.ToPhysical(o.Dst))
 		if popdx {
 			v += "\n\tPOPQ DX"
 		}
