@@ -18,6 +18,7 @@ func compare(v1, v2 Node) bool {
 		Variable, VarWithType,
 		LetStmt, MutStmt,
 		AdditionOperator, SubtractionOperator, AssignmentOperator,
+		MulOperator, DivOperator,
 		EqualityComparison, NotEqualsComparison, GreaterComparison,
 		GreaterOrEqualComparison:
 		return v1 == v2
@@ -833,4 +834,118 @@ func TestSumToTenRecursive(t *testing.T) {
 			t.Errorf("sum to ten recursive(%d): got %v want %v", i, ast[i], v)
 		}
 	}
+}
+
+func TestSomeMath(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.SomeMath))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Node{
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					LetStmt{
+						Var: VarWithType{Name: "add", Type: "int"},
+						Value: AdditionOperator{
+							Left:  IntLiteral(1),
+							Right: IntLiteral(2),
+						},
+					},
+					LetStmt{
+						Var: VarWithType{Name: "sub", Type: "int"},
+						Value: SubtractionOperator{
+							Left:  IntLiteral(1),
+							Right: IntLiteral(2),
+						},
+					},
+					LetStmt{
+						Var: VarWithType{Name: "mul", Type: "int"},
+						Value: MulOperator{
+							Left:  IntLiteral(2),
+							Right: IntLiteral(3),
+						},
+					},
+					LetStmt{
+						Var: VarWithType{Name: "div", Type: "int"},
+						Value: DivOperator{
+							Left:  IntLiteral(6),
+							Right: IntLiteral(2),
+						},
+					},
+					LetStmt{
+						Var: VarWithType{Name: "x", Type: "int"},
+						Value: AdditionOperator{
+							Left: IntLiteral(1),
+							Right: SubtractionOperator{
+								Left: MulOperator{
+									Left:  IntLiteral(2),
+									Right: IntLiteral(3),
+								},
+								Right: DivOperator{
+									Left:  IntLiteral(4),
+									Right: IntLiteral(2),
+								},
+							},
+						},
+					},
+					FuncCall{
+						Name: "print",
+
+						Args: []Value{
+							StringLiteral(`Add: %d\n`),
+							Variable("add"),
+						},
+					},
+					FuncCall{
+						Name: "print",
+
+						Args: []Value{
+							StringLiteral(`Sub: %d\n`),
+							Variable("sub"),
+						},
+					},
+					FuncCall{
+						Name: "print",
+
+						Args: []Value{
+							StringLiteral(`Mul: %d\n`),
+							Variable("mul"),
+						},
+					},
+					FuncCall{
+						Name: "print",
+
+						Args: []Value{
+							StringLiteral(`Div: %d\n`),
+							Variable("div"),
+						},
+					},
+					FuncCall{
+						Name: "print",
+
+						Args: []Value{
+							StringLiteral(`Complex: %d\n`),
+							Variable("x"),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("let statement (%d): got %v want %v", i, ast[i], v)
+		}
+	}
+
 }

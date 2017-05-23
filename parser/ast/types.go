@@ -89,6 +89,10 @@ func (ao AdditionOperator) Value() interface{} {
 	return true
 }
 
+func (ao AdditionOperator) String() string {
+	return fmt.Sprintf("(%v + %v)", ao.Left, ao.Right)
+}
+
 type SubtractionOperator struct {
 	Left, Right Value
 }
@@ -99,6 +103,41 @@ func (so SubtractionOperator) Node() Node {
 
 func (so SubtractionOperator) Value() interface{} {
 	return true
+}
+
+func (o SubtractionOperator) String() string {
+	return fmt.Sprintf("(%v - %v)", o.Left, o.Right)
+}
+
+type MulOperator struct {
+	Left, Right Value
+}
+
+func (mo MulOperator) Value() interface{} {
+	return 4
+}
+
+func (mo MulOperator) Node() Node {
+	return mo
+}
+
+func (o MulOperator) String() string {
+	return fmt.Sprintf("(%v * %v)", o.Left, o.Right)
+}
+
+type DivOperator struct {
+	Left, Right Value
+}
+
+func (mo DivOperator) Value() interface{} {
+	return 4
+}
+
+func (mo DivOperator) Node() Node {
+	return mo
+}
+func (o DivOperator) String() string {
+	return fmt.Sprintf("(%v / %v)", o.Left, o.Right)
 }
 
 type ModOperation struct {
