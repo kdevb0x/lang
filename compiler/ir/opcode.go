@@ -136,7 +136,30 @@ func (o SUB) Registers() []Register {
 	return []Register{o.Src, o.Dst}
 }
 
-type DIV struct{}
+type DIV struct {
+	Left, Right, Dst Register
+}
+
+func (o DIV) String() string {
+	return fmt.Sprintf("DIV %s, %s, %s\n", o.Left, o.Right, o.Dst)
+}
+
+func (o DIV) Registers() []Register {
+	return []Register{o.Left, o.Right, o.Dst}
+}
+
+type MUL struct {
+	Left, Right, Dst Register
+}
+
+func (o MUL) String() string {
+	return fmt.Sprintf("MUL %s, %s, %s\n", o.Left, o.Right, o.Dst)
+}
+
+func (o MUL) Registers() []Register {
+	return []Register{o.Left, o.Right, o.Dst}
+}
+
 type MOD struct {
 	Left, Right, Dst Register
 }

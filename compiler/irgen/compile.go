@@ -184,6 +184,18 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 					Src: getRegister(v, context),
 					Dst: reg,
 				})
+			case ast.AdditionOperator, ast.SubtractionOperator,
+				ast.DivOperator, ast.MulOperator, ast.ModOperation:
+				reg := context.NextLocalRegister(s.Var.Name)
+				body, r, err := evaluateValue(s.Value, context)
+				if err != nil {
+					return nil, err
+				}
+				ops = append(ops, body...)
+				ops = append(ops, ir.MOV{
+					Src: r,
+					Dst: reg,
+				})
 			default:
 				panic("Unsupported let statement assignment")
 
@@ -216,7 +228,7 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 					Dst: reg,
 				})
 
-			case ast.AdditionOperator:
+			case ast.AdditionOperator, ast.SubtractionOperator, ast.MulOperator, ast.DivOperator, ast.ModOperation:
 				reg := context.NextLocalRegister(s.Var.Name)
 				body, r, err := evaluateValue(s.InitialValue, context)
 				if err != nil {
@@ -245,7 +257,7 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 					Src: getRegister(s.Value, context),
 					Dst: context.Get(s.Variable),
 				})
-			case ast.AdditionOperator, ast.SubtractionOperator:
+			case ast.AdditionOperator, ast.SubtractionOperator, ast.DivOperator, ast.MulOperator, ast.ModOperation:
 				body, r, err := evaluateValue(s.Value, context)
 				if err != nil {
 					return nil, err
@@ -414,40 +426,36 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]ir.Opcode, ir.Regi
 				Src: getRegister(s.Left, context),
 				Dst: a,
 			})
-		case ast.AdditionOperator:
+		case ast.AdditionOperator, ast.SubtractionOperator, ast.MulOperator, ast.DivOperator, ast.ModOperation:
 			body, r, err := evaluateValue(s.Left, context)
 			if err != nil {
 				return nil, nil, err
 			}
 			ops = append(ops, body...)
-			ops = append(ops, ir.ADD{
-				Src: r,
-				Dst: a,
-			})
+			a = r
 		default:
 			panic(fmt.Sprintf("Unhandled left parameter in addition %v", reflect.TypeOf(s.Left)))
 		}
 
+		var r ir.Register
 		switch s.Right.(type) {
 		case ast.IntLiteral, ast.Variable:
-			ops = append(ops, ir.ADD{
-				Src: getRegister(s.Right, context),
-				Dst: a,
-			})
-		case ast.AdditionOperator:
-			body, r, err := evaluateValue(s.Right, context)
+			r = getRegister(s.Right, context)
+		case ast.AdditionOperator, ast.SubtractionOperator, ast.MulOperator, ast.DivOperator, ast.ModOperation:
+			body, r2, err := evaluateValue(s.Right, context)
 			if err != nil {
 				return nil, nil, err
 			}
 			ops = append(ops, body...)
-			ops = append(ops, ir.ADD{
-				Src: r,
-				Dst: a,
-			})
+			r = r2
 		default:
-			panic("Unhandled right parameter in addition")
+			panic(fmt.Sprintf("Unhandled right parameter in addition: %v", reflect.TypeOf(s.Right)))
 
 		}
+		ops = append(ops, ir.ADD{
+			Src: r,
+			Dst: a,
+		})
 		return ops, a, nil
 	case ast.SubtractionOperator:
 		a := context.NextLocalRegister("")
@@ -457,6 +465,13 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]ir.Opcode, ir.Regi
 				Src: getRegister(s.Left, context),
 				Dst: a,
 			})
+		case ast.AdditionOperator, ast.SubtractionOperator, ast.MulOperator, ast.DivOperator:
+			body, r, err := evaluateValue(s.Left, context)
+			if err != nil {
+				return nil, nil, err
+			}
+			ops = append(ops, body...)
+			a = r
 		default:
 			panic(fmt.Sprintf("Unhandled left parameter in subtraction %v", reflect.TypeOf(s.Left)))
 		}
@@ -465,6 +480,16 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]ir.Opcode, ir.Regi
 		case ast.IntLiteral, ast.Variable:
 			ops = append(ops, ir.SUB{
 				Src: getRegister(s.Right, context),
+				Dst: a,
+			})
+		case ast.AdditionOperator, ast.SubtractionOperator, ast.MulOperator, ast.DivOperator:
+			body, r, err := evaluateValue(s.Right, context)
+			if err != nil {
+				return nil, nil, err
+			}
+			ops = append(ops, body...)
+			ops = append(ops, ir.SUB{
+				Src: r,
 				Dst: a,
 			})
 		default:
@@ -488,6 +513,63 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]ir.Opcode, ir.Regi
 		ops = append(ops, ir.MOD{
 			Left:  ra,
 			Right: rb,
+			Dst:   a,
+		})
+		return ops, a, nil
+	case ast.MulOperator:
+		a := context.NextLocalRegister("")
+		var l, r ir.Register
+		switch s.Left.(type) {
+		case ast.IntLiteral, ast.Variable:
+			l = getRegister(s.Left, context)
+		default:
+			panic(fmt.Sprintf("Unhandled left parameter in mul %v", reflect.TypeOf(s.Left)))
+		}
+
+		switch s.Right.(type) {
+		case ast.IntLiteral, ast.Variable:
+			r = getRegister(s.Right, context)
+		case ast.SubtractionOperator, ast.AdditionOperator, ast.MulOperator, ast.DivOperator:
+			body, reg, err := evaluateValue(s.Right, context)
+			if err != nil {
+				return nil, nil, err
+			}
+			ops = append(ops, body...)
+			r = reg
+		}
+		ops = append(ops, ir.MUL{
+			Left:  l,
+			Right: r,
+			Dst:   a,
+		})
+		return ops, a, nil
+	case ast.DivOperator:
+		a := context.NextLocalRegister("")
+		var l, r ir.Register
+		switch s.Left.(type) {
+		case ast.IntLiteral, ast.Variable:
+			l = getRegister(s.Left, context)
+		default:
+			panic(fmt.Sprintf("Unhandled left parameter in div %v", reflect.TypeOf(s.Left)))
+		}
+
+		switch s.Right.(type) {
+		case ast.IntLiteral, ast.Variable:
+			r = getRegister(s.Right, context)
+		case ast.SubtractionOperator, ast.AdditionOperator, ast.MulOperator, ast.DivOperator:
+			body, reg, err := evaluateValue(s.Right, context)
+			if err != nil {
+				return nil, nil, err
+			}
+			ops = append(ops, body...)
+			r = reg
+		default:
+			panic(fmt.Sprintf("Unhandled right parameter in div: %v", reflect.TypeOf(s.Right)))
+
+		}
+		ops = append(ops, ir.DIV{
+			Left:  l,
+			Right: r,
 			Dst:   a,
 		})
 		return ops, a, nil

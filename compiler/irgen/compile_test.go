@@ -681,3 +681,145 @@ func TestIRGenFizzBuzz(t *testing.T) {
 		}
 	}
 }
+
+func TestIRGenSomeMathStatement(t *testing.T) {
+	ast, err := ast.Parse(sampleprograms.SomeMath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i, err := GenerateIR(ast[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if i.Name != "main" {
+		t.Errorf("Unexpected name: got %v want %v", i.Name, "main")
+	}
+	expected := []ir.Opcode{
+		ir.ADD{
+			Src: ir.IntLiteral(1),
+			Dst: ir.LocalValue(1),
+		},
+		ir.ADD{
+			Src: ir.IntLiteral(2),
+			Dst: ir.LocalValue(1),
+		},
+		ir.MOV{
+			Src: ir.LocalValue(1),
+			Dst: ir.LocalValue(0),
+		},
+
+		ir.MOV{
+			Src: ir.IntLiteral(1),
+			Dst: ir.LocalValue(3),
+		},
+		ir.SUB{
+			Src: ir.IntLiteral(2),
+			Dst: ir.LocalValue(3),
+		},
+		ir.MOV{
+			Src: ir.LocalValue(3),
+			Dst: ir.LocalValue(2),
+		},
+
+		ir.MUL{
+			Left:  ir.IntLiteral(2),
+			Right: ir.IntLiteral(3),
+			Dst:   ir.LocalValue(5),
+		},
+		ir.MOV{
+			Src: ir.LocalValue(5),
+			Dst: ir.LocalValue(4),
+		},
+		ir.DIV{
+			Left:  ir.IntLiteral(6),
+			Right: ir.IntLiteral(2),
+			Dst:   ir.LocalValue(7),
+		},
+		ir.MOV{
+			Src: ir.LocalValue(7),
+			Dst: ir.LocalValue(6),
+		},
+		ir.ADD{
+			Src: ir.IntLiteral(1),
+			Dst: ir.LocalValue(9),
+		},
+		ir.MUL{
+			Left:  ir.IntLiteral(2),
+			Right: ir.IntLiteral(3),
+			Dst:   ir.LocalValue(11),
+		},
+		ir.DIV{
+			Left:  ir.IntLiteral(4),
+			Right: ir.IntLiteral(2),
+			Dst:   ir.LocalValue(12),
+		},
+		ir.SUB{
+			Src: ir.LocalValue(12),
+			Dst: ir.LocalValue(11),
+		},
+		ir.ADD{
+			Src: ir.LocalValue(11),
+			Dst: ir.LocalValue(9),
+		},
+		ir.MOV{
+			Src: ir.LocalValue(9),
+			Dst: ir.LocalValue(8),
+		},
+		ir.MOV{
+			Src: ir.StringLiteral(`Add: %d\n`),
+			Dst: ir.FuncCallArg(0),
+		},
+		ir.MOV{
+			Src: ir.LocalValue(0),
+			Dst: ir.FuncCallArg(1),
+		},
+		ir.CALL{ir.Fname("printf")},
+		ir.MOV{
+			Src: ir.StringLiteral(`Sub: %d\n`),
+			Dst: ir.FuncCallArg(0),
+		},
+		ir.MOV{
+			Src: ir.LocalValue(2),
+			Dst: ir.FuncCallArg(1),
+		},
+		ir.CALL{ir.Fname("printf")},
+
+		ir.MOV{
+			Src: ir.StringLiteral(`Mul: %d\n`),
+			Dst: ir.FuncCallArg(0),
+		},
+		ir.MOV{
+			Src: ir.LocalValue(4),
+			Dst: ir.FuncCallArg(1),
+		},
+		ir.CALL{ir.Fname("printf")},
+		ir.MOV{
+			Src: ir.StringLiteral(`Div: %d\n`),
+			Dst: ir.FuncCallArg(0),
+		},
+		ir.MOV{
+			Src: ir.LocalValue(6),
+			Dst: ir.FuncCallArg(1),
+		},
+		ir.CALL{ir.Fname("printf")},
+		ir.MOV{
+			Src: ir.StringLiteral(`Complex: %d\n`),
+			Dst: ir.FuncCallArg(0),
+		},
+		ir.MOV{
+			Src: ir.LocalValue(8),
+			Dst: ir.FuncCallArg(1),
+		},
+		ir.CALL{ir.Fname("printf")},
+	}
+	if len(i.Body) != len(expected) {
+		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
+	}
+
+	for j := range expected {
+		if expected[j] != i.Body[j] {
+			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
+		}
+	}
+}

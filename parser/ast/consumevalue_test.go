@@ -78,6 +78,17 @@ func TestConsumeValue(t *testing.T) {
 			9,
 		},
 		{
+			"1 + 2 * 4 - 4 / 2",
+			AdditionOperator{
+				Left: IntLiteral(1),
+				Right: SubtractionOperator{
+					Left:  MulOperator{IntLiteral(2), IntLiteral(4)},
+					Right: DivOperator{IntLiteral(4), IntLiteral(2)},
+				},
+			},
+			9,
+		},
+		{
 			"1 - 2 + 3 / 4",
 			SubtractionOperator{
 				Left: IntLiteral(1),
@@ -131,7 +142,6 @@ func TestConsumeValue(t *testing.T) {
 			},
 			15,
 		},
-		//	{ "1 % 2", ModOperation{A: IntLiteral(1), B: IntLiteral(2)}, 3 },
 	}
 	for i, tc := range cases {
 		tokens, err := token.Tokenize(strings.NewReader(tc.Code))
