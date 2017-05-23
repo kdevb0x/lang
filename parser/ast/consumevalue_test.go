@@ -142,7 +142,92 @@ func TestConsumeValue(t *testing.T) {
 			},
 			15,
 		},
+		{
+			"1 + 2 != 3 + 4",
+			NotEqualsComparison{
+				Left: AdditionOperator{
+					Left:  IntLiteral(1),
+					Right: IntLiteral(2),
+				},
+				Right: AdditionOperator{
+					Left:  IntLiteral(3),
+					Right: IntLiteral(4),
+				},
+			},
+			7,
+		},
+		{
+			"1 + 2 == 3 + 4",
+			EqualityComparison{
+				Left: AdditionOperator{
+					Left:  IntLiteral(1),
+					Right: IntLiteral(2),
+				},
+				Right: AdditionOperator{
+					Left:  IntLiteral(3),
+					Right: IntLiteral(4),
+				},
+			},
+			7,
+		},
+		{
+			"1 + 2 >= 3 + 4",
+			GreaterOrEqualComparison{
+				Left: AdditionOperator{
+					Left:  IntLiteral(1),
+					Right: IntLiteral(2),
+				},
+				Right: AdditionOperator{
+					Left:  IntLiteral(3),
+					Right: IntLiteral(4),
+				},
+			},
+			7,
+		},
+		{
+			"1 + 2 > 3 + 4",
+			GreaterComparison{
+				Left: AdditionOperator{
+					Left:  IntLiteral(1),
+					Right: IntLiteral(2),
+				},
+				Right: AdditionOperator{
+					Left:  IntLiteral(3),
+					Right: IntLiteral(4),
+				},
+			},
+			7,
+		},
+		{
+			"1 + 2 < 3 + 4",
+			LessThanComparison{
+				Left: AdditionOperator{
+					Left:  IntLiteral(1),
+					Right: IntLiteral(2),
+				},
+				Right: AdditionOperator{
+					Left:  IntLiteral(3),
+					Right: IntLiteral(4),
+				},
+			},
+			7,
+		},
+		{
+			"1 + 2 <= 3 + 4",
+			LessThanOrEqualComparison{
+				Left: AdditionOperator{
+					Left:  IntLiteral(1),
+					Right: IntLiteral(2),
+				},
+				Right: AdditionOperator{
+					Left:  IntLiteral(3),
+					Right: IntLiteral(4),
+				},
+			},
+			7,
+		},
 	}
+
 	for i, tc := range cases {
 		tokens, err := token.Tokenize(strings.NewReader(tc.Code))
 		tokens = stripWhitespace(tokens)

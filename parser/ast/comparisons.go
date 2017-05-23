@@ -79,3 +79,39 @@ func (n GreaterOrEqualComparison) Node() Node {
 func (n GreaterOrEqualComparison) Value() interface{} {
 	return n.BoolValue()
 }
+
+type LessThanOrEqualComparison struct {
+	Left, Right Value
+}
+
+func (n LessThanOrEqualComparison) Node() Node {
+	return n
+}
+
+func (n LessThanOrEqualComparison) Value() interface{} {
+	return n.BoolValue()
+}
+
+func (gc LessThanOrEqualComparison) BoolValue() bool {
+	// This method is mostly a sentinal, the value returned doesn't matter
+	// and since left and right are interfaces, > doesn't exist.
+	return true //gc.Left >= gc.Right
+}
+
+type LessThanComparison struct {
+	Left, Right Value
+}
+
+func (n LessThanComparison) Node() Node {
+	return n
+}
+
+func (n LessThanComparison) Value() interface{} {
+	return n.BoolValue()
+}
+
+func (gc LessThanComparison) BoolValue() bool {
+	// This method is mostly a sentinal, the value returned doesn't matter
+	// and since left and right are interfaces, > doesn't exist.
+	return true //gc.Left >= gc.Right
+}

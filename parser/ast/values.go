@@ -104,7 +104,7 @@ func operatorPrecedence(op Value) int {
 		return 5
 	case AdditionOperator, SubtractionOperator:
 		return 4
-	case EqualityComparison, NotEqualsComparison:
+	case EqualityComparison, NotEqualsComparison, GreaterOrEqualComparison, GreaterComparison, LessThanComparison, LessThanOrEqualComparison:
 		return 3
 	default:
 		panic(fmt.Sprintf("Unhandled precedence %v", reflect.TypeOf(op)))
@@ -121,6 +121,18 @@ func getLeft(node Value) Value {
 		return v.Left
 	case MulOperator:
 		return v.Left
+	case NotEqualsComparison:
+		return v.Left
+	case EqualityComparison:
+		return v.Left
+	case GreaterOrEqualComparison:
+		return v.Left
+	case GreaterComparison:
+		return v.Left
+	case LessThanOrEqualComparison:
+		return v.Left
+	case LessThanComparison:
+		return v.Left
 	default:
 		panic(fmt.Sprintf("Unhandled node type in getLeft: %v", reflect.TypeOf(node)))
 	}
@@ -134,6 +146,18 @@ func getRight(node Value) Value {
 	case DivOperator:
 		return v.Right
 	case MulOperator:
+		return v.Right
+	case NotEqualsComparison:
+		return v.Right
+	case EqualityComparison:
+		return v.Right
+	case GreaterOrEqualComparison:
+		return v.Right
+	case GreaterComparison:
+		return v.Right
+	case LessThanOrEqualComparison:
+		return v.Right
+	case LessThanComparison:
 		return v.Right
 	default:
 		panic("Unhandled node type in getRight")
@@ -154,6 +178,24 @@ func setLeft(node, value Value) Value {
 	case AdditionOperator:
 		v.Left = value
 		return v
+	case NotEqualsComparison:
+		v.Left = value
+		return v
+	case EqualityComparison:
+		v.Left = value
+		return v
+	case GreaterOrEqualComparison:
+		v.Left = value
+		return v
+	case GreaterComparison:
+		v.Left = value
+		return v
+	case LessThanOrEqualComparison:
+		v.Left = value
+		return v
+	case LessThanComparison:
+		v.Left = value
+		return v
 	default:
 		panic(fmt.Sprintf("Unhandled node type in setLeft", reflect.TypeOf(node)))
 	}
@@ -171,6 +213,24 @@ func setRight(node, value Value) Value {
 		v.Right = value
 		return v
 	case AdditionOperator:
+		v.Right = value
+		return v
+	case NotEqualsComparison:
+		v.Right = value
+		return v
+	case EqualityComparison:
+		v.Right = value
+		return v
+	case GreaterOrEqualComparison:
+		v.Right = value
+		return v
+	case GreaterComparison:
+		v.Right = value
+		return v
+	case LessThanOrEqualComparison:
+		v.Right = value
+		return v
+	case LessThanComparison:
 		v.Right = value
 		return v
 	default:
@@ -197,11 +257,17 @@ func invertPrecedence(node Value) Value {
 	op2 := getRight(node)
 	op3 := getRight(op2)
 
-	_, isInt := op3.(IntLiteral)
-	if !isInt {
-		_, isInt = op2.(IntLiteral)
+	var isLit bool
+	switch op3.(type) {
+	case IntLiteral, BoolLiteral, Variable:
+		isLit = true
 	}
-	if isInt || operatorPrecedence(op3) > operatorPrecedence(op2) {
+
+	switch op2.(type) {
+	case IntLiteral, BoolLiteral, Variable:
+		isLit = true
+	}
+	if isLit || operatorPrecedence(op3) > operatorPrecedence(op2) {
 		// Handle the (2 * (4 - (6 / 3))) => ((2*4) - (6 / 3))
 		lLeft := getLeft(op1)
 		lRight := getLeft(op2)
@@ -243,14 +309,24 @@ func createOperatorNode(op token.Token, left, right Value) Value {
 		v = MulOperator{Left: left, Right: right}
 	case token.Operator("/"):
 		v = DivOperator{Left: left, Right: right}
+	case token.Operator("=="):
+		v = EqualityComparison{Left: left, Right: right}
+	case token.Operator("!="):
+		v = NotEqualsComparison{Left: left, Right: right}
+	case token.Operator(">"):
+		v = GreaterComparison{Left: left, Right: right}
+	case token.Operator(">="):
+		v = GreaterOrEqualComparison{Left: left, Right: right}
+	case token.Operator("<"):
+		v = LessThanComparison{Left: left, Right: right}
+	case token.Operator("<="):
+		v = LessThanOrEqualComparison{Left: left, Right: right}
 	default:
 		panic("Unhandled operator type in createOperatorNode")
 	}
 
-	if _, ok := right.(IntLiteral); ok {
-		return v
-	}
-	if _, ok := right.(Variable); ok {
+	switch right.(type) {
+	case IntLiteral, Variable, BoolLiteral:
 		return v
 	}
 
@@ -290,11 +366,12 @@ func consumeBoolValue(start int, tokens []token.Token, c Context) (int, Value, e
 			}
 
 			for isInfixOperator(i+1, tokens) {
-				// FIXME: Only operators that are used by sample
-				// programs are implemented.
 				switch tokens[i+1] {
 				case token.Operator("+"), token.Operator("-"),
-					token.Operator("*"), token.Operator("/"):
+					token.Operator("*"), token.Operator("/"),
+					token.Operator("<"), token.Operator("<="),
+					token.Operator("=="), token.Operator("!="),
+					token.Operator(">"), token.Operator(">="):
 					n, right, err := consumeValue(i+2, tokens, c)
 					if err != nil {
 						return 0, nil, err
@@ -303,6 +380,8 @@ func consumeBoolValue(start int, tokens []token.Token, c Context) (int, Value, e
 					finalPos := i + 2 - start + n
 					return finalPos, createOperatorNode(tokens[i+1], partial, right), nil
 				case token.Operator("%"):
+					// FIXME: The MOD operator should be normalized to work the same way
+					// as the other operators
 					n, right, err := consumeIntValue(i+2, tokens, c)
 					if err != nil {
 						return 0, nil, err
@@ -312,42 +391,6 @@ func consumeBoolValue(start int, tokens []token.Token, c Context) (int, Value, e
 						A: partial,
 						B: right,
 					}
-				case token.Operator(">"):
-					n, right, err := consumeValue(i+2, tokens, c)
-					if err != nil {
-						return 0, nil, err
-					}
-					return i + 2 - start + n, GreaterComparison{
-						Left:  partial,
-						Right: right,
-					}, nil
-				case token.Operator(">="):
-					n, right, err := consumeValue(i+2, tokens, c)
-					if err != nil {
-						return 0, nil, err
-					}
-					return i + 2 - start + n, GreaterOrEqualComparison{
-						Left:  partial,
-						Right: right,
-					}, nil
-				case token.Operator("=="):
-					n, right, err := consumeValue(i+2, tokens, c)
-					if err != nil {
-						return 0, nil, err
-					}
-					return i + 2 - start + n, EqualityComparison{
-						Left:  partial,
-						Right: right,
-					}, nil
-				case token.Operator("!="):
-					n, right, err := consumeValue(i+2, tokens, c)
-					if err != nil {
-						return 0, nil, err
-					}
-					return i + 2 - start + n, NotEqualsComparison{
-						Left:  partial,
-						Right: right,
-					}, nil
 				default:
 					panic(fmt.Sprintf("Unhandled infix operator %v at %v", tokens[i].String(), i))
 				}

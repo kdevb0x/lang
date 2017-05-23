@@ -20,7 +20,7 @@ func compare(v1, v2 Node) bool {
 		AdditionOperator, SubtractionOperator, AssignmentOperator,
 		MulOperator, DivOperator,
 		EqualityComparison, NotEqualsComparison, GreaterComparison,
-		GreaterOrEqualComparison:
+		GreaterOrEqualComparison, LessThanComparison, LessThanOrEqualComparison:
 		return v1 == v2
 	}
 
