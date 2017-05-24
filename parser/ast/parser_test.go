@@ -40,12 +40,12 @@ func compare(v1, v2 Node) bool {
 		return compare(v1a.Val, v2a.Val)
 	}
 
-	if v1a, ok := v1.(ModOperation); ok {
-		v2a, ok := v2.(ModOperation)
+	if v1a, ok := v1.(ModOperator); ok {
+		v2a, ok := v2.(ModOperator)
 		if !ok {
 			return false
 		}
-		return compare(v1a.A, v2a.A) && compare(v1a.B, v2a.B)
+		return compare(v1a.Left, v2a.Left) && compare(v1a.Right, v2a.Right)
 	}
 
 	if v1a, ok := v1.(ProcDecl); ok {
@@ -215,9 +215,9 @@ func TestParseFizzBuzz(t *testing.T) {
 							[]Node{
 								IfStmt{
 									Condition: EqualityComparison{
-										Left: ModOperation{
-											A: Variable("i"),
-											B: IntLiteral(15),
+										Left: ModOperator{
+											Left:  Variable("i"),
+											Right: IntLiteral(15),
 										},
 										Right: IntLiteral(0),
 									},
@@ -235,9 +235,9 @@ func TestParseFizzBuzz(t *testing.T) {
 										[]Node{
 											IfStmt{
 												Condition: EqualityComparison{
-													Left: ModOperation{
-														A: Variable("i"),
-														B: IntLiteral(5),
+													Left: ModOperator{
+														Left:  Variable("i"),
+														Right: IntLiteral(5),
 													},
 													Right: IntLiteral(0),
 												},
@@ -255,9 +255,9 @@ func TestParseFizzBuzz(t *testing.T) {
 													[]Node{
 														IfStmt{
 															Condition: EqualityComparison{
-																Left: ModOperation{
-																	A: Variable("i"),
-																	B: IntLiteral(3),
+																Left: ModOperator{
+																	Left:  Variable("i"),
+																	Right: IntLiteral(3),
 																},
 																Right: IntLiteral(0),
 															},

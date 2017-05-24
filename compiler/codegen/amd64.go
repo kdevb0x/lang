@@ -458,7 +458,7 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 		if err != nil {
 			panic(err)
 		}
-		v := fmt.Sprintf("MOVQ %v, %v", a.ToPhysical(o.Src),src)
+		v := fmt.Sprintf("MOVQ %v, %v", a.ToPhysical(o.Src), src)
 		return v + fmt.Sprintf("\n\tCMPQ %v, %v\n\tJE %v", src, a.ToPhysical(o.Dst), o.Label.Inline())
 	case ir.JL:
 		// FIXME: Only required if both src and dst are not really registers
@@ -466,7 +466,7 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 		if err != nil {
 			panic(err)
 		}
-		v := fmt.Sprintf("MOVQ %v, %v", a.ToPhysical(o.Src),src)
+		v := fmt.Sprintf("MOVQ %v, %v", a.ToPhysical(o.Src), src)
 		return v + fmt.Sprintf("\n\tCMPQ %v, %v\n\tJL %v", src, a.ToPhysical(o.Dst), o.Label.Inline())
 	case ir.JLE:
 		// FIXME: Only required if both src and dst are not really registers
@@ -474,7 +474,7 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 		if err != nil {
 			panic(err)
 		}
-		v := fmt.Sprintf("MOVQ %v, %v", a.ToPhysical(o.Src),src)
+		v := fmt.Sprintf("MOVQ %v, %v", a.ToPhysical(o.Src), src)
 		return v + fmt.Sprintf("\n\tCMPQ %v, %v\n\tJLE %v", src, a.ToPhysical(o.Dst), o.Label.Inline())
 	case ir.JNE:
 		// FIXME: Only required if both src and dst are not really registers
@@ -482,7 +482,7 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 		if err != nil {
 			panic(err)
 		}
-		v := fmt.Sprintf("MOVQ %v, %v", a.ToPhysical(o.Src),src)
+		v := fmt.Sprintf("MOVQ %v, %v", a.ToPhysical(o.Src), src)
 		return v + fmt.Sprintf("\n\tCMPQ %v, %v\n\tJNE %v", src, a.ToPhysical(o.Dst), o.Label.Inline())
 	default:
 		panic(fmt.Sprintf("Unhandled instruction in AMD64 code generation %v", reflect.TypeOf(o)))

@@ -83,9 +83,9 @@ func consumeIntValue(start int, tokens []token.Token, c Context) (int, Value, er
 					return 0, nil, err
 				}
 				i += n - 1
-				partial = ModOperation{
-					A: partial,
-					B: right,
+				partial = ModOperator{
+					Left:  partial,
+					Right: right,
 				}
 			}
 		default:
@@ -100,7 +100,7 @@ func consumeIntValue(start int, tokens []token.Token, c Context) (int, Value, er
 
 func operatorPrecedence(op Value) int {
 	switch op.(type) {
-	case MulOperator, DivOperator, ModOperation:
+	case MulOperator, DivOperator, ModOperator:
 		return 5
 	case AdditionOperator, SubtractionOperator:
 		return 4
@@ -120,6 +120,8 @@ func getLeft(node Value) Value {
 	case DivOperator:
 		return v.Left
 	case MulOperator:
+		return v.Left
+	case ModOperator:
 		return v.Left
 	case NotEqualsComparison:
 		return v.Left
@@ -147,6 +149,8 @@ func getRight(node Value) Value {
 		return v.Right
 	case MulOperator:
 		return v.Right
+	case ModOperator:
+		return v.Right
 	case NotEqualsComparison:
 		return v.Right
 	case EqualityComparison:
@@ -160,7 +164,7 @@ func getRight(node Value) Value {
 	case LessThanComparison:
 		return v.Right
 	default:
-		panic("Unhandled node type in getRight")
+		panic(fmt.Sprintf("Unhandled node type in getRight: %v", reflect.TypeOf(node)))
 	}
 }
 
@@ -176,6 +180,9 @@ func setLeft(node, value Value) Value {
 		v.Left = value
 		return v
 	case AdditionOperator:
+		v.Left = value
+		return v
+	case ModOperator:
 		v.Left = value
 		return v
 	case NotEqualsComparison:
@@ -213,6 +220,9 @@ func setRight(node, value Value) Value {
 		v.Right = value
 		return v
 	case AdditionOperator:
+		v.Right = value
+		return v
+	case ModOperator:
 		v.Right = value
 		return v
 	case NotEqualsComparison:
@@ -309,6 +319,8 @@ func createOperatorNode(op token.Token, left, right Value) Value {
 		v = MulOperator{Left: left, Right: right}
 	case token.Operator("/"):
 		v = DivOperator{Left: left, Right: right}
+	case token.Operator("%"):
+		v = ModOperator{Left: left, Right: right}
 	case token.Operator("=="):
 		v = EqualityComparison{Left: left, Right: right}
 	case token.Operator("!="):
@@ -369,6 +381,7 @@ func consumeBoolValue(start int, tokens []token.Token, c Context) (int, Value, e
 				switch tokens[i+1] {
 				case token.Operator("+"), token.Operator("-"),
 					token.Operator("*"), token.Operator("/"),
+					token.Operator("%"),
 					token.Operator("<"), token.Operator("<="),
 					token.Operator("=="), token.Operator("!="),
 					token.Operator(">"), token.Operator(">="):
@@ -379,18 +392,6 @@ func consumeBoolValue(start int, tokens []token.Token, c Context) (int, Value, e
 
 					finalPos := i + 2 - start + n
 					return finalPos, createOperatorNode(tokens[i+1], partial, right), nil
-				case token.Operator("%"):
-					// FIXME: The MOD operator should be normalized to work the same way
-					// as the other operators
-					n, right, err := consumeIntValue(i+2, tokens, c)
-					if err != nil {
-						return 0, nil, err
-					}
-					i += n - 1
-					partial = ModOperation{
-						A: partial,
-						B: right,
-					}
 				default:
 					panic(fmt.Sprintf("Unhandled infix operator %v at %v", tokens[i].String(), i))
 				}

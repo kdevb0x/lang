@@ -62,8 +62,6 @@ func RunProgram(name, p string) error {
 	return err
 }
 
-
-
 func TestCompileHelloWorld(t *testing.T) {
 	prgAst, err := ast.Parse(sampleprograms.HelloWorld)
 	if err != nil {
@@ -336,4 +334,3 @@ func LessThanOrEqualComparison() {
 	// 2
 	// 3
 }
-

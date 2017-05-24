@@ -140,20 +140,20 @@ func (o DivOperator) String() string {
 	return fmt.Sprintf("(%v / %v)", o.Left, o.Right)
 }
 
-type ModOperation struct {
-	A, B Value
+type ModOperator struct {
+	Left, Right Value
 }
 
-func (mo ModOperation) Value() interface{} {
+func (mo ModOperator) Value() interface{} {
 	return 3
 }
 
-func (mo ModOperation) Node() Node {
+func (mo ModOperator) Node() Node {
 	return mo
 }
 
-func (m ModOperation) String() string {
-	return fmt.Sprintf("ModOperation{%v mod %v}", m.A, m.B)
+func (m ModOperator) String() string {
+	return fmt.Sprintf("ModOperator{%v mod %v}", m.Left, m.Right)
 }
 
 type Variable string
