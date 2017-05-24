@@ -62,6 +62,44 @@ func RunProgram(name, p string) error {
 	return err
 }
 
+
+
+func TestCompileHelloWorld(t *testing.T) {
+	prgAst, err := ast.Parse(sampleprograms.HelloWorld)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var w bytes.Buffer
+	fnc, err := irgen.GenerateIR(prgAst[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := Compile(&w, fnc); err != nil {
+		t.Fatal(err)
+	}
+
+	// HelloWorld is simple enough that we can hand compile it. Most other
+	// programs we just compile it, run it and check the output to ensure
+	// that they work.
+	expected := `#pragma lib "libstdio.a"
+#pragma lib "libc.a"
+
+TEXT main(SB), $32
+	DATA .string0<>+0(SB)/8, $"Hello, w"
+	DATA .string0<>+8(SB)/8, $"orld!\n\z\z"
+	GLOBL .string0<>+0(SB), $16
+	MOVQ $.string0<>+0(SB), BP
+	CALL printf+0(SB)
+	RET
+`
+
+	if val := w.Bytes(); string(val) != expected {
+		t.Errorf("Unexpected ASM output compiling HelloWorld. got %s; want %s", val, expected)
+	}
+}
+
 func ExampleCompileEmptyMain() {
 	if err := RunProgram("emptymain", sampleprograms.EmptyMain); err != nil {
 		// fmt.Println(err.Error())
@@ -249,38 +287,53 @@ func ExampleSomeMath() {
 	// Div: 3
 	// Complex: 5
 }
-func TestCompileHelloWorld(t *testing.T) {
-	prgAst, err := ast.Parse(sampleprograms.HelloWorld)
-	if err != nil {
-		t.Fatal(err)
+
+func ExampleEqualComparison() {
+	if err := RunProgram("equalcompare", sampleprograms.EqualComparison); err != nil {
+		// fmt.Println(err.Error())
 	}
-
-	var w bytes.Buffer
-	fnc, err := irgen.GenerateIR(prgAst[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := Compile(&w, fnc); err != nil {
-		t.Fatal(err)
-	}
-
-	// HelloWorld is simple enough that we can hand compile it. Most other
-	// programs we just compile it, run it and check the output to ensure
-	// that they work.
-	expected := `#pragma lib "libstdio.a"
-#pragma lib "libc.a"
-
-TEXT main(SB), $32
-	DATA .string0<>+0(SB)/8, $"Hello, w"
-	DATA .string0<>+8(SB)/8, $"orld!\n\z\z"
-	GLOBL .string0<>+0(SB), $16
-	MOVQ $.string0<>+0(SB), BP
-	CALL printf+0(SB)
-	RET
-`
-
-	if val := w.Bytes(); string(val) != expected {
-		t.Errorf("Unexpected ASM output compiling HelloWorld. got %s; want %s", val, expected)
-	}
+	// Output: true
+	// 3
 }
+
+func ExampleNotEqualComparison() {
+	if err := RunProgram("notequalcompare", sampleprograms.NotEqualComparison); err != nil {
+		// fmt.Println(err.Error())
+	}
+	// Output: false
+}
+
+func ExampleGreaterComparison() {
+	if err := RunProgram("greatercompare", sampleprograms.GreaterComparison); err != nil {
+		// fmt.Println(err.Error())
+	}
+	// Output: true
+	// 4
+}
+
+func ExampleGreaterOrEqualComparison() {
+	if err := RunProgram("greaterorequalcompare", sampleprograms.GreaterOrEqualComparison); err != nil {
+		// fmt.Println(err.Error())
+	}
+	// Output: true
+	// 4
+	// 3
+}
+
+func LessThanEqualComparison() {
+	if err := RunProgram("lessthanequalcompare", sampleprograms.LessThanComparison); err != nil {
+		// fmt.Println(err.Error())
+	}
+	// Output: false
+}
+
+func LessThanOrEqualComparison() {
+	if err := RunProgram("lessthanorequalcompare", sampleprograms.LessThanOrEqualComparison); err != nil {
+		// fmt.Println(err.Error())
+	}
+	// Output: true
+	// 1
+	// 2
+	// 3
+}
+

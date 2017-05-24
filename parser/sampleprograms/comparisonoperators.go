@@ -4,9 +4,9 @@ const EqualComparison = `proc main() () {
 	mut a int = 3
 	let b int = 3
 	if a == b {
-		print("true")
+		print("true\n")
 	} else {
-		print("false")
+		print("false\n")
 	}
 
 	while a == b {
@@ -19,9 +19,9 @@ const NotEqualComparison = `proc main() () {
 	mut a int = 3
 	let b int = 3
 	if a != b {
-		print("true")
+		print("true\n")
 	} else {
-		print("false")
+		print("false\n")
 	}
 
 	while a != b {
@@ -34,9 +34,9 @@ const GreaterComparison = `proc main() () {
 	mut a int = 4
 	let b int = 3
 	if a > b {
-		print("true")
+		print("true\n")
 	} else {
-		print("false")
+		print("false\n")
 	}
 
 	while a > b {
@@ -49,9 +49,9 @@ const GreaterOrEqualComparison = `proc main() () {
 	mut a int = 4
 	let b int = 3
 	if a >= b {
-		print("true")
+		print("true\n")
 	} else {
-		print("false")
+		print("false\n")
 	}
 
 	while a >= b {
@@ -64,9 +64,9 @@ const LessThanComparison = `proc main() () {
 	mut a int = 4
 	let b int = 3
 	if a < b {
-		print("true")
+		print("true\n")
 	} else {
-		print("false")
+		print("false\n")
 	}
 
 	while a < b {
@@ -79,9 +79,9 @@ const LessThanOrEqualComparison = `proc main() () {
 	mut a int = 1
 	let b int = 3
 	if a <= b {
-		print("true")
+		print("true\n")
 	} else {
-		print("false")
+		print("false\n")
 	}
 
 	while a <= b {

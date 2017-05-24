@@ -984,7 +984,7 @@ func TestEqualComparisonMath(t *testing.T) {
 							[]Node{
 								FuncCall{
 									Name: "print",
-									Args: []Value{StringLiteral("true")},
+									Args: []Value{StringLiteral(`true\n`)},
 								},
 							},
 						},
@@ -992,7 +992,7 @@ func TestEqualComparisonMath(t *testing.T) {
 							[]Node{
 								FuncCall{
 									Name: "print",
-									Args: []Value{StringLiteral("false")},
+									Args: []Value{StringLiteral(`false\n`)},
 								},
 							},
 						},
@@ -1068,7 +1068,7 @@ func TestNotEqualComparisonMath(t *testing.T) {
 							[]Node{
 								FuncCall{
 									Name: "print",
-									Args: []Value{StringLiteral("true")},
+									Args: []Value{StringLiteral(`true\n`)},
 								},
 							},
 						},
@@ -1076,7 +1076,7 @@ func TestNotEqualComparisonMath(t *testing.T) {
 							[]Node{
 								FuncCall{
 									Name: "print",
-									Args: []Value{StringLiteral("false")},
+									Args: []Value{StringLiteral(`false\n`)},
 								},
 							},
 						},
@@ -1152,7 +1152,7 @@ func TestGreaterComparisonMath(t *testing.T) {
 							[]Node{
 								FuncCall{
 									Name: "print",
-									Args: []Value{StringLiteral("true")},
+									Args: []Value{StringLiteral(`true\n`)},
 								},
 							},
 						},
@@ -1160,7 +1160,7 @@ func TestGreaterComparisonMath(t *testing.T) {
 							[]Node{
 								FuncCall{
 									Name: "print",
-									Args: []Value{StringLiteral("false")},
+									Args: []Value{StringLiteral(`false\n`)},
 								},
 							},
 						},
@@ -1236,7 +1236,7 @@ func TestGreaterOrEqualComparisonMath(t *testing.T) {
 							[]Node{
 								FuncCall{
 									Name: "print",
-									Args: []Value{StringLiteral("true")},
+									Args: []Value{StringLiteral(`true\n`)},
 								},
 							},
 						},
@@ -1244,7 +1244,7 @@ func TestGreaterOrEqualComparisonMath(t *testing.T) {
 							[]Node{
 								FuncCall{
 									Name: "print",
-									Args: []Value{StringLiteral("false")},
+									Args: []Value{StringLiteral(`false\n`)},
 								},
 							},
 						},
@@ -1320,7 +1320,7 @@ func TestLessThanComparisonMath(t *testing.T) {
 							[]Node{
 								FuncCall{
 									Name: "print",
-									Args: []Value{StringLiteral("true")},
+									Args: []Value{StringLiteral(`true\n`)},
 								},
 							},
 						},
@@ -1328,7 +1328,7 @@ func TestLessThanComparisonMath(t *testing.T) {
 							[]Node{
 								FuncCall{
 									Name: "print",
-									Args: []Value{StringLiteral("false")},
+									Args: []Value{StringLiteral(`false\n`)},
 								},
 							},
 						},
@@ -1404,7 +1404,7 @@ func TestLessThanOrEqualComparisonMath(t *testing.T) {
 							[]Node{
 								FuncCall{
 									Name: "print",
-									Args: []Value{StringLiteral("true")},
+									Args: []Value{StringLiteral(`true\n`)},
 								},
 							},
 						},
@@ -1412,7 +1412,7 @@ func TestLessThanOrEqualComparisonMath(t *testing.T) {
 							[]Node{
 								FuncCall{
 									Name: "print",
-									Args: []Value{StringLiteral("false")},
+									Args: []Value{StringLiteral(`false\n`)},
 								},
 							},
 						},
