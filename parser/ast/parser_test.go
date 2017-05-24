@@ -949,3 +949,507 @@ func TestSomeMath(t *testing.T) {
 	}
 
 }
+
+func TestEqualComparisonMath(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.EqualComparison))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Node{
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					MutStmt{
+						Var:          VarWithType{Name: "a", Type: "int"},
+						InitialValue: IntLiteral(3),
+					},
+					LetStmt{
+						Var:   VarWithType{Name: "b", Type: "int"},
+						Value: IntLiteral(3),
+					},
+					IfStmt{
+						Condition: EqualityComparison{
+							Left:  Variable("a"),
+							Right: Variable("b"),
+						},
+						Body: BlockStmt{
+							[]Node{
+								FuncCall{
+									Name: "print",
+									Args: []Value{StringLiteral("true")},
+								},
+							},
+						},
+						Else: BlockStmt{
+							[]Node{
+								FuncCall{
+									Name: "print",
+									Args: []Value{StringLiteral("false")},
+								},
+							},
+						},
+					},
+					WhileLoop{
+						Condition: EqualityComparison{
+							Left:  Variable("a"),
+							Right: Variable("b"),
+						},
+						Body: BlockStmt{
+							[]Node{
+								FuncCall{
+									Name: "print",
+									Args: []Value{
+										StringLiteral(`%d\n`),
+										Variable("a"),
+									},
+								},
+								AssignmentOperator{
+									Variable: Variable("a"),
+									Value: AdditionOperator{
+										Left:  Variable("a"),
+										Right: IntLiteral(1),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("let statement (%d): got %v want %v", i, ast[i], v)
+		}
+	}
+
+}
+
+func TestNotEqualComparisonMath(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.NotEqualComparison))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Node{
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					MutStmt{
+						Var:          VarWithType{Name: "a", Type: "int"},
+						InitialValue: IntLiteral(3),
+					},
+					LetStmt{
+						Var:   VarWithType{Name: "b", Type: "int"},
+						Value: IntLiteral(3),
+					},
+					IfStmt{
+						Condition: NotEqualsComparison{
+							Left:  Variable("a"),
+							Right: Variable("b"),
+						},
+						Body: BlockStmt{
+							[]Node{
+								FuncCall{
+									Name: "print",
+									Args: []Value{StringLiteral("true")},
+								},
+							},
+						},
+						Else: BlockStmt{
+							[]Node{
+								FuncCall{
+									Name: "print",
+									Args: []Value{StringLiteral("false")},
+								},
+							},
+						},
+					},
+					WhileLoop{
+						Condition: NotEqualsComparison{
+							Left:  Variable("a"),
+							Right: Variable("b"),
+						},
+						Body: BlockStmt{
+							[]Node{
+								FuncCall{
+									Name: "print",
+									Args: []Value{
+										StringLiteral(`%d\n`),
+										Variable("a"),
+									},
+								},
+								AssignmentOperator{
+									Variable: Variable("a"),
+									Value: AdditionOperator{
+										Left:  Variable("a"),
+										Right: IntLiteral(1),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("let statement (%d): got %v want %v", i, ast[i], v)
+		}
+	}
+
+}
+
+func TestGreaterComparisonMath(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.GreaterComparison))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Node{
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					MutStmt{
+						Var:          VarWithType{Name: "a", Type: "int"},
+						InitialValue: IntLiteral(4),
+					},
+					LetStmt{
+						Var:   VarWithType{Name: "b", Type: "int"},
+						Value: IntLiteral(3),
+					},
+					IfStmt{
+						Condition: GreaterComparison{
+							Left:  Variable("a"),
+							Right: Variable("b"),
+						},
+						Body: BlockStmt{
+							[]Node{
+								FuncCall{
+									Name: "print",
+									Args: []Value{StringLiteral("true")},
+								},
+							},
+						},
+						Else: BlockStmt{
+							[]Node{
+								FuncCall{
+									Name: "print",
+									Args: []Value{StringLiteral("false")},
+								},
+							},
+						},
+					},
+					WhileLoop{
+						Condition: GreaterComparison{
+							Left:  Variable("a"),
+							Right: Variable("b"),
+						},
+						Body: BlockStmt{
+							[]Node{
+								FuncCall{
+									Name: "print",
+									Args: []Value{
+										StringLiteral(`%d\n`),
+										Variable("a"),
+									},
+								},
+								AssignmentOperator{
+									Variable: Variable("a"),
+									Value: SubtractionOperator{
+										Left:  Variable("a"),
+										Right: IntLiteral(1),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("let statement (%d): got %v want %v", i, ast[i], v)
+		}
+	}
+
+}
+
+func TestGreaterOrEqualComparisonMath(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.GreaterOrEqualComparison))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Node{
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					MutStmt{
+						Var:          VarWithType{Name: "a", Type: "int"},
+						InitialValue: IntLiteral(4),
+					},
+					LetStmt{
+						Var:   VarWithType{Name: "b", Type: "int"},
+						Value: IntLiteral(3),
+					},
+					IfStmt{
+						Condition: GreaterOrEqualComparison{
+							Left:  Variable("a"),
+							Right: Variable("b"),
+						},
+						Body: BlockStmt{
+							[]Node{
+								FuncCall{
+									Name: "print",
+									Args: []Value{StringLiteral("true")},
+								},
+							},
+						},
+						Else: BlockStmt{
+							[]Node{
+								FuncCall{
+									Name: "print",
+									Args: []Value{StringLiteral("false")},
+								},
+							},
+						},
+					},
+					WhileLoop{
+						Condition: GreaterOrEqualComparison{
+							Left:  Variable("a"),
+							Right: Variable("b"),
+						},
+						Body: BlockStmt{
+							[]Node{
+								FuncCall{
+									Name: "print",
+									Args: []Value{
+										StringLiteral(`%d\n`),
+										Variable("a"),
+									},
+								},
+								AssignmentOperator{
+									Variable: Variable("a"),
+									Value: SubtractionOperator{
+										Left:  Variable("a"),
+										Right: IntLiteral(1),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("let statement (%d): got %v want %v", i, ast[i], v)
+		}
+	}
+
+}
+
+func TestLessThanComparisonMath(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.LessThanComparison))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Node{
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					MutStmt{
+						Var:          VarWithType{Name: "a", Type: "int"},
+						InitialValue: IntLiteral(4),
+					},
+					LetStmt{
+						Var:   VarWithType{Name: "b", Type: "int"},
+						Value: IntLiteral(3),
+					},
+					IfStmt{
+						Condition: LessThanComparison{
+							Left:  Variable("a"),
+							Right: Variable("b"),
+						},
+						Body: BlockStmt{
+							[]Node{
+								FuncCall{
+									Name: "print",
+									Args: []Value{StringLiteral("true")},
+								},
+							},
+						},
+						Else: BlockStmt{
+							[]Node{
+								FuncCall{
+									Name: "print",
+									Args: []Value{StringLiteral("false")},
+								},
+							},
+						},
+					},
+					WhileLoop{
+						Condition: LessThanComparison{
+							Left:  Variable("a"),
+							Right: Variable("b"),
+						},
+						Body: BlockStmt{
+							[]Node{
+								FuncCall{
+									Name: "print",
+									Args: []Value{
+										StringLiteral(`%d\n`),
+										Variable("a"),
+									},
+								},
+								AssignmentOperator{
+									Variable: Variable("a"),
+									Value: AdditionOperator{
+										Left:  Variable("a"),
+										Right: IntLiteral(1),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("let statement (%d): got %v want %v", i, ast[i], v)
+		}
+	}
+
+}
+
+func TestLessThanOrEqualComparisonMath(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.LessThanOrEqualComparison))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Node{
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					MutStmt{
+						Var:          VarWithType{Name: "a", Type: "int"},
+						InitialValue: IntLiteral(1),
+					},
+					LetStmt{
+						Var:   VarWithType{Name: "b", Type: "int"},
+						Value: IntLiteral(3),
+					},
+					IfStmt{
+						Condition: LessThanOrEqualComparison{
+							Left:  Variable("a"),
+							Right: Variable("b"),
+						},
+						Body: BlockStmt{
+							[]Node{
+								FuncCall{
+									Name: "print",
+									Args: []Value{StringLiteral("true")},
+								},
+							},
+						},
+						Else: BlockStmt{
+							[]Node{
+								FuncCall{
+									Name: "print",
+									Args: []Value{StringLiteral("false")},
+								},
+							},
+						},
+					},
+					WhileLoop{
+						Condition: LessThanOrEqualComparison{
+							Left:  Variable("a"),
+							Right: Variable("b"),
+						},
+						Body: BlockStmt{
+							[]Node{
+								FuncCall{
+									Name: "print",
+									Args: []Value{
+										StringLiteral(`%d\n`),
+										Variable("a"),
+									},
+								},
+								AssignmentOperator{
+									Variable: Variable("a"),
+									Value: AdditionOperator{
+										Left:  Variable("a"),
+										Right: IntLiteral(1),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("let statement (%d): got %v want %v", i, ast[i], v)
+		}
+	}
+
+}

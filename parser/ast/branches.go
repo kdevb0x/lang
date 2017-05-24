@@ -64,6 +64,10 @@ func consumeCondition(start int, tokens []token.Token, c Context) (int, BoolValu
 		return n, val, nil
 	case GreaterOrEqualComparison:
 		return n, val, nil
+	case LessThanComparison:
+		return n, val, nil
+	case LessThanOrEqualComparison:
+		return n, val, nil
 	default:
 		return 0, nil, fmt.Errorf("Unsupported comparison %s", reflect.TypeOf(val))
 	}
