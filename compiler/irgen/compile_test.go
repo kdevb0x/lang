@@ -9,6 +9,29 @@ import (
 	"github.com/driusan/lang/parser/sampleprograms"
 )
 
+func compareOp(a, b ir.Opcode) bool {
+	switch a1 := a.(type) {
+	case ir.CALL:
+		b1, ok := b.(ir.CALL)
+		if !ok {
+			return false
+		}
+		if b1.FName != a1.FName {
+			return false
+		}
+		if len(b1.Args) != len(a1.Args) {
+			return false
+		}
+		for i := range a1.Args {
+			if a1.Args[i] != b1.Args[i] {
+				return false
+			}
+		}
+		return b1.TailCall == a1.TailCall
+	default:
+		return a == b
+	}
+}
 func TestIRGenEmptyMain(t *testing.T) {
 	ast, err := ast.Parse(sampleprograms.EmptyMain)
 	if err != nil {
@@ -42,17 +65,13 @@ func TestIRGenHelloWorld(t *testing.T) {
 	}
 
 	expected := []ir.Opcode{
-		ir.MOV{
-			Src: ir.StringLiteral(`Hello, world!\n`),
-			Dst: ir.FuncCallArg(0),
-		},
-		ir.CALL{ir.Fname("printf")},
+		ir.CALL{FName: "printf", Args: []ir.Register{ir.StringLiteral(`Hello, world!\n`)}},
 	}
 	if len(i.Body) != len(expected) {
 		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
 	}
 	for j := range expected {
-		if expected[j] != i.Body[j] {
+		if !compareOp(expected[j], i.Body[j]) {
 			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
 		}
 	}
@@ -76,22 +95,14 @@ func TestIRGenLetStatement(t *testing.T) {
 			Src: ir.IntLiteral(5),
 			Dst: ir.LocalValue(0),
 		},
-		ir.MOV{
-			Src: ir.StringLiteral(`%d\n`),
-			Dst: ir.FuncCallArg(0),
-		},
-		ir.MOV{
-			Src: ir.LocalValue(0),
-			Dst: ir.FuncCallArg(1),
-		},
-		ir.CALL{ir.Fname("printf")},
+		ir.CALL{FName: "printf", Args: []ir.Register{ir.StringLiteral(`%d\n`), ir.LocalValue(0)}},
 	}
 	if len(i.Body) != len(expected) {
 		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
 	}
 
 	for j := range expected {
-		if expected[j] != i.Body[j] {
+		if !compareOp(expected[j], i.Body[j]) {
 			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
 		}
 	}
@@ -111,30 +122,20 @@ func TestIRGenHelloWorld2(t *testing.T) {
 		t.Errorf("Unexpected name: got %v want %v", i.Name, "main")
 	}
 	expected := []ir.Opcode{
-		ir.MOV{
-			Src: ir.StringLiteral(`%s %s\n %s`),
-			Dst: ir.FuncCallArg(0),
+		ir.CALL{FName: "printf", Args: []ir.Register{
+			ir.StringLiteral(`%s %s\n %s`),
+			ir.StringLiteral(`Hello, world!\n`),
+			ir.StringLiteral(`World??`),
+			ir.StringLiteral(`Hello, world!\n`),
 		},
-		ir.MOV{
-			Src: ir.StringLiteral(`Hello, world!\n`),
-			Dst: ir.FuncCallArg(1),
 		},
-		ir.MOV{
-			Src: ir.StringLiteral(`World??`),
-			Dst: ir.FuncCallArg(2),
-		},
-		ir.MOV{
-			Src: ir.StringLiteral(`Hello, world!\n`),
-			Dst: ir.FuncCallArg(3),
-		},
-		ir.CALL{ir.Fname("printf")},
 	}
 	if len(i.Body) != len(expected) {
 		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
 	}
 
 	for j := range expected {
-		if expected[j] != i.Body[j] {
+		if !compareOp(expected[j], i.Body[j]) {
 			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
 		}
 	}
@@ -178,23 +179,24 @@ func TestIRGenTwoProcs(t *testing.T) {
 		t.Errorf("Unexpected name: got %v want %v", i.Name, "main")
 	}
 	expected = []ir.Opcode{
-		ir.CALL{Fname: "foo"},
+		ir.CALL{FName: "foo"},
 		ir.MOV{
 			Src: ir.FuncRetVal(0),
-			Dst: ir.FuncCallArg(1),
+			Dst: ir.LocalValue(0),
 		},
-		ir.MOV{
-			Src: ir.StringLiteral("%d"),
-			Dst: ir.FuncCallArg(0),
+		ir.CALL{FName: "printf",
+			Args: []ir.Register{
+				ir.StringLiteral(`%d`),
+				ir.LocalValue(0),
+			},
 		},
-		ir.CALL{Fname: "printf"},
 	}
 	if len(i.Body) != len(expected) {
 		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
 	}
 
 	for j := range expected {
-		if expected[j] != i.Body[j] {
+		if !compareOp(expected[j], i.Body[j]) {
 			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
 		}
 	}
@@ -214,23 +216,23 @@ func TestIRGenOutOfOrder(t *testing.T) {
 		t.Errorf("Unexpected name: got %v want %v", i.Name, "main")
 	}
 	expected := []ir.Opcode{
-		ir.CALL{Fname: "foo"},
+		ir.CALL{FName: "foo", Args: []ir.Register{}},
 		ir.MOV{
 			Src: ir.FuncRetVal(0),
-			Dst: ir.FuncCallArg(1),
+			Dst: ir.LocalValue(0),
 		},
-		ir.MOV{
-			Src: ir.StringLiteral("%d"),
-			Dst: ir.FuncCallArg(0),
+		ir.CALL{FName: "printf", Args: []ir.Register{
+			ir.StringLiteral(`%d`),
+			ir.LocalValue(0),
 		},
-		ir.CALL{Fname: "printf"},
+		},
 	}
 	if len(i.Body) != len(expected) {
 		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
 	}
 
 	for j := range expected {
-		if expected[j] != i.Body[j] {
+		if !compareOp(expected[j], i.Body[j]) {
 			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
 		}
 	}
@@ -310,22 +312,18 @@ func TestIRGenMutAddition(t *testing.T) {
 			Src: ir.LocalValue(3),
 			Dst: ir.LocalValue(0),
 		},
-		ir.MOV{
-			Src: ir.StringLiteral(`%d\n`),
-			Dst: ir.FuncCallArg(0),
+		ir.CALL{FName: "printf", Args: []ir.Register{
+			ir.StringLiteral(`%d\n`),
+			ir.LocalValue(0),
 		},
-		ir.MOV{
-			Src: ir.LocalValue(0),
-			Dst: ir.FuncCallArg(1),
 		},
-		ir.CALL{Fname: "printf"},
 	}
 	if len(i.Body) != len(expected) {
 		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
 	}
 
 	for j := range expected {
-		if expected[j] != i.Body[j] {
+		if !compareOp(expected[j], i.Body[j]) {
 			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
 		}
 	}
@@ -369,23 +367,20 @@ func TestIRGenSimpleFunc(t *testing.T) {
 		t.Errorf("Unexpected name: got %v want %v", i.Name, "main")
 	}
 	expected = []ir.Opcode{
-		ir.CALL{Fname: "foo"},
-		ir.MOV{
-			Src: ir.FuncRetVal(0),
-			Dst: ir.FuncCallArg(1),
+		ir.CALL{FName: "foo", Args: []ir.Register{}},
+		ir.MOV{Src: ir.FuncRetVal(0), Dst: ir.LocalValue(0)},
+		ir.CALL{FName: "printf", Args: []ir.Register{
+			ir.StringLiteral("%d"),
+			ir.LocalValue(0),
 		},
-		ir.MOV{
-			Src: ir.StringLiteral("%d"),
-			Dst: ir.FuncCallArg(0),
 		},
-		ir.CALL{Fname: "printf"},
 	}
 	if len(i.Body) != len(expected) {
 		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
 	}
 
 	for j := range expected {
-		if expected[j] != i.Body[j] {
+		if !compareOp(expected[j], i.Body[j]) {
 			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
 		}
 	}
@@ -466,27 +461,26 @@ func TestIRGenSumToTen(t *testing.T) {
 		t.Errorf("Unexpected name: got %v want %v", i.Name, "main")
 	}
 	expected = []ir.Opcode{
-		ir.MOV{
-			Src: ir.IntLiteral(10),
-			Dst: ir.FuncCallArg(0),
+		ir.CALL{FName: "sum", Args: []ir.Register{
+			ir.IntLiteral(10),
 		},
-		ir.CALL{"sum"},
+		},
 		ir.MOV{
 			Src: ir.FuncRetVal(0),
-			Dst: ir.FuncCallArg(1),
+			Dst: ir.LocalValue(0),
 		},
-		ir.MOV{
-			Src: ir.StringLiteral(`%d\n`),
-			Dst: ir.FuncCallArg(0),
+		ir.CALL{FName: "printf", Args: []ir.Register{
+			ir.StringLiteral(`%d\n`),
+			ir.LocalValue(0),
 		},
-		ir.CALL{"printf"},
+		},
 	}
 	if len(i.Body) != len(expected) {
 		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
 	}
 
 	for j := range expected {
-		if expected[j] != i.Body[j] {
+		if !compareOp(expected[j], i.Body[j]) {
 			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
 		}
 	}
@@ -506,15 +500,14 @@ func TestIRGenSumToTenRecursive(t *testing.T) {
 		t.Errorf("Unexpected name: got %v want %v", i.Name, "sum")
 	}
 	expected := []ir.Opcode{
-		ir.MOV{
-			Src: ir.IntLiteral(0),
-			Dst: ir.FuncCallArg(0),
+		ir.CALL{
+			FName: "partial_sum",
+			Args: []ir.Register{
+				ir.IntLiteral(0),
+				ir.FuncArg(0),
+			},
+			TailCall: true,
 		},
-		ir.MOV{
-			Src: ir.FuncArg(0),
-			Dst: ir.FuncCallArg(1),
-		},
-		ir.CALL{Fname: "partial_sum"},
 		ir.RET{},
 	}
 	if len(i.Body) != len(expected) {
@@ -522,7 +515,7 @@ func TestIRGenSumToTenRecursive(t *testing.T) {
 	}
 
 	for j := range expected {
-		if expected[j] != i.Body[j] {
+		if !compareOp(expected[j], i.Body[j]) {
 			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
 		}
 	}
@@ -555,10 +548,6 @@ func TestIRGenSumToTenRecursive(t *testing.T) {
 			Dst: ir.LocalValue(0),
 		},
 		ir.MOV{
-			Src: ir.LocalValue(0),
-			Dst: ir.FuncCallArg(0),
-		},
-		ir.MOV{
 			Src: ir.FuncArg(1),
 			Dst: ir.LocalValue(1),
 		},
@@ -566,11 +555,14 @@ func TestIRGenSumToTenRecursive(t *testing.T) {
 			Src: ir.IntLiteral(1),
 			Dst: ir.LocalValue(1),
 		},
-		ir.MOV{
-			Src: ir.LocalValue(1),
-			Dst: ir.FuncCallArg(1),
+		ir.CALL{
+			FName: "partial_sum",
+			Args: []ir.Register{
+				ir.LocalValue(0),
+				ir.LocalValue(1),
+			},
+			TailCall: true,
 		},
-		ir.CALL{"partial_sum"},
 		ir.RET{},
 	}
 	if len(i.Body) != len(expected) {
@@ -578,7 +570,7 @@ func TestIRGenSumToTenRecursive(t *testing.T) {
 	}
 
 	for j := range expected {
-		if expected[j] != i.Body[j] {
+		if !compareOp(expected[j], i.Body[j]) {
 			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
 		}
 	}
@@ -591,27 +583,20 @@ func TestIRGenSumToTenRecursive(t *testing.T) {
 		t.Errorf("Unexpected name: got %v want %v", i.Name, "main")
 	}
 	expected = []ir.Opcode{
-		ir.MOV{
-			Src: ir.IntLiteral(10),
-			Dst: ir.FuncCallArg(0),
+		ir.CALL{FName: "sum", Args: []ir.Register{ir.IntLiteral(10)}},
+		ir.MOV{Src: ir.FuncRetVal(0), Dst: ir.LocalValue(0)},
+		ir.CALL{FName: "printf", Args: []ir.Register{
+			ir.StringLiteral(`%d\n`),
+			ir.LocalValue(0),
 		},
-		ir.CALL{"sum"},
-		ir.MOV{
-			Src: ir.FuncRetVal(0),
-			Dst: ir.FuncCallArg(1),
 		},
-		ir.MOV{
-			Src: ir.StringLiteral(`%d\n`),
-			Dst: ir.FuncCallArg(0),
-		},
-		ir.CALL{"printf"},
 	}
 	if len(i.Body) != len(expected) {
 		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
 	}
 
 	for j := range expected {
-		if expected[j] != i.Body[j] {
+		if !compareOp(expected[j], i.Body[j]) {
 			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
 		}
 	}
@@ -638,25 +623,20 @@ func TestIRGenFizzBuzz(t *testing.T) {
 		ir.JE{ir.ConditionalJump{Label: "loop2end", Src: ir.LocalValue(0), Dst: ir.IntLiteral(1)}},
 		ir.MOD{Left: ir.LocalValue(1), Right: ir.IntLiteral(15), Dst: ir.LocalValue(2)},
 		ir.JNE{ir.ConditionalJump{Label: "if3else", Src: ir.LocalValue(2), Dst: ir.IntLiteral(0)}},
-		ir.MOV{Src: ir.StringLiteral(`fizzbuzz\n`), Dst: ir.FuncCallArg(0)},
-		ir.CALL{"printf"},
+		ir.CALL{FName: "printf", Args: []ir.Register{ir.StringLiteral(`fizzbuzz\n`)}},
 		ir.JMP{"if3elsedone"},
 		ir.Label("if3else"),
 		ir.MOD{Left: ir.LocalValue(1), Right: ir.IntLiteral(5), Dst: ir.LocalValue(3)},
 		ir.JNE{ir.ConditionalJump{Label: "if4else", Src: ir.LocalValue(3), Dst: ir.IntLiteral(0)}},
-		ir.MOV{Src: ir.StringLiteral(`buzz\n`), Dst: ir.FuncCallArg(0)},
-		ir.CALL{"printf"},
+		ir.CALL{FName: "printf", Args: []ir.Register{ir.StringLiteral(`buzz\n`)}},
 		ir.JMP{"if4elsedone"},
 		ir.Label("if4else"),
 		ir.MOD{Left: ir.LocalValue(1), Right: ir.IntLiteral(3), Dst: ir.LocalValue(4)},
 		ir.JNE{ir.ConditionalJump{Label: "if5else", Src: ir.LocalValue(4), Dst: ir.IntLiteral(0)}},
-		ir.MOV{Src: ir.StringLiteral(`fizz\n`), Dst: ir.FuncCallArg(0)},
-		ir.CALL{"printf"},
+		ir.CALL{FName: "printf", Args: []ir.Register{ir.StringLiteral(`fizz\n`)}},
 		ir.JMP{"if5elsedone"},
 		ir.Label("if5else"),
-		ir.MOV{Src: ir.StringLiteral(`%d\n`), Dst: ir.FuncCallArg(0)},
-		ir.MOV{Src: ir.LocalValue(1), Dst: ir.FuncCallArg(1)},
-		ir.CALL{"printf"},
+		ir.CALL{FName: "printf", Args: []ir.Register{ir.StringLiteral(`%d\n`), ir.LocalValue(1)}},
 		ir.Label("if5elsedone"),
 		ir.Label("if4elsedone"),
 		ir.Label("if3elsedone"),
@@ -676,7 +656,7 @@ func TestIRGenFizzBuzz(t *testing.T) {
 	}
 
 	for j := range expected {
-		if expected[j] != i.Body[j] {
+		if !compareOp(expected[j], i.Body[j]) {
 			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
 		}
 	}
@@ -766,59 +746,38 @@ func TestIRGenSomeMathStatement(t *testing.T) {
 			Src: ir.LocalValue(9),
 			Dst: ir.LocalValue(8),
 		},
-		ir.MOV{
-			Src: ir.StringLiteral(`Add: %d\n`),
-			Dst: ir.FuncCallArg(0),
+		ir.CALL{FName: "printf", Args: []ir.Register{
+			ir.StringLiteral(`Add: %d\n`),
+			ir.LocalValue(0),
 		},
-		ir.MOV{
-			Src: ir.LocalValue(0),
-			Dst: ir.FuncCallArg(1),
 		},
-		ir.CALL{ir.Fname("printf")},
-		ir.MOV{
-			Src: ir.StringLiteral(`Sub: %d\n`),
-			Dst: ir.FuncCallArg(0),
+		ir.CALL{FName: "printf", Args: []ir.Register{
+			ir.StringLiteral(`Sub: %d\n`),
+			ir.LocalValue(2),
 		},
-		ir.MOV{
-			Src: ir.LocalValue(2),
-			Dst: ir.FuncCallArg(1),
 		},
-		ir.CALL{ir.Fname("printf")},
-
-		ir.MOV{
-			Src: ir.StringLiteral(`Mul: %d\n`),
-			Dst: ir.FuncCallArg(0),
+		ir.CALL{FName: "printf", Args: []ir.Register{
+			ir.StringLiteral(`Mul: %d\n`),
+			ir.LocalValue(4),
 		},
-		ir.MOV{
-			Src: ir.LocalValue(4),
-			Dst: ir.FuncCallArg(1),
 		},
-		ir.CALL{ir.Fname("printf")},
-		ir.MOV{
-			Src: ir.StringLiteral(`Div: %d\n`),
-			Dst: ir.FuncCallArg(0),
+		ir.CALL{FName: "printf", Args: []ir.Register{
+			ir.StringLiteral(`Div: %d\n`),
+			ir.LocalValue(6),
 		},
-		ir.MOV{
-			Src: ir.LocalValue(6),
-			Dst: ir.FuncCallArg(1),
 		},
-		ir.CALL{ir.Fname("printf")},
-		ir.MOV{
-			Src: ir.StringLiteral(`Complex: %d\n`),
-			Dst: ir.FuncCallArg(0),
+		ir.CALL{FName: "printf", Args: []ir.Register{
+			ir.StringLiteral(`Complex: %d\n`),
+			ir.LocalValue(8),
 		},
-		ir.MOV{
-			Src: ir.LocalValue(8),
-			Dst: ir.FuncCallArg(1),
 		},
-		ir.CALL{ir.Fname("printf")},
 	}
 	if len(i.Body) != len(expected) {
 		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
 	}
 
 	for j := range expected {
-		if expected[j] != i.Body[j] {
+		if !compareOp(expected[j], i.Body[j]) {
 			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
 		}
 	}

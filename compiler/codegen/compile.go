@@ -18,7 +18,7 @@ func Compile(w io.Writer, f ir.Func) error {
 	cpu.clearRegisterMapping()
 	for i := range f.Body {
 		// For debugging, add a comment with the IR serialization
-		// fmt.Fprintf(w, "\t%s // %s", cpu.ConvertInstruction(i, f.Body), f.Body[i])
+		//fmt.Fprintf(w, "\t%s // %s", cpu.ConvertInstruction(i, f.Body), f.Body[i])
 		fmt.Fprintf(w, "\t%s\n", cpu.ConvertInstruction(i, f.Body))
 	}
 	if len(f.Body) == 0 || f.Body[len(f.Body)-1] != (ir.RET{}) {
@@ -30,11 +30,20 @@ func Compile(w io.Writer, f ir.Func) error {
 
 type PhysicalRegister string
 
+func (pr PhysicalRegister) IsRealRegister() bool {
+	switch string(pr) {
+	case "AX", "BX", "CX", "DX", "SI", "DI", "BP", "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15", "SP":
+		return true
+	default:
+		return false
+	}
+}
+
 var stringNum uint
 
 func printPragmas(w io.Writer, f ir.Func) {
 	for _, op := range f.Body {
-		if op == (ir.CALL{"printf"}) {
+		if op1, ok := op.(ir.CALL); ok && op1.FName == "printf" {
 			fmt.Fprintf(w, "#pragma lib \"libstdio.a\"\n")
 			fmt.Fprintf(w, "#pragma lib \"libc.a\"\n\n")
 			return

@@ -83,55 +83,42 @@ func GenerateIR(node ast.Node) (ir.Func, error) {
 }
 
 // calculate the IR to perform a function call.
-func callFunc(fc ast.FuncCall, context *variableLayout) ([]ir.Opcode, error) {
+func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]ir.Opcode, error) {
 	var ops []ir.Opcode
-	// First handle any non-literals that need to be evaluated.
-	for i, arg := range fc.Args {
+	var argRegs []ir.Register
+	for _, arg := range fc.Args {
 		switch a := arg.(type) {
+
+		case ast.StringLiteral, ast.IntLiteral, ast.BoolLiteral:
+			argRegs = append(argRegs, getRegister(a, context))
+		case ast.Variable:
+			argRegs = append(argRegs, context.Get(a))
 		case ast.FuncCall:
-			fc, err := callFunc(a, context)
+			// a function call as a parameter to a function call in
+			// a return statement shouldn't be tail call optimized,
+			// only the return call itself.
+			fc, err := callFunc(a, context, false)
 			if err != nil {
 				return nil, err
 			}
 			ops = append(ops, fc...)
+			reg := context.NextLocalRegister("")
+
 			ops = append(ops,
 				ir.MOV{
 					Src: ir.FuncRetVal(0),
-					Dst: ir.FuncCallArg(i),
+					Dst: reg,
 				},
 			)
-		case ast.AdditionOperator, ast.SubtractionOperator:
+			argRegs = append(argRegs, reg)
+		case ast.AdditionOperator, ast.SubtractionOperator, ast.MulOperator, ast.DivOperator, ast.ModOperator:
 			arg, r, err := evaluateValue(a, context)
 			if err != nil {
 				return nil, err
 			}
 			ops = append(ops, arg...)
-			ops = append(ops,
-				ir.MOV{
-					Src: r,
-					Dst: ir.FuncCallArg(i),
-				},
-			)
-		default:
-			// Nothing, will handle below.
-		}
-	}
-	for i, arg := range fc.Args {
-		switch a := arg.(type) {
-		case ast.StringLiteral, ast.IntLiteral, ast.BoolLiteral:
-			ops = append(ops, ir.MOV{
-				Src: getRegister(a, context),
-				Dst: ir.FuncCallArg(i),
-			})
-		case ast.Variable:
-			reg := context.Get(a)
-			ops = append(ops, ir.MOV{
-				Src: reg,
-				Dst: ir.FuncCallArg(i),
-			})
 
-		case ast.FuncCall, ast.AdditionOperator, ast.SubtractionOperator:
-			// handled above, do nothing.
+			argRegs = append(argRegs, r)
 		default:
 			panic(fmt.Sprintf("Unhandled argument type in FuncCall %v", reflect.TypeOf(a)))
 		}
@@ -139,9 +126,9 @@ func callFunc(fc ast.FuncCall, context *variableLayout) ([]ir.Opcode, error) {
 
 	// Perform the call.
 	if fc.Name == "print" {
-		ops = append(ops, ir.CALL{"printf"})
+		ops = append(ops, ir.CALL{FName: "printf", Args: argRegs, TailCall: tailcall})
 	} else {
-		ops = append(ops, ir.CALL{ir.Fname(fc.Name)})
+		ops = append(ops, ir.CALL{FName: ir.Fname(fc.Name), Args: argRegs, TailCall: tailcall})
 	}
 	return ops, nil
 }
@@ -171,7 +158,7 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 	for _, stmt := range block.Stmts {
 		switch s := stmt.(type) {
 		case ast.FuncCall:
-			fc, err := callFunc(s, context)
+			fc, err := callFunc(s, context, false)
 			if err != nil {
 				return nil, err
 			}
@@ -203,7 +190,7 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 		case ast.ReturnStmt:
 			switch arg := s.Val.(type) {
 			case ast.FuncCall:
-				fc, err := callFunc(arg, context)
+				fc, err := callFunc(arg, context, true)
 				if err != nil {
 					return nil, err
 				}

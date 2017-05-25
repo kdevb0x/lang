@@ -20,15 +20,17 @@ func (o RET) Registers() []Register {
 }
 
 type CALL struct {
-	Fname
+	FName Fname
+	Args  []Register
+	TailCall bool
 }
 
 func (c CALL) String() string {
-	return fmt.Sprintf("CALL %v\n", c.Fname)
+	return fmt.Sprintf("CALL %v (%v)\n", c.FName, c.Args)
 }
 
 func (o CALL) Registers() []Register {
-	return nil
+	return o.Args
 }
 
 type Label string
