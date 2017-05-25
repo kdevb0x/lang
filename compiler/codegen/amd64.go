@@ -84,7 +84,7 @@ func (a *amd64Registers) nextPhysicalRegister(r ir.Register, skipDX bool) (Physi
 	}
 	return "", fmt.Errorf("No physical registers available")
 }
-func (a *amd64Registers) tempPhysicalRegister(r ir.Register, skipDX bool) (PhysicalRegister, error) {
+func (a *amd64Registers) tempPhysicalRegister(skipDX bool) (PhysicalRegister, error) {
 	// Avoids AX and BP, since AX is the return register and BP is the first
 	// argument to a function call.
 	if a.bx == nil {
@@ -258,7 +258,7 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 				src = r
 				break
 			}
-			src, err = a.tempPhysicalRegister(val, false)
+			src, err = a.tempPhysicalRegister(false)
 			if err != nil {
 				panic(err)
 			}
@@ -272,7 +272,14 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 	case ir.CALL:
 		var v string
 		for i, arg := range o.Args {
-			fa := a.ToPhysical(ir.FuncCallArg(i))
+			var fa PhysicalRegister
+			if o.TailCall {
+				// If it's a tail call, the dst should get optimized
+				// to the same location as this call's.
+				fa = a.ToPhysical(ir.FuncArg(i))
+			} else {
+				fa = a.ToPhysical(ir.FuncCallArg(i))
+			}
 			var physArg PhysicalRegister
 			switch arg.(type) {
 			case ir.LocalValue, ir.FuncArg:
@@ -282,7 +289,7 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 					physArg = r
 					break
 				}
-				physArg, err = a.tempPhysicalRegister(arg, false)
+				physArg, err = a.tempPhysicalRegister(false)
 				if err != nil {
 					panic(err)
 				}
@@ -301,7 +308,25 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 
 			v += fmt.Sprintf("MOVQ %v, %v\n\t", physArg, fa)
 		}
-		return v + fmt.Sprintf("CALL %v+0(SB)", o.FName)
+		if o.TailCall {
+			// Optimize the call away to a JMP and reuse the stack
+			// frame.
+			tmp, err := a.tempPhysicalRegister(false)
+			if err != nil {
+				panic(err)
+			}
+			// Jump 1 instruction past the start of this symbol.
+			// The first instruction is SUBQ $k, SP which the linker
+			// inserts. We want to reuse the stack, not push to it.
+			//
+			// FIXME: This needs to manually adjust SP if the stack
+			// space reserved for the new symbol isn't the same as
+			// the current function.
+			v += fmt.Sprintf("MOVQ $%v+4(SB), %v\n\t", o.FName, tmp)
+			return v + fmt.Sprintf("JMP %v", tmp)
+		} else {
+			return v + fmt.Sprintf("CALL %v+0(SB)", o.FName)
+		}
 	case ir.RET:
 		return fmt.Sprintf("RET")
 	case ir.ADD:
@@ -326,7 +351,7 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 				src = r
 				break
 			}
-			src, err = a.tempPhysicalRegister(val, false)
+			src, err = a.tempPhysicalRegister(false)
 			if err != nil {
 				panic(err)
 			}
@@ -468,7 +493,7 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 		return fmt.Sprintf("JMP %v", o.Label.Inline())
 	case ir.JE:
 		// FIXME: Only required if both src and dst are not really registers
-		src, err := a.tempPhysicalRegister("", false)
+		src, err := a.tempPhysicalRegister(false)
 		if err != nil {
 			panic(err)
 		}
@@ -476,7 +501,7 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 		return v + fmt.Sprintf("\n\tCMPQ %v, %v\n\tJE %v", src, a.ToPhysical(o.Dst), o.Label.Inline())
 	case ir.JL:
 		// FIXME: Only required if both src and dst are not really registers
-		src, err := a.tempPhysicalRegister("", false)
+		src, err := a.tempPhysicalRegister(false)
 		if err != nil {
 			panic(err)
 		}
@@ -484,7 +509,7 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 		return v + fmt.Sprintf("\n\tCMPQ %v, %v\n\tJL %v", src, a.ToPhysical(o.Dst), o.Label.Inline())
 	case ir.JLE:
 		// FIXME: Only required if both src and dst are not really registers
-		src, err := a.tempPhysicalRegister("", false)
+		src, err := a.tempPhysicalRegister(false)
 		if err != nil {
 			panic(err)
 		}
@@ -492,7 +517,7 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 		return v + fmt.Sprintf("\n\tCMPQ %v, %v\n\tJLE %v", src, a.ToPhysical(o.Dst), o.Label.Inline())
 	case ir.JNE:
 		// FIXME: Only required if both src and dst are not really registers
-		src, err := a.tempPhysicalRegister("", false)
+		src, err := a.tempPhysicalRegister(false)
 		if err != nil {
 			panic(err)
 		}

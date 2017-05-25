@@ -20,8 +20,8 @@ func (o RET) Registers() []Register {
 }
 
 type CALL struct {
-	FName Fname
-	Args  []Register
+	FName    Fname
+	Args     []Register
 	TailCall bool
 }
 
