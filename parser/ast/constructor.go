@@ -11,6 +11,7 @@ type Context struct {
 	Variables   map[string]VarWithType
 	Mutables    map[string]VarWithType
 	Functions   map[string]Callable
+	Types       map[string]Type
 	PureContext bool // true if inside a pure function.
 }
 
@@ -70,6 +71,12 @@ func (c Context) IsFunction(s string) bool {
 	return false
 }
 
+func (c Context) ValidType(t Type) bool {
+	if _, ok := c.Types[string(t)]; ok {
+		return true
+	}
+	return false
+}
 func topLevelNode(T token.Token) (Node, error) {
 	switch T.(type) {
 	case token.Whitespace:
@@ -563,6 +570,10 @@ func consumeLetStmt(start int, tokens []token.Token, c *Context) (int, Node, err
 				c.Variables[t.String()] = l.Var
 			} else if l.Var.Typ == "" {
 				l.Var.Typ = Type(t.String())
+				if !c.ValidType(l.Var.Typ) {
+					return 0, nil, fmt.Errorf("Invalid type: %v", t.String())
+				}
+
 				c.Variables[string(l.Var.Name)] = l.Var
 			} else {
 				return 0, nil, fmt.Errorf("Invalid name for let statement")
@@ -613,6 +624,9 @@ func consumeMutStmt(start int, tokens []token.Token, c *Context) (int, Node, err
 				c.Mutables[t.String()] = l.Var
 			} else if l.Var.Typ == "" {
 				l.Var.Typ = Type(t.String())
+				if !c.ValidType(l.Var.Typ) {
+					return 0, nil, fmt.Errorf("Invalid type: %v", t.String())
+				}
 				c.Variables[string(l.Var.Name)] = l.Var
 				c.Mutables[string(l.Var.Name)] = l.Var
 			} else {

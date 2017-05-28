@@ -27,7 +27,6 @@ func ExampleBadProcCall() {
 	// Output: Can not call procedure from pure function.
 }
 
-
 func ExampleBadLetAssignment() {
 	if err := RunProgram("badletassignment", invalidprograms.LetAssignment); err != nil {
 		fmt.Println(err.Error())
@@ -61,4 +60,11 @@ func ExampleWrongScope() {
 		fmt.Println(err.Error())
 	}
 	// Output: Use of undefined variable "x".
+}
+
+func ExampleInvalidType() {
+	if err := RunProgram("invalidtype", invalidprograms.InvalidType); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: Invalid type: fint
 }

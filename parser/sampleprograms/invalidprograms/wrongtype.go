@@ -7,3 +7,9 @@ const WrongType = `proc main() () {
 	print("%d\n", x)
 }
 `
+
+const InvalidType = `proc main() () {
+	let x fint = 3
+	print("%d\n", x)
+}
+`
