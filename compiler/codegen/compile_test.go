@@ -318,14 +318,14 @@ func ExampleGreaterOrEqualComparison() {
 	// 3
 }
 
-func LessThanEqualComparison() {
+func ExampleLessThanEqualComparison() {
 	if err := RunProgram("lessthanequalcompare", sampleprograms.LessThanComparison); err != nil {
 		// fmt.Println(err.Error())
 	}
 	// Output: false
 }
 
-func LessThanOrEqualComparison() {
+func ExampleLessThanOrEqualComparison() {
 	if err := RunProgram("lessthanorequalcompare", sampleprograms.LessThanOrEqualComparison); err != nil {
 		// fmt.Println(err.Error())
 	}

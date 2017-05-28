@@ -523,6 +523,22 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 		}
 		v := fmt.Sprintf("MOVQ %v, %v", a.ToPhysical(o.Src), src)
 		return v + fmt.Sprintf("\n\tCMPQ %v, %v\n\tJNE %v", src, a.ToPhysical(o.Dst), o.Label.Inline())
+	case ir.JGE:
+		// FIXME: Only required if both src and dst are not really registers
+		src, err := a.tempPhysicalRegister(false)
+		if err != nil {
+			panic(err)
+		}
+		v := fmt.Sprintf("MOVQ %v, %v", a.ToPhysical(o.Src), src)
+		return v + fmt.Sprintf("\n\tCMPQ %v, %v\n\tJGE %v", src, a.ToPhysical(o.Dst), o.Label.Inline())
+	case ir.JG:
+		// FIXME: Only required if both src and dst are not really registers
+		src, err := a.tempPhysicalRegister(false)
+		if err != nil {
+			panic(err)
+		}
+		v := fmt.Sprintf("MOVQ %v, %v", a.ToPhysical(o.Src), src)
+		return v + fmt.Sprintf("\n\tCMPQ %v, %v\n\tJG %v", src, a.ToPhysical(o.Dst), o.Label.Inline())
 	default:
 		panic(fmt.Sprintf("Unhandled instruction in AMD64 code generation %v", reflect.TypeOf(o)))
 	}

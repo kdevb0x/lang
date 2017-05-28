@@ -91,6 +91,14 @@ func (j JGE) String() string {
 	return fmt.Sprintf("JGE %v, %v, %v\n", j.Label.Inline(), j.Src, j.Dst)
 }
 
+type JG struct {
+	ConditionalJump
+}
+
+func (j JG) String() string {
+	return fmt.Sprintf("JG %v, %v, %v\n", j.Label.Inline(), j.Src, j.Dst)
+}
+
 type JL struct {
 	ConditionalJump
 }

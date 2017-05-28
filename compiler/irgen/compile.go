@@ -364,6 +364,44 @@ func evaluateCondition(val ast.BoolValue, context *variableLayout, faillabel ir.
 			},
 		})
 		return ops, nil
+	case ast.LessThanComparison:
+		body, r, err := evaluateValue(c.Left, context)
+		if err != nil {
+			return nil, err
+		}
+		ops = append(ops, body...)
+
+		body, r2, err := evaluateValue(c.Right, context)
+		if err != nil {
+			return nil, err
+		}
+		ops = append(ops, body...)
+		ops = append(ops, ir.JGE{
+			ir.ConditionalJump{Label: faillabel,
+				Src: r,
+				Dst: r2,
+			},
+		})
+		return ops, nil
+	case ast.LessThanOrEqualComparison:
+		body, r, err := evaluateValue(c.Left, context)
+		if err != nil {
+			return nil, err
+		}
+		ops = append(ops, body...)
+
+		body, r2, err := evaluateValue(c.Right, context)
+		if err != nil {
+			return nil, err
+		}
+		ops = append(ops, body...)
+		ops = append(ops, ir.JG{
+			ir.ConditionalJump{Label: faillabel,
+				Src: r,
+				Dst: r2,
+			},
+		})
+		return ops, nil
 	case ast.EqualityComparison:
 		body, r, err := evaluateValue(c.Left, context)
 		if err != nil {
