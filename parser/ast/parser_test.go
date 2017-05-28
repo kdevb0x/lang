@@ -145,12 +145,12 @@ func compare(v1, v2 Node) bool {
 		if v1a.Name != v2a.Name {
 			return false
 		}
-		if len(v1a.Args) != len(v2a.Args) {
+		if len(v1a.UserArgs) != len(v2a.UserArgs) {
 			return false
 		}
-		for i := range v1a.Args {
-			arg1 := v1a.Args[i].(Node)
-			arg2 := v2a.Args[i].(Node)
+		for i := range v1a.UserArgs {
+			arg1 := v1a.UserArgs[i].(Node)
+			arg2 := v2a.UserArgs[i].(Node)
 			if compare(arg1, arg2) == false {
 				return false
 			}
@@ -199,16 +199,16 @@ func TestParseFizzBuzz(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					MutStmt{
-						Var:          VarWithType{Name: "terminate", Type: "bool"},
+						Var:          VarWithType{Name: "terminate", Typ: "bool"},
 						InitialValue: BoolLiteral(false),
 					},
 					MutStmt{
-						Var:          VarWithType{Name: "i", Type: "int"},
+						Var:          VarWithType{Name: "i", Typ: "int"},
 						InitialValue: IntLiteral(1),
 					},
 					WhileLoop{
 						Condition: NotEqualsComparison{
-							Left:  Variable("terminate"),
+							Left:  VarWithType{"terminate", "bool"},
 							Right: BoolLiteral(true),
 						},
 						Body: BlockStmt{
@@ -216,7 +216,7 @@ func TestParseFizzBuzz(t *testing.T) {
 								IfStmt{
 									Condition: EqualityComparison{
 										Left: ModOperator{
-											Left:  Variable("i"),
+											Left:  VarWithType{Variable("i"), "int"},
 											Right: IntLiteral(15),
 										},
 										Right: IntLiteral(0),
@@ -225,7 +225,7 @@ func TestParseFizzBuzz(t *testing.T) {
 										[]Node{
 											FuncCall{
 												Name: "print",
-												Args: []Value{
+												UserArgs: []Value{
 													StringLiteral(`fizzbuzz\n`),
 												},
 											},
@@ -236,7 +236,7 @@ func TestParseFizzBuzz(t *testing.T) {
 											IfStmt{
 												Condition: EqualityComparison{
 													Left: ModOperator{
-														Left:  Variable("i"),
+														Left:  VarWithType{Variable("i"), "int"},
 														Right: IntLiteral(5),
 													},
 													Right: IntLiteral(0),
@@ -245,7 +245,7 @@ func TestParseFizzBuzz(t *testing.T) {
 													[]Node{
 														FuncCall{
 															Name: "print",
-															Args: []Value{
+															UserArgs: []Value{
 																StringLiteral(`buzz\n`),
 															},
 														},
@@ -256,7 +256,7 @@ func TestParseFizzBuzz(t *testing.T) {
 														IfStmt{
 															Condition: EqualityComparison{
 																Left: ModOperator{
-																	Left:  Variable("i"),
+																	Left:  VarWithType{"i", "int"},
 																	Right: IntLiteral(3),
 																},
 																Right: IntLiteral(0),
@@ -265,7 +265,7 @@ func TestParseFizzBuzz(t *testing.T) {
 																[]Node{
 																	FuncCall{
 																		Name: "print",
-																		Args: []Value{
+																		UserArgs: []Value{
 																			StringLiteral(`fizz\n`),
 																		},
 																	},
@@ -275,9 +275,9 @@ func TestParseFizzBuzz(t *testing.T) {
 																[]Node{
 																	FuncCall{
 																		Name: "print",
-																		Args: []Value{
+																		UserArgs: []Value{
 																			StringLiteral(`%d\n`),
-																			Variable("i"),
+																			VarWithType{"i", "int"},
 																		},
 																	},
 																},
@@ -290,21 +290,21 @@ func TestParseFizzBuzz(t *testing.T) {
 									},
 								},
 								AssignmentOperator{
-									Variable: Variable("i"),
+									Variable: VarWithType{"i", "int"},
 									Value: AdditionOperator{
-										Left:  Variable("i"),
+										Left:  VarWithType{"i", "int"},
 										Right: IntLiteral(1),
 									},
 								},
 								IfStmt{
 									Condition: GreaterOrEqualComparison{
-										Left:  Variable("i"),
+										Left:  VarWithType{"i", "int"},
 										Right: IntLiteral(100),
 									},
 									Body: BlockStmt{
 										[]Node{
 											AssignmentOperator{
-												Variable: Variable("terminate"),
+												Variable: VarWithType{"terminate", "bool"},
 												Value:    BoolLiteral(true),
 											},
 										},
@@ -344,7 +344,7 @@ func TestHelloWorld(t *testing.T) {
 				[]Node{
 					FuncCall{
 						Name: "print",
-						Args: []Value{
+						UserArgs: []Value{
 							StringLiteral(`Hello, world!\n`),
 						},
 					},
@@ -383,17 +383,6 @@ func TestEmptyMain(t *testing.T) {
 		}
 	}
 }
-func TestUnbalancedBrackets(t *testing.T) {
-	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.BrokenMain))
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = Construct(tokens)
-	// The program wasn't valid, there should be an error
-	if err == nil {
-		t.Errorf("Invalid main program should have failed parsing.")
-	}
-}
 
 func TestLetStatement(t *testing.T) {
 	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.LetStatement))
@@ -413,15 +402,14 @@ func TestLetStatement(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					LetStmt{
-						Var:   VarWithType{Name: "n", Type: "int"},
+						Var:   VarWithType{"n", "int"},
 						Value: IntLiteral(5),
 					},
 					FuncCall{
 						Name: "print",
-
-						Args: []Value{
+						UserArgs: []Value{
 							StringLiteral(`%d\n`),
-							Variable("n"),
+							VarWithType{"n", "int"},
 						},
 					},
 				},
@@ -455,31 +443,31 @@ func TestMutStatement(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					MutStmt{
-						Var:          VarWithType{Name: "x", Type: "int"},
+						Var:          VarWithType{"x", "int"},
 						InitialValue: IntLiteral(3),
 					},
 					MutStmt{
-						Var: VarWithType{Name: "y", Type: "int"},
+						Var: VarWithType{"y", "int"},
 						InitialValue: AdditionOperator{
-							Left:  Variable("x"),
+							Left:  VarWithType{"x", "int"},
 							Right: IntLiteral(1),
 						},
 					},
 					AssignmentOperator{
-						Variable: Variable("x"),
+						Variable: VarWithType{"x", "int"},
 						Value: AdditionOperator{
-							Left: Variable("x"),
+							Left: VarWithType{"x", "int"},
 							Right: AdditionOperator{
-								Left:  Variable("y"),
+								Left:  VarWithType{"y", "int"},
 								Right: IntLiteral(1),
 							},
 						},
 					},
 					FuncCall{
 						Name: "print",
-						Args: []Value{
+						UserArgs: []Value{
 							StringLiteral(`%d\n`),
-							Variable("x"),
+							VarWithType{"x", "int"},
 						},
 					},
 				},
@@ -509,7 +497,7 @@ func TestTwoProcs(t *testing.T) {
 			Name: "foo",
 			Args: nil,
 			Return: []VarWithType{
-				VarWithType{Name: "", Type: "int"},
+				VarWithType{Name: "", Typ: "int"},
 			},
 			Body: BlockStmt{
 				[]Node{
@@ -527,7 +515,7 @@ func TestTwoProcs(t *testing.T) {
 				[]Node{
 					FuncCall{
 						Name: "print",
-						Args: []Value{
+						UserArgs: []Value{
 							StringLiteral(`%d`),
 							FuncCall{
 								Name: "foo",
@@ -563,7 +551,7 @@ func TestOutOfOrder(t *testing.T) {
 				[]Node{
 					FuncCall{
 						Name: "print",
-						Args: []Value{
+						UserArgs: []Value{
 							StringLiteral(`%d`),
 							FuncCall{
 								Name: "foo",
@@ -577,7 +565,7 @@ func TestOutOfOrder(t *testing.T) {
 			Name: "foo",
 			Args: nil,
 			Return: []VarWithType{
-				VarWithType{Name: "", Type: "int"},
+				VarWithType{Name: "", Typ: "int"},
 			},
 			Body: BlockStmt{
 				[]Node{
@@ -609,46 +597,46 @@ func TestSumToTen(t *testing.T) {
 		ProcDecl{
 			Name: "sum",
 			Args: []VarWithType{
-				{Name: "x", Type: "int"},
+				{Name: "x", Typ: "int"},
 			},
 			Return: []VarWithType{
-				{Type: "int"},
+				{Typ: "int"},
 			},
 			Body: BlockStmt{
 				[]Node{
 					MutStmt{
-						Var:          VarWithType{Name: "val", Type: "int"},
-						InitialValue: Variable("x"),
+						Var:          VarWithType{Name: "val", Typ: "int"},
+						InitialValue: VarWithType{"x", "int"},
 					},
 					MutStmt{
-						Var:          VarWithType{Name: "sum", Type: "int"},
+						Var:          VarWithType{Name: "sum", Typ: "int"},
 						InitialValue: IntLiteral(0),
 					},
 					WhileLoop{
 						Condition: GreaterComparison{
-							Left:  Variable("val"),
+							Left:  VarWithType{"val", "int"},
 							Right: IntLiteral(0),
 						},
 						Body: BlockStmt{
 							[]Node{
 								AssignmentOperator{
-									Variable: Variable("sum"),
+									Variable: VarWithType{"sum", "int"},
 									Value: AdditionOperator{
-										Left:  Variable("sum"),
-										Right: Variable("val"),
+										Left:  VarWithType{"sum", "int"},
+										Right: VarWithType{"val", "int"},
 									},
 								},
 								AssignmentOperator{
-									Variable: Variable("val"),
+									Variable: VarWithType{"val", "int"},
 									Value: SubtractionOperator{
-										Left:  Variable("val"),
+										Left:  VarWithType{"val", "int"},
 										Right: IntLiteral(1),
 									},
 								},
 							},
 						},
 					},
-					ReturnStmt{Variable("sum")},
+					ReturnStmt{VarWithType{"sum", "int"}},
 				},
 			},
 		},
@@ -658,11 +646,11 @@ func TestSumToTen(t *testing.T) {
 				[]Node{
 					FuncCall{
 						Name: "print",
-						Args: []Value{
+						UserArgs: []Value{
 							StringLiteral(`%d\n`),
 							FuncCall{
 								Name: "sum",
-								Args: []Value{
+								UserArgs: []Value{
 									IntLiteral(10),
 								},
 							},
@@ -694,7 +682,7 @@ func TestSimpleFunc(t *testing.T) {
 			Name: "foo",
 			Args: nil,
 			Return: []VarWithType{
-				VarWithType{Name: "", Type: "int"},
+				VarWithType{Name: "", Typ: "int"},
 			},
 			Body: BlockStmt{
 				[]Node{
@@ -712,7 +700,7 @@ func TestSimpleFunc(t *testing.T) {
 				[]Node{
 					FuncCall{
 						Name: "print",
-						Args: []Value{
+						UserArgs: []Value{
 							StringLiteral(`%d`),
 							FuncCall{
 								Name: "foo",
@@ -745,19 +733,19 @@ func TestSumToTenRecursive(t *testing.T) {
 		FuncDecl{
 			Name: "sum",
 			Args: []VarWithType{
-				{Name: "x", Type: "int"},
+				{Name: "x", Typ: "int"},
 			},
 			Return: []VarWithType{
-				{Type: "int"},
+				{Typ: "int"},
 			},
 			Body: BlockStmt{
 				[]Node{
 					ReturnStmt{
 						Val: FuncCall{
 							Name: "partial_sum",
-							Args: []Value{
+							UserArgs: []Value{
 								IntLiteral(0),
-								Variable("x"),
+								VarWithType{"x", "int"},
 							},
 						},
 					},
@@ -767,23 +755,23 @@ func TestSumToTenRecursive(t *testing.T) {
 		FuncDecl{
 			Name: "partial_sum",
 			Args: []VarWithType{
-				{Name: "partial", Type: "int"},
-				{Name: "x", Type: "int"},
+				{Name: "partial", Typ: "int"},
+				{Name: "x", Typ: "int"},
 			},
 			Return: []VarWithType{
-				{Type: "int"},
+				{Typ: "int"},
 			},
 			Body: BlockStmt{
 				[]Node{
 					IfStmt{
 						Condition: EqualityComparison{
-							Left:  Variable("x"),
+							Left:  VarWithType{"x", "int"},
 							Right: IntLiteral(0),
 						},
 						Body: BlockStmt{
 							[]Node{
 								ReturnStmt{
-									Val: Variable("partial"),
+									Val: VarWithType{"partial", "int"},
 								},
 							},
 						},
@@ -791,13 +779,13 @@ func TestSumToTenRecursive(t *testing.T) {
 					ReturnStmt{
 						Val: FuncCall{
 							Name: "partial_sum",
-							Args: []Value{
+							UserArgs: []Value{
 								AdditionOperator{
-									Left:  Variable("partial"),
-									Right: Variable("x"),
+									Left:  VarWithType{"partial", "int"},
+									Right: VarWithType{"x", "int"},
 								},
 								SubtractionOperator{
-									Left:  Variable("x"),
+									Left:  VarWithType{"x", "int"},
 									Right: IntLiteral(1),
 								},
 							},
@@ -812,11 +800,11 @@ func TestSumToTenRecursive(t *testing.T) {
 				[]Node{
 					FuncCall{
 						Name: "print",
-						Args: []Value{
+						UserArgs: []Value{
 							StringLiteral(`%d\n`),
 							FuncCall{
 								Name: "sum",
-								Args: []Value{
+								UserArgs: []Value{
 									IntLiteral(10),
 								},
 							},
@@ -854,35 +842,35 @@ func TestSomeMath(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					LetStmt{
-						Var: VarWithType{Name: "add", Type: "int"},
+						Var: VarWithType{Name: "add", Typ: "int"},
 						Value: AdditionOperator{
 							Left:  IntLiteral(1),
 							Right: IntLiteral(2),
 						},
 					},
 					LetStmt{
-						Var: VarWithType{Name: "sub", Type: "int"},
+						Var: VarWithType{Name: "sub", Typ: "int"},
 						Value: SubtractionOperator{
 							Left:  IntLiteral(1),
 							Right: IntLiteral(2),
 						},
 					},
 					LetStmt{
-						Var: VarWithType{Name: "mul", Type: "int"},
+						Var: VarWithType{Name: "mul", Typ: "int"},
 						Value: MulOperator{
 							Left:  IntLiteral(2),
 							Right: IntLiteral(3),
 						},
 					},
 					LetStmt{
-						Var: VarWithType{Name: "div", Type: "int"},
+						Var: VarWithType{Name: "div", Typ: "int"},
 						Value: DivOperator{
 							Left:  IntLiteral(6),
 							Right: IntLiteral(2),
 						},
 					},
 					LetStmt{
-						Var: VarWithType{Name: "x", Type: "int"},
+						Var: VarWithType{Name: "x", Typ: "int"},
 						Value: AdditionOperator{
 							Left: IntLiteral(1),
 							Right: SubtractionOperator{
@@ -900,41 +888,41 @@ func TestSomeMath(t *testing.T) {
 					FuncCall{
 						Name: "print",
 
-						Args: []Value{
+						UserArgs: []Value{
 							StringLiteral(`Add: %d\n`),
-							Variable("add"),
+							VarWithType{"add", "int"},
 						},
 					},
 					FuncCall{
 						Name: "print",
 
-						Args: []Value{
+						UserArgs: []Value{
 							StringLiteral(`Sub: %d\n`),
-							Variable("sub"),
+							VarWithType{"sub", "int"},
 						},
 					},
 					FuncCall{
 						Name: "print",
 
-						Args: []Value{
+						UserArgs: []Value{
 							StringLiteral(`Mul: %d\n`),
-							Variable("mul"),
+							VarWithType{"mul", "int"},
 						},
 					},
 					FuncCall{
 						Name: "print",
 
-						Args: []Value{
+						UserArgs: []Value{
 							StringLiteral(`Div: %d\n`),
-							Variable("div"),
+							VarWithType{"div", "int"},
 						},
 					},
 					FuncCall{
 						Name: "print",
 
-						Args: []Value{
+						UserArgs: []Value{
 							StringLiteral(`Complex: %d\n`),
-							Variable("x"),
+							VarWithType{"x", "int"},
 						},
 					},
 				},
@@ -968,53 +956,53 @@ func TestEqualComparisonMath(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					MutStmt{
-						Var:          VarWithType{Name: "a", Type: "int"},
+						Var:          VarWithType{"a", "int"},
 						InitialValue: IntLiteral(3),
 					},
 					LetStmt{
-						Var:   VarWithType{Name: "b", Type: "int"},
+						Var:   VarWithType{"b", "int"},
 						Value: IntLiteral(3),
 					},
 					IfStmt{
 						Condition: EqualityComparison{
-							Left:  Variable("a"),
-							Right: Variable("b"),
+							Left:  VarWithType{"a", "int"},
+							Right: VarWithType{"b", "int"},
 						},
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name: "print",
-									Args: []Value{StringLiteral(`true\n`)},
+									Name:     "print",
+									UserArgs: []Value{StringLiteral(`true\n`)},
 								},
 							},
 						},
 						Else: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name: "print",
-									Args: []Value{StringLiteral(`false\n`)},
+									Name:     "print",
+									UserArgs: []Value{StringLiteral(`false\n`)},
 								},
 							},
 						},
 					},
 					WhileLoop{
 						Condition: EqualityComparison{
-							Left:  Variable("a"),
-							Right: Variable("b"),
+							Left:  VarWithType{"a", "int"},
+							Right: VarWithType{"b", "int"},
 						},
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
 									Name: "print",
-									Args: []Value{
+									UserArgs: []Value{
 										StringLiteral(`%d\n`),
-										Variable("a"),
+										VarWithType{"a", "int"},
 									},
 								},
 								AssignmentOperator{
-									Variable: Variable("a"),
+									Variable: VarWithType{"a", "int"},
 									Value: AdditionOperator{
-										Left:  Variable("a"),
+										Left:  VarWithType{"a", "int"},
 										Right: IntLiteral(1),
 									},
 								},
@@ -1052,53 +1040,53 @@ func TestNotEqualComparisonMath(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					MutStmt{
-						Var:          VarWithType{Name: "a", Type: "int"},
+						Var:          VarWithType{"a", "int"},
 						InitialValue: IntLiteral(3),
 					},
 					LetStmt{
-						Var:   VarWithType{Name: "b", Type: "int"},
+						Var:   VarWithType{"b", "int"},
 						Value: IntLiteral(3),
 					},
 					IfStmt{
 						Condition: NotEqualsComparison{
-							Left:  Variable("a"),
-							Right: Variable("b"),
+							Left:  VarWithType{"a", "int"},
+							Right: VarWithType{"b", "int"},
 						},
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name: "print",
-									Args: []Value{StringLiteral(`true\n`)},
+									Name:     "print",
+									UserArgs: []Value{StringLiteral(`true\n`)},
 								},
 							},
 						},
 						Else: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name: "print",
-									Args: []Value{StringLiteral(`false\n`)},
+									Name:     "print",
+									UserArgs: []Value{StringLiteral(`false\n`)},
 								},
 							},
 						},
 					},
 					WhileLoop{
 						Condition: NotEqualsComparison{
-							Left:  Variable("a"),
-							Right: Variable("b"),
+							Left:  VarWithType{"a", "int"},
+							Right: VarWithType{"b", "int"},
 						},
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
 									Name: "print",
-									Args: []Value{
+									UserArgs: []Value{
 										StringLiteral(`%d\n`),
-										Variable("a"),
+										VarWithType{"a", "int"},
 									},
 								},
 								AssignmentOperator{
-									Variable: Variable("a"),
+									Variable: VarWithType{"a", "int"},
 									Value: AdditionOperator{
-										Left:  Variable("a"),
+										Left:  VarWithType{"a", "int"},
 										Right: IntLiteral(1),
 									},
 								},
@@ -1136,53 +1124,53 @@ func TestGreaterComparisonMath(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					MutStmt{
-						Var:          VarWithType{Name: "a", Type: "int"},
+						Var:          VarWithType{"a", "int"},
 						InitialValue: IntLiteral(4),
 					},
 					LetStmt{
-						Var:   VarWithType{Name: "b", Type: "int"},
+						Var:   VarWithType{"b", "int"},
 						Value: IntLiteral(3),
 					},
 					IfStmt{
 						Condition: GreaterComparison{
-							Left:  Variable("a"),
-							Right: Variable("b"),
+							Left:  VarWithType{"a", "int"},
+							Right: VarWithType{"b", "int"},
 						},
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name: "print",
-									Args: []Value{StringLiteral(`true\n`)},
+									Name:     "print",
+									UserArgs: []Value{StringLiteral(`true\n`)},
 								},
 							},
 						},
 						Else: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name: "print",
-									Args: []Value{StringLiteral(`false\n`)},
+									Name:     "print",
+									UserArgs: []Value{StringLiteral(`false\n`)},
 								},
 							},
 						},
 					},
 					WhileLoop{
 						Condition: GreaterComparison{
-							Left:  Variable("a"),
-							Right: Variable("b"),
+							Left:  VarWithType{"a", "int"},
+							Right: VarWithType{"b", "int"},
 						},
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
 									Name: "print",
-									Args: []Value{
+									UserArgs: []Value{
 										StringLiteral(`%d\n`),
-										Variable("a"),
+										VarWithType{"a", "int"},
 									},
 								},
 								AssignmentOperator{
-									Variable: Variable("a"),
+									Variable: VarWithType{"a", "int"},
 									Value: SubtractionOperator{
-										Left:  Variable("a"),
+										Left:  VarWithType{"a", "int"},
 										Right: IntLiteral(1),
 									},
 								},
@@ -1220,53 +1208,53 @@ func TestGreaterOrEqualComparisonMath(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					MutStmt{
-						Var:          VarWithType{Name: "a", Type: "int"},
+						Var:          VarWithType{"a", "int"},
 						InitialValue: IntLiteral(4),
 					},
 					LetStmt{
-						Var:   VarWithType{Name: "b", Type: "int"},
+						Var:   VarWithType{"b", "int"},
 						Value: IntLiteral(3),
 					},
 					IfStmt{
 						Condition: GreaterOrEqualComparison{
-							Left:  Variable("a"),
-							Right: Variable("b"),
+							Left:  VarWithType{"a", "int"},
+							Right: VarWithType{"b", "int"},
 						},
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name: "print",
-									Args: []Value{StringLiteral(`true\n`)},
+									Name:     "print",
+									UserArgs: []Value{StringLiteral(`true\n`)},
 								},
 							},
 						},
 						Else: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name: "print",
-									Args: []Value{StringLiteral(`false\n`)},
+									Name:     "print",
+									UserArgs: []Value{StringLiteral(`false\n`)},
 								},
 							},
 						},
 					},
 					WhileLoop{
 						Condition: GreaterOrEqualComparison{
-							Left:  Variable("a"),
-							Right: Variable("b"),
+							Left:  VarWithType{"a", "int"},
+							Right: VarWithType{"b", "int"},
 						},
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
 									Name: "print",
-									Args: []Value{
+									UserArgs: []Value{
 										StringLiteral(`%d\n`),
-										Variable("a"),
+										VarWithType{"a", "int"},
 									},
 								},
 								AssignmentOperator{
-									Variable: Variable("a"),
+									Variable: VarWithType{"a", "int"},
 									Value: SubtractionOperator{
-										Left:  Variable("a"),
+										Left:  VarWithType{"a", "int"},
 										Right: IntLiteral(1),
 									},
 								},
@@ -1304,53 +1292,53 @@ func TestLessThanComparisonMath(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					MutStmt{
-						Var:          VarWithType{Name: "a", Type: "int"},
+						Var:          VarWithType{"a", "int"},
 						InitialValue: IntLiteral(4),
 					},
 					LetStmt{
-						Var:   VarWithType{Name: "b", Type: "int"},
+						Var:   VarWithType{"b", "int"},
 						Value: IntLiteral(3),
 					},
 					IfStmt{
 						Condition: LessThanComparison{
-							Left:  Variable("a"),
-							Right: Variable("b"),
+							Left:  VarWithType{"a", "int"},
+							Right: VarWithType{"b", "int"},
 						},
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name: "print",
-									Args: []Value{StringLiteral(`true\n`)},
+									Name:     "print",
+									UserArgs: []Value{StringLiteral(`true\n`)},
 								},
 							},
 						},
 						Else: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name: "print",
-									Args: []Value{StringLiteral(`false\n`)},
+									Name:     "print",
+									UserArgs: []Value{StringLiteral(`false\n`)},
 								},
 							},
 						},
 					},
 					WhileLoop{
 						Condition: LessThanComparison{
-							Left:  Variable("a"),
-							Right: Variable("b"),
+							Left:  VarWithType{"a", "int"},
+							Right: VarWithType{"b", "int"},
 						},
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
 									Name: "print",
-									Args: []Value{
+									UserArgs: []Value{
 										StringLiteral(`%d\n`),
-										Variable("a"),
+										VarWithType{"a", "int"},
 									},
 								},
 								AssignmentOperator{
-									Variable: Variable("a"),
+									Variable: VarWithType{"a", "int"},
 									Value: AdditionOperator{
-										Left:  Variable("a"),
+										Left:  VarWithType{"a", "int"},
 										Right: IntLiteral(1),
 									},
 								},
@@ -1388,53 +1376,53 @@ func TestLessThanOrEqualComparisonMath(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					MutStmt{
-						Var:          VarWithType{Name: "a", Type: "int"},
+						Var:          VarWithType{"a", "int"},
 						InitialValue: IntLiteral(1),
 					},
 					LetStmt{
-						Var:   VarWithType{Name: "b", Type: "int"},
+						Var:   VarWithType{"b", "int"},
 						Value: IntLiteral(3),
 					},
 					IfStmt{
 						Condition: LessThanOrEqualComparison{
-							Left:  Variable("a"),
-							Right: Variable("b"),
+							Left:  VarWithType{"a", "int"},
+							Right: VarWithType{"b", "int"},
 						},
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name: "print",
-									Args: []Value{StringLiteral(`true\n`)},
+									Name:     "print",
+									UserArgs: []Value{StringLiteral(`true\n`)},
 								},
 							},
 						},
 						Else: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name: "print",
-									Args: []Value{StringLiteral(`false\n`)},
+									Name:     "print",
+									UserArgs: []Value{StringLiteral(`false\n`)},
 								},
 							},
 						},
 					},
 					WhileLoop{
 						Condition: LessThanOrEqualComparison{
-							Left:  Variable("a"),
-							Right: Variable("b"),
+							Left:  VarWithType{"a", "int"},
+							Right: VarWithType{"b", "int"},
 						},
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
 									Name: "print",
-									Args: []Value{
+									UserArgs: []Value{
 										StringLiteral(`%d\n`),
-										Variable("a"),
+										VarWithType{"a", "int"},
 									},
 								},
 								AssignmentOperator{
-									Variable: Variable("a"),
+									Variable: VarWithType{"a", "int"},
 									Value: AdditionOperator{
-										Left:  Variable("a"),
+										Left:  VarWithType{"a", "int"},
 										Right: IntLiteral(1),
 									},
 								},

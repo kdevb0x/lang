@@ -6,7 +6,7 @@ import (
 	"reflect"
 )
 
-func consumeWhileLoop(start int, tokens []token.Token, c Context) (int, Node, error) {
+func consumeWhileLoop(start int, tokens []token.Token, c *Context) (int, Node, error) {
 	l := WhileLoop{}
 
 	if tokens[start] != token.Keyword("while") {
@@ -19,7 +19,8 @@ func consumeWhileLoop(start int, tokens []token.Token, c Context) (int, Node, er
 
 	l.Condition = cv
 
-	bn, block, err := consumeBlock(start+cn+1, tokens, c)
+	c2 := c.Clone()
+	bn, block, err := consumeBlock(start+cn+1, tokens, &c2)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -28,7 +29,7 @@ func consumeWhileLoop(start int, tokens []token.Token, c Context) (int, Node, er
 	return cn + bn + 1, l, nil
 }
 
-func consumeIfStmt(start int, tokens []token.Token, c Context) (int, IfStmt, error) {
+func consumeIfStmt(start int, tokens []token.Token, c *Context) (int, IfStmt, error) {
 	l := IfStmt{}
 
 	if tokens[start] != token.Keyword("if") {
@@ -41,7 +42,8 @@ func consumeIfStmt(start int, tokens []token.Token, c Context) (int, IfStmt, err
 
 	l.Condition = cv
 
-	bn, block, err := consumeBlock(start+cn+1, tokens, c)
+	c2 := c.Clone()
+	bn, block, err := consumeBlock(start+cn+1, tokens, &c2)
 	if err != nil {
 		return 0, IfStmt{}, err
 	}
@@ -50,7 +52,7 @@ func consumeIfStmt(start int, tokens []token.Token, c Context) (int, IfStmt, err
 	return cn + bn + 1, l, nil
 }
 
-func consumeCondition(start int, tokens []token.Token, c Context) (int, BoolValue, error) {
+func consumeCondition(start int, tokens []token.Token, c *Context) (int, BoolValue, error) {
 	n, cond, err := consumeBoolValue(start, tokens, c)
 	if err != nil {
 		return 0, nil, err
@@ -67,6 +69,8 @@ func consumeCondition(start int, tokens []token.Token, c Context) (int, BoolValu
 	case LessThanComparison:
 		return n, val, nil
 	case LessThanOrEqualComparison:
+		return n, val, nil
+	case BoolLiteral:
 		return n, val, nil
 	default:
 		return 0, nil, fmt.Errorf("Unsupported comparison %s", reflect.TypeOf(val))

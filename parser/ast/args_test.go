@@ -13,12 +13,12 @@ func TestConsumeArgs(t *testing.T) {
 		ExpectedN int
 	}{
 		{"()", nil, 2},
-		{"(n int)", []VarWithType{{Name: "n", Type: "int"}}, 4},
+		{"(n int)", []VarWithType{{Name: "n", Typ: "int"}}, 4},
 		{
 			"(partial int, x int)",
 			[]VarWithType{
-				{Name: "partial", Type: "int"},
-				{Name: "x", Type: "int"},
+				{Name: "partial", Typ: "int"},
+				{Name: "x", Typ: "int"},
 			},
 			7,
 		},
@@ -32,7 +32,7 @@ func TestConsumeArgs(t *testing.T) {
 		}
 
 		tokens = stripWhitespace(tokens)
-		n, vt, err := consumeArgs(0, tokens, c)
+		n, vt, err := consumeArgs(0, tokens, &c)
 		if n != tc.ExpectedN {
 			t.Errorf("Unexpected number of values returned: got %v want %v", n, tc.ExpectedN)
 		}

@@ -19,6 +19,9 @@ func (ec EqualityComparison) Value() interface{} {
 func (n EqualityComparison) Node() Node {
 	return n
 }
+func (c EqualityComparison) Type() Type {
+	return "bool"
+}
 
 func (n EqualityComparison) String() string {
 	return fmt.Sprintf("EqualityComparison{%v == %v}", n.Left, n.Right)
@@ -44,6 +47,10 @@ func (n NotEqualsComparison) String() string {
 	return fmt.Sprintf("NotEqualsComparison{%v == %v}", n.Left, n.Right)
 }
 
+func (c NotEqualsComparison) Type() Type {
+	return "bool"
+}
+
 type GreaterComparison struct {
 	Left, Right Value
 }
@@ -62,6 +69,10 @@ func (n GreaterComparison) Value() interface{} {
 	return n.BoolValue()
 }
 
+func (c GreaterComparison) Type() Type {
+	return "bool"
+}
+
 type GreaterOrEqualComparison struct {
 	Left, Right Value
 }
@@ -70,6 +81,10 @@ func (gc GreaterOrEqualComparison) BoolValue() bool {
 	// This method is mostly a sentinal, the value returned doesn't matter
 	// and since left and right are interfaces, > doesn't exist.
 	return true //gc.Left >= gc.Right
+}
+
+func (c GreaterOrEqualComparison) Type() Type {
+	return "bool"
 }
 
 func (n GreaterOrEqualComparison) Node() Node {
@@ -98,6 +113,10 @@ func (gc LessThanOrEqualComparison) BoolValue() bool {
 	return true //gc.Left >= gc.Right
 }
 
+func (c LessThanOrEqualComparison) Type() Type {
+	return "bool"
+}
+
 type LessThanComparison struct {
 	Left, Right Value
 }
@@ -114,4 +133,8 @@ func (gc LessThanComparison) BoolValue() bool {
 	// This method is mostly a sentinal, the value returned doesn't matter
 	// and since left and right are interfaces, > doesn't exist.
 	return true //gc.Left >= gc.Right
+}
+
+func (c LessThanComparison) Type() Type {
+	return "bool"
 }

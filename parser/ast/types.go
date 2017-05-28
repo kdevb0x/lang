@@ -4,24 +4,41 @@ import (
 	"fmt"
 )
 
+type Type string
+
 type VarWithType struct {
 	Name Variable
-	Type string
+	Typ  Type
 }
 
+func (vt VarWithType) Type() Type {
+	return vt.Typ
+}
 func (vt VarWithType) Node() Node {
 	return vt
 }
 
+func (v VarWithType) Value() interface{} {
+	return v.Name
+}
+
+func (v VarWithType) String() string {
+	return fmt.Sprintf("VarWithType{%v %v}", v.Name, v.Typ)
+}
+
 type Node interface {
 	Node() Node
-	// String() string
 }
 
 type MutStmt struct {
 	Var          VarWithType
 	InitialValue Value
 }
+
+func (m MutStmt) Type() Type {
+	return m.Var.Type()
+}
+
 type LetStmt struct {
 	Var   VarWithType
 	Value Value
@@ -29,6 +46,14 @@ type LetStmt struct {
 
 func (s LetStmt) Node() Node {
 	return s
+}
+
+func (l LetStmt) Type() Type {
+	return l.Var.Type()
+}
+
+func (ls LetStmt) String() string {
+	return fmt.Sprintf("LetStmt{%v, Value: %v}", ls.Var, ls.Value)
 }
 
 type BlockStmt struct {
@@ -51,7 +76,7 @@ func (b BlockStmt) String() string {
 }
 
 func (ms MutStmt) String() string {
-	return fmt.Sprintf("MutStmt{Name: %v, InitialValue: %v}", ms.Var.Name.String(), ms.InitialValue)
+	return fmt.Sprintf("MutStmt{%v, InitialValue: %v}", ms.Var, ms.InitialValue)
 }
 
 func (ms MutStmt) Node() Node {
@@ -66,10 +91,11 @@ type BoolValue interface {
 type Value interface {
 	Node
 	Value() interface{}
+	Type() Type
 }
 
 type AssignmentOperator struct {
-	Variable Variable
+	Variable VarWithType
 	Value    Value
 }
 
@@ -93,6 +119,10 @@ func (ao AdditionOperator) String() string {
 	return fmt.Sprintf("(%v + %v)", ao.Left, ao.Right)
 }
 
+func (ao AdditionOperator) Type() Type {
+	return ao.Left.Type()
+}
+
 type SubtractionOperator struct {
 	Left, Right Value
 }
@@ -107,6 +137,10 @@ func (so SubtractionOperator) Value() interface{} {
 
 func (o SubtractionOperator) String() string {
 	return fmt.Sprintf("(%v - %v)", o.Left, o.Right)
+}
+
+func (o SubtractionOperator) Type() Type {
+	return o.Left.Type()
 }
 
 type MulOperator struct {
@@ -125,6 +159,10 @@ func (o MulOperator) String() string {
 	return fmt.Sprintf("(%v * %v)", o.Left, o.Right)
 }
 
+func (o MulOperator) Type() Type {
+	return o.Left.Type()
+}
+
 type DivOperator struct {
 	Left, Right Value
 }
@@ -138,6 +176,10 @@ func (mo DivOperator) Node() Node {
 }
 func (o DivOperator) String() string {
 	return fmt.Sprintf("(%v / %v)", o.Left, o.Right)
+}
+
+func (o DivOperator) Type() Type {
+	return o.Left.Type()
 }
 
 type ModOperator struct {
@@ -156,14 +198,15 @@ func (m ModOperator) String() string {
 	return fmt.Sprintf("ModOperator{%v mod %v}", m.Left, m.Right)
 }
 
-type Variable string
-
-func (v Variable) Value() interface{} {
-	return v
+func (m ModOperator) Type() Type {
+	return m.Left.Type()
 }
 
+type Variable string
+
 func (v Variable) String() string {
-	return fmt.Sprintf("Variable(%s)", string(v))
+	return string(v)
+	//return fmt.Sprintf("Variable(%s)", string(v))
 }
 
 func (v Variable) Node() Node {

@@ -9,13 +9,13 @@ import (
 )
 
 type variableLayout struct {
-	values   map[ast.Variable]ir.Register
+	values   map[ast.VarWithType]ir.Register
 	tempVars int
 }
 
 // Reserves the next available register for varname
-func (c *variableLayout) NextLocalRegister(varname ast.Variable) ir.Register {
-	if varname == "" {
+func (c *variableLayout) NextLocalRegister(varname ast.VarWithType) ir.Register {
+	if varname.Name == "" {
 		c.tempVars++
 		return ir.LocalValue(len(c.values) + c.tempVars - 1)
 	}
@@ -26,7 +26,7 @@ func (c *variableLayout) NextLocalRegister(varname ast.Variable) ir.Register {
 
 // Reserves a register for a function parameter. This must be done for every
 // parameter, before any LocalRegister calls are made.
-func (c *variableLayout) FuncParamRegister(varname ast.Variable, i int) ir.Register {
+func (c *variableLayout) FuncParamRegister(varname ast.VarWithType, i int) ir.Register {
 	c.tempVars--
 
 	c.values[varname] = ir.FuncArg(i)
@@ -35,13 +35,13 @@ func (c *variableLayout) FuncParamRegister(varname ast.Variable, i int) ir.Regis
 
 // Sets a variable to refer to an existing register, without generating a new
 // one.
-func (c *variableLayout) SetLocalRegister(varname ast.Variable, val ir.Register) {
+func (c *variableLayout) SetLocalRegister(varname ast.VarWithType, val ir.Register) {
 	c.values[varname] = val
 }
 
 // Gets the register for an existing variable. Panics on invalid variables.
-func (c variableLayout) Get(varname ast.Variable) ir.Register {
-	if varname == "" {
+func (c variableLayout) Get(varname ast.VarWithType) ir.Register {
+	if varname.Name == "" {
 		panic("Can not get empty varname")
 	}
 	return c.values[varname]
@@ -49,7 +49,7 @@ func (c variableLayout) Get(varname ast.Variable) ir.Register {
 
 // Gets the register for an existing variable, and a bool denoting whether
 // the variable exists or not.
-func (c variableLayout) SafeGet(varname ast.Variable) (ir.Register, bool) {
+func (c variableLayout) SafeGet(varname ast.VarWithType) (ir.Register, bool) {
 	v, ok := c.values[varname]
 	return v, ok
 }
@@ -57,11 +57,11 @@ func (c variableLayout) SafeGet(varname ast.Variable) (ir.Register, bool) {
 // Compile takes an AST and writes the assembly that it compiles to to
 // w.
 func GenerateIR(node ast.Node) (ir.Func, error) {
-	context := &variableLayout{make(map[ast.Variable]ir.Register), 0}
+	context := &variableLayout{make(map[ast.VarWithType]ir.Register), 0}
 	switch n := node.(type) {
 	case ast.ProcDecl:
 		for i, arg := range n.Args {
-			context.FuncParamRegister(arg.Name, i)
+			context.FuncParamRegister(arg, i)
 		}
 		body, err := compileBlock(n.Body, context)
 		if err != nil {
@@ -70,7 +70,7 @@ func GenerateIR(node ast.Node) (ir.Func, error) {
 		return ir.Func{Name: n.Name, Body: body, NumArgs: uint(len(n.Args))}, nil
 	case ast.FuncDecl:
 		for i, arg := range n.Args {
-			context.FuncParamRegister(arg.Name, i)
+			context.FuncParamRegister(arg, i)
 		}
 		body, err := compileBlock(n.Body, context)
 		if err != nil {
@@ -86,12 +86,12 @@ func GenerateIR(node ast.Node) (ir.Func, error) {
 func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]ir.Opcode, error) {
 	var ops []ir.Opcode
 	var argRegs []ir.Register
-	for _, arg := range fc.Args {
+	for _, arg := range fc.UserArgs {
 		switch a := arg.(type) {
 
 		case ast.StringLiteral, ast.IntLiteral, ast.BoolLiteral:
 			argRegs = append(argRegs, getRegister(a, context))
-		case ast.Variable:
+		case ast.VarWithType:
 			argRegs = append(argRegs, context.Get(a))
 		case ast.FuncCall:
 			// a function call as a parameter to a function call in
@@ -102,7 +102,7 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]ir.Opc
 				return nil, err
 			}
 			ops = append(ops, fc...)
-			reg := context.NextLocalRegister("")
+			reg := context.NextLocalRegister(ast.VarWithType{})
 
 			ops = append(ops,
 				ir.MOV{
@@ -146,7 +146,7 @@ func getRegister(n ast.Node, context *variableLayout) ir.Register {
 			return ir.IntLiteral(1)
 		}
 		return ir.IntLiteral(0)
-	case ast.Variable:
+	case ast.VarWithType:
 		return context.Get(v)
 	default:
 		panic(fmt.Sprintf("Unhandled type in getRegister: %v", reflect.TypeOf(v)))
@@ -164,16 +164,15 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 			}
 			ops = append(ops, fc...)
 		case ast.LetStmt:
+			reg := context.NextLocalRegister(s.Var)
 			switch v := s.Value.(type) {
 			case ast.IntLiteral, ast.StringLiteral, ast.BoolLiteral:
-				reg := context.NextLocalRegister(s.Var.Name)
 				ops = append(ops, ir.MOV{
 					Src: getRegister(v, context),
 					Dst: reg,
 				})
 			case ast.AdditionOperator, ast.SubtractionOperator,
 				ast.DivOperator, ast.MulOperator, ast.ModOperator:
-				reg := context.NextLocalRegister(s.Var.Name)
 				body, r, err := evaluateValue(s.Value, context)
 				if err != nil {
 					return nil, err
@@ -183,9 +182,19 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 					Src: r,
 					Dst: reg,
 				})
+			case ast.FuncCall:
+				fc, err := callFunc(v, context, false)
+				if err != nil {
+					return nil, err
+				}
+				ops = append(ops, fc...)
+				ops = append(ops, ir.MOV{
+					Src: ir.FuncRetVal(0),
+					Dst: reg,
+				})
+
 			default:
 				panic("Unsupported let statement assignment")
-
 			}
 		case ast.ReturnStmt:
 			switch arg := s.Val.(type) {
@@ -209,14 +218,14 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 		case ast.MutStmt:
 			switch v := s.InitialValue.(type) {
 			case ast.IntLiteral, ast.BoolLiteral, ast.StringLiteral:
-				reg := context.NextLocalRegister(s.Var.Name)
+				reg := context.NextLocalRegister(s.Var)
 				ops = append(ops, ir.MOV{
 					Src: getRegister(s.InitialValue, context),
 					Dst: reg,
 				})
 
 			case ast.AdditionOperator, ast.SubtractionOperator, ast.MulOperator, ast.DivOperator, ast.ModOperator:
-				reg := context.NextLocalRegister(s.Var.Name)
+				reg := context.NextLocalRegister(s.Var)
 				body, r, err := evaluateValue(s.InitialValue, context)
 				if err != nil {
 					return nil, err
@@ -227,8 +236,8 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 					Dst: reg,
 				})
 
-			case ast.Variable:
-				reg := context.NextLocalRegister(s.Var.Name)
+			case ast.VarWithType:
+				reg := context.NextLocalRegister(s.Var)
 				val := context.Get(v)
 				ops = append(ops, ir.MOV{
 					Src: val,
@@ -394,6 +403,12 @@ func evaluateCondition(val ast.BoolValue, context *variableLayout, faillabel ir.
 			},
 		})
 		return ops, nil
+	case ast.BoolLiteral:
+		if c {
+			return ops, nil
+		}
+		ops = append(ops, ir.JMP{faillabel})
+		return ops, nil
 	default:
 		panic(fmt.Sprintf("Condition type not implemented: %v", reflect.TypeOf(c)))
 	}
@@ -406,9 +421,9 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]ir.Opcode, ir.Regi
 	var ops []ir.Opcode
 	switch s := val.(type) {
 	case ast.AdditionOperator:
-		a := context.NextLocalRegister("")
+		a := context.NextLocalRegister(ast.VarWithType{})
 		switch s.Left.(type) {
-		case ast.IntLiteral, ast.Variable:
+		case ast.IntLiteral, ast.VarWithType:
 			ops = append(ops, ir.ADD{
 				Src: getRegister(s.Left, context),
 				Dst: a,
@@ -426,7 +441,7 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]ir.Opcode, ir.Regi
 
 		var r ir.Register
 		switch s.Right.(type) {
-		case ast.IntLiteral, ast.Variable:
+		case ast.IntLiteral, ast.VarWithType:
 			r = getRegister(s.Right, context)
 		case ast.AdditionOperator, ast.SubtractionOperator, ast.MulOperator, ast.DivOperator, ast.ModOperator:
 			body, r2, err := evaluateValue(s.Right, context)
@@ -445,9 +460,9 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]ir.Opcode, ir.Regi
 		})
 		return ops, a, nil
 	case ast.SubtractionOperator:
-		a := context.NextLocalRegister("")
+		a := context.NextLocalRegister(ast.VarWithType{})
 		switch s.Left.(type) {
-		case ast.IntLiteral, ast.Variable:
+		case ast.IntLiteral, ast.VarWithType:
 			ops = append(ops, ir.MOV{
 				Src: getRegister(s.Left, context),
 				Dst: a,
@@ -464,7 +479,7 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]ir.Opcode, ir.Regi
 		}
 
 		switch s.Right.(type) {
-		case ast.IntLiteral, ast.Variable:
+		case ast.IntLiteral, ast.VarWithType:
 			ops = append(ops, ir.SUB{
 				Src: getRegister(s.Right, context),
 				Dst: a,
@@ -495,7 +510,7 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]ir.Opcode, ir.Regi
 			return nil, nil, err
 		}
 
-		a := context.NextLocalRegister("")
+		a := context.NextLocalRegister(ast.VarWithType{})
 		ops = append(ops, bodyb...)
 		ops = append(ops, ir.MOD{
 			Left:  ra,
@@ -504,17 +519,17 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]ir.Opcode, ir.Regi
 		})
 		return ops, a, nil
 	case ast.MulOperator:
-		a := context.NextLocalRegister("")
+		a := context.NextLocalRegister(ast.VarWithType{})
 		var l, r ir.Register
 		switch s.Left.(type) {
-		case ast.IntLiteral, ast.Variable:
+		case ast.IntLiteral, ast.VarWithType:
 			l = getRegister(s.Left, context)
 		default:
 			panic(fmt.Sprintf("Unhandled left parameter in mul %v", reflect.TypeOf(s.Left)))
 		}
 
 		switch s.Right.(type) {
-		case ast.IntLiteral, ast.Variable:
+		case ast.IntLiteral, ast.VarWithType:
 			r = getRegister(s.Right, context)
 		case ast.SubtractionOperator, ast.AdditionOperator, ast.MulOperator, ast.DivOperator:
 			body, reg, err := evaluateValue(s.Right, context)
@@ -531,17 +546,17 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]ir.Opcode, ir.Regi
 		})
 		return ops, a, nil
 	case ast.DivOperator:
-		a := context.NextLocalRegister("")
+		a := context.NextLocalRegister(ast.VarWithType{})
 		var l, r ir.Register
 		switch s.Left.(type) {
-		case ast.IntLiteral, ast.Variable:
+		case ast.IntLiteral, ast.VarWithType:
 			l = getRegister(s.Left, context)
 		default:
 			panic(fmt.Sprintf("Unhandled left parameter in div %v", reflect.TypeOf(s.Left)))
 		}
 
 		switch s.Right.(type) {
-		case ast.IntLiteral, ast.Variable:
+		case ast.IntLiteral, ast.VarWithType:
 			r = getRegister(s.Right, context)
 		case ast.SubtractionOperator, ast.AdditionOperator, ast.MulOperator, ast.DivOperator:
 			body, reg, err := evaluateValue(s.Right, context)
@@ -560,7 +575,7 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]ir.Opcode, ir.Regi
 			Dst:   a,
 		})
 		return ops, a, nil
-	case ast.Variable, ast.IntLiteral, ast.BoolLiteral:
+	case ast.VarWithType, ast.IntLiteral, ast.BoolLiteral:
 		return nil, getRegister(s, context), nil
 	default:
 		panic(fmt.Errorf("Unhandled value type: %v", reflect.TypeOf(s)))

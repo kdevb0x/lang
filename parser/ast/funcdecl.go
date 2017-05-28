@@ -6,14 +6,26 @@ import (
 
 type Callable interface {
 	GetArgs() []VarWithType
+	Type() Type
+	ReturnTuple() Tuple
+}
+
+type Tuple []VarWithType
+
+func (t Tuple) Type() Type {
+	if len(t) == 0 {
+		return "(none)"
+	}
+	// FIXME: This should take into account all types.
+	return t[0].Type()
 }
 
 // type Function should be the same as procedure, but
 // until the statements are settled we're just have Funcedure
 type FuncDecl struct {
 	Name   string
-	Args   []VarWithType
-	Return []VarWithType
+	Args   Tuple
+	Return Tuple
 
 	Body BlockStmt
 }
@@ -28,4 +40,12 @@ func (pd FuncDecl) GetArgs() []VarWithType {
 
 func (fd FuncDecl) String() string {
 	return fmt.Sprintf("FuncDecl{\n\tName: %v,\n\tArgs: %v,\n\tReturn: %v,\n\tBody: %v}", fd.Name, fd.Args, fd.Return, fd.Body)
+}
+
+func (fd FuncDecl) Type() Type {
+	return fd.Return.Type()
+}
+
+func (fd FuncDecl) ReturnTuple() Tuple {
+	return fd.Return
 }

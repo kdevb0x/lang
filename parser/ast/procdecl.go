@@ -2,15 +2,14 @@ package ast
 
 import (
 	"fmt"
-	"github.com/driusan/lang/parser/token"
 )
 
 // type Function should be the same as procedure, but
 // until the statements are settled we're just have Procedure
 type ProcDecl struct {
 	Name   string
-	Args   []VarWithType
-	Return []VarWithType
+	Args   Tuple
+	Return Tuple
 
 	Body BlockStmt
 }
@@ -27,20 +26,14 @@ func (pd ProcDecl) Node() Node {
 	return pd
 }
 
-func (pd *ProcDecl) PopulateName(t token.Token) error {
-	switch v := t.(type) {
-	case token.Whitespace:
-		// an error would be fatal, so just return nil
-		// to try again on the next token
-		return nil
-	case token.Unknown:
-		pd.Name = v.String()
-		return nil
-	default:
-		return fmt.Errorf("Invalid proc name: %v", t.String())
-	}
-}
-
 func (pd ProcDecl) GetArgs() []VarWithType {
 	return pd.Args
+}
+
+func (pd ProcDecl) Type() Type {
+	return pd.Return.Type()
+}
+
+func (pd ProcDecl) ReturnTuple() Tuple {
+	return pd.Return
 }

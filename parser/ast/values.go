@@ -24,11 +24,12 @@ func isInfixOperator(pos int, tokens []token.Token) bool {
 	return false
 }
 
-func consumeValue(start int, tokens []token.Token, c Context) (int, Value, error) {
+func consumeValue(start int, tokens []token.Token, c *Context) (int, Value, error) {
 	// FIXME: Implement this properly
 	return consumeBoolValue(start, tokens, c)
 }
 
+/*
 func consumeIntValue(start int, tokens []token.Token, c Context) (int, Value, error) {
 	var partial Value
 	for i := start; i < len(tokens); i++ {
@@ -36,11 +37,11 @@ func consumeIntValue(start int, tokens []token.Token, c Context) (int, Value, er
 		case token.Unknown:
 			if n, err := strconv.Atoi(t.String()); err == nil {
 				partial = IntLiteral(n)
-			} else if c.IsVariable(t.String()) {
+			} else if nm := t.String(); c.IsVariable(nm) {
 				// If it's a defined variable, that takes
 				// precedence as a symbol over a function
 				// name.
-				partial = Variable(t.String())
+				partial = c.Variables[nm]
 			} else if c.IsFunction(t.String()) {
 				// if it's a function, call it.
 				n, fc, err := consumeFuncCall(i, tokens, c)
@@ -52,7 +53,7 @@ func consumeIntValue(start int, tokens []token.Token, c Context) (int, Value, er
 			} else {
 				// FIXME: Otherwise, it may still be a parameter.
 				// Validate this.
-				partial = Variable(t.String())
+				partial = c.Variables[t.String()]
 			}
 
 			switch tokens[i+1] {
@@ -97,6 +98,7 @@ func consumeIntValue(start int, tokens []token.Token, c Context) (int, Value, er
 	}
 	panic("Don't know how many tokens were consumed")
 }
+*/
 
 func operatorPrecedence(op Value) int {
 	switch op.(type) {
@@ -269,12 +271,12 @@ func invertPrecedence(node Value) Value {
 
 	var isLit bool
 	switch op3.(type) {
-	case IntLiteral, BoolLiteral, Variable:
+	case IntLiteral, BoolLiteral, VarWithType:
 		isLit = true
 	}
 
 	switch op2.(type) {
-	case IntLiteral, BoolLiteral, Variable:
+	case IntLiteral, BoolLiteral, VarWithType:
 		isLit = true
 	}
 	if isLit || operatorPrecedence(op3) > operatorPrecedence(op2) {
@@ -338,7 +340,7 @@ func createOperatorNode(op token.Token, left, right Value) Value {
 	}
 
 	switch right.(type) {
-	case IntLiteral, Variable, BoolLiteral:
+	case IntLiteral, VarWithType, BoolLiteral:
 		return v
 	}
 
@@ -347,7 +349,7 @@ func createOperatorNode(op token.Token, left, right Value) Value {
 	}
 	return invertPrecedence(v)
 }
-func consumeBoolValue(start int, tokens []token.Token, c Context) (int, Value, error) {
+func consumeBoolValue(start int, tokens []token.Token, c *Context) (int, Value, error) {
 	for i := start; i < len(tokens); i++ {
 		switch t := tokens[i].(type) {
 		case token.Unknown:
@@ -362,7 +364,7 @@ func consumeBoolValue(start int, tokens []token.Token, c Context) (int, Value, e
 				// If it's a defined variable, that takes
 				// precedence as a symbol over a function
 				// name.
-				partial = Variable(t.String())
+				partial = c.Variables[t.String()]
 			} else if c.IsFunction(t.String()) {
 				// if it's a function, call it.
 				n, fc, err := consumeFuncCall(i, tokens, c)
@@ -374,7 +376,7 @@ func consumeBoolValue(start int, tokens []token.Token, c Context) (int, Value, e
 			} else {
 				// FIXME: Otherwise, it may still be a parameter.
 				// Validate this.
-				partial = Variable(t.String())
+				partial = c.Variables[t.String()]
 			}
 
 			for isInfixOperator(i+1, tokens) {
@@ -399,6 +401,14 @@ func consumeBoolValue(start int, tokens []token.Token, c Context) (int, Value, e
 			return i + 1 - start, partial, nil
 		case token.Whitespace:
 			continue
+		case token.Char:
+			if tokens[i] == token.Char(`"`) {
+				if tokens[i+2] != token.Char(`"`) {
+					return 0, nil, fmt.Errorf("Invalid string at %v", tokens[i])
+				}
+				return 3, StringLiteral(tokens[i+1].String()), nil
+			}
+			return 0, nil, fmt.Errorf("Invalid character at %v", tokens[i])
 		default:
 			return 0, nil, fmt.Errorf("Invalid value: %v", tokens[i])
 		}

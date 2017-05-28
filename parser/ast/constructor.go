@@ -8,25 +8,27 @@ import (
 )
 
 type Context struct {
-	Variables map[string]bool
-	Mutables  map[string]bool
-	Functions map[string]Callable
+	Variables   map[string]VarWithType
+	Mutables    map[string]VarWithType
+	Functions   map[string]Callable
+	PureContext bool // true if inside a pure function.
 }
 
 func NewContext() Context {
 	return Context{
-		Variables: make(map[string]bool),
+		Variables: make(map[string]VarWithType),
 		Functions: map[string]Callable{
 			"print": FuncDecl{Name: "print"},
 		},
-		Mutables: make(map[string]bool),
+		Mutables:    make(map[string]VarWithType),
+		PureContext: false,
 	}
 }
 func (c Context) Clone() Context {
 	var c2 Context
-	c.Variables = make(map[string]bool)
-	c.Functions = make(map[string]Callable)
-	c.Mutables = make(map[string]bool)
+	c2.Variables = make(map[string]VarWithType)
+	c2.Functions = make(map[string]Callable)
+	c2.Mutables = make(map[string]VarWithType)
 	for k, v := range c.Variables {
 		c2.Variables[k] = v
 	}
@@ -37,12 +39,13 @@ func (c Context) Clone() Context {
 	for k, v := range c.Functions {
 		c2.Functions[k] = v
 	}
+	c2.PureContext = c.PureContext
 	return c2
 }
 
 func (c Context) IsVariable(s string) bool {
-	for k := range c.Variables {
-		if k == s {
+	for _, v := range c.Variables {
+		if string(v.Name) == s {
 			return true
 		}
 	}
@@ -50,8 +53,8 @@ func (c Context) IsVariable(s string) bool {
 }
 
 func (c Context) IsMutable(s string) bool {
-	for k := range c.Mutables {
-		if k == s {
+	for _, v := range c.Mutables {
+		if string(v.Name) == s {
 			return true
 		}
 	}
@@ -118,7 +121,7 @@ func Construct(tokens []token.Token) ([]Node, error) {
 		}
 	*/
 
-	err := extractPrototypes(tokens, c)
+	err := extractPrototypes(tokens, &c)
 	if err != nil {
 		return nil, err
 	}
@@ -134,8 +137,9 @@ func Construct(tokens []token.Token) ([]Node, error) {
 		case ProcDecl:
 			// move past the "proc" keyword and reset the local
 			// variables and mutables, since we're in a new function.
-			c.Variables = make(map[string]bool)
-			c.Mutables = make(map[string]bool)
+			c.Variables = make(map[string]VarWithType)
+			c.Mutables = make(map[string]VarWithType)
+			c.PureContext = false
 			i++
 
 			// FIXME: This should check that the name is valid and
@@ -143,7 +147,7 @@ func Construct(tokens []token.Token) ([]Node, error) {
 			cur.Name = tokens[i].String()
 			i++
 
-			n, a, r, err := consumePrototype(i, tokens, c)
+			n, a, r, err := consumePrototype(i, tokens, &c)
 			if err != nil {
 				return nil, err
 			}
@@ -151,7 +155,10 @@ func Construct(tokens []token.Token) ([]Node, error) {
 			cur.Return = r
 			i += n
 
-			n, block, err := consumeBlock(i, tokens, c)
+			for _, v := range cur.Args {
+				c.Variables[string(v.Name)] = v
+			}
+			n, block, err := consumeBlock(i, tokens, &c)
 			if err != nil {
 				return nil, err
 			}
@@ -161,10 +168,12 @@ func Construct(tokens []token.Token) ([]Node, error) {
 
 			nodes = append(nodes, cur)
 		case FuncDecl:
-			// move past the "proc" keyword and reset the local
+			// move past the "func" keyword and reset the local
 			// variables and mutables, since we're in a new function.
-			c.Variables = make(map[string]bool)
-			c.Mutables = make(map[string]bool)
+			c.Variables = make(map[string]VarWithType)
+			c.Mutables = make(map[string]VarWithType)
+			c.PureContext = true
+
 			i++
 
 			// FIXME: This should check that the name is valid and
@@ -172,15 +181,18 @@ func Construct(tokens []token.Token) ([]Node, error) {
 			cur.Name = tokens[i].String()
 			i++
 
-			n, a, r, err := consumePrototype(i, tokens, c)
+			n, a, r, err := consumePrototype(i, tokens, &c)
 			if err != nil {
 				return nil, err
 			}
 			cur.Args = a
 			cur.Return = r
 			i += n
+			for _, v := range cur.Args {
+				c.Variables[string(v.Name)] = v
+			}
 
-			n, block, err := consumeBlock(i, tokens, c)
+			n, block, err := consumeBlock(i, tokens, &c)
 			if err != nil {
 				return nil, err
 			}
@@ -194,7 +206,7 @@ func Construct(tokens []token.Token) ([]Node, error) {
 	return nodes, nil
 }
 
-func consumePrototype(start int, tokens []token.Token, c Context) (n int, args []VarWithType, retn []VarWithType, err error) {
+func consumePrototype(start int, tokens []token.Token, c *Context) (n int, args []VarWithType, retn []VarWithType, err error) {
 	n, argsDefn, err := consumeArgs(start, tokens, c)
 	if err != nil {
 		return 0, nil, nil, err
@@ -207,7 +219,7 @@ func consumePrototype(start int, tokens []token.Token, c Context) (n int, args [
 	return n + n2, argsDefn, retDefn, nil
 }
 
-func extractPrototypes(tokens []token.Token, c Context) error {
+func extractPrototypes(tokens []token.Token, c *Context) error {
 	for i := 0; i < len(tokens); i++ {
 		// Parse the top level "func" or "proc" keyword
 		cn, err := topLevelNode(tokens[i])
@@ -298,7 +310,7 @@ func extractPrototypes(tokens []token.Token, c Context) error {
 // consumeBlock consumes a balanced number of tokens delimited by a balanced
 // number of "{" and "}" characters. It returns the ASTNode for the block, and
 // the number of tokens that were consumed.
-func consumeBlock(start int, tokens []token.Token, c Context) (int, BlockStmt, error) {
+func consumeBlock(start int, tokens []token.Token, c *Context) (int, BlockStmt, error) {
 	if tokens[start] != token.Char("{") {
 		return 0, BlockStmt{}, fmt.Errorf("Invalid block. (%v)", tokens[start])
 	}
@@ -308,7 +320,7 @@ func consumeBlock(start int, tokens []token.Token, c Context) (int, BlockStmt, e
 		// First handle open or close brackets
 		if tokens[i] == token.Char("{") {
 			c2 := c.Clone()
-			n, subblock, err := consumeBlock(i, tokens, c2)
+			n, subblock, err := consumeBlock(i, tokens, &c2)
 			if err != nil {
 				return 0, BlockStmt{}, err
 			}
@@ -341,14 +353,15 @@ func consumeBlock(start int, tokens []token.Token, c Context) (int, BlockStmt, e
 				}
 
 				if !c.IsMutable(t.String()) {
-					return 0, BlockStmt{}, fmt.Errorf("Can not mutate immutable variable %v", tokens[i])
+					return 0, BlockStmt{}, fmt.Errorf(`Can not assign to immutable let variable "%v".`, tokens[i])
 				}
 				n, val, err := consumeValue(i+2, tokens, c)
 				if err != nil {
 					return 0, BlockStmt{}, err
 				}
+
 				blockStmt.Stmts = append(blockStmt.Stmts, AssignmentOperator{
-					Variable: Variable(tokens[i].String()),
+					Variable: c.Variables[tokens[i].String()],
 					Value:    val,
 				})
 				i += n + 1
@@ -436,7 +449,7 @@ func consumeBlock(start int, tokens []token.Token, c Context) (int, BlockStmt, e
 	return 0, BlockStmt{}, fmt.Errorf("Unterminated block statement")
 }
 
-func consumeFuncCall(start int, tokens []token.Token, c Context) (int, FuncCall, error) {
+func consumeFuncCall(start int, tokens []token.Token, c *Context) (int, FuncCall, error) {
 	name := tokens[start].String()
 	f := FuncCall{
 		Name: name,
@@ -446,7 +459,11 @@ func consumeFuncCall(start int, tokens []token.Token, c Context) (int, FuncCall,
 	if !ok {
 		return 0, FuncCall{}, fmt.Errorf("Undefined function: %v", name)
 	}
-
+	if c.PureContext {
+		if _, ok := decl.(ProcDecl); ok {
+			return 0, FuncCall{}, fmt.Errorf("Can not call procedure from pure function.")
+		}
+	}
 	// FIXME: Hack because printf is variadic, and variadic functions aren't
 	// implemented, but print is required for pretty much every test.
 	if name == "print" {
@@ -459,7 +476,7 @@ func consumeFuncCall(start int, tokens []token.Token, c Context) (int, FuncCall,
 					return i - start, f, nil
 				} else if t == `"` {
 					if consumingString {
-						f.Args = append(f.Args, strLit)
+						f.UserArgs = append(f.UserArgs, strLit)
 						strLit = ""
 						consumingString = false
 					} else {
@@ -473,16 +490,16 @@ func consumeFuncCall(start int, tokens []token.Token, c Context) (int, FuncCall,
 				}
 			case token.Unknown:
 				if c.IsVariable(t.String()) {
-					f.Args = append(f.Args, Variable(t.String()))
+					f.UserArgs = append(f.UserArgs, c.Variables[t.String()])
 				} else if c.IsFunction(t.String()) {
 					n, subcall, err := consumeFuncCall(i, tokens, c)
 					if err != nil {
 						return 0, FuncCall{}, err
 					}
-					f.Args = append(f.Args, subcall)
+					f.UserArgs = append(f.UserArgs, subcall)
 					i += n
 				} else {
-					panic("Unhandled token" + t.String())
+					return 0, FuncCall{}, fmt.Errorf(`Use of undefined variable "%v".`, t)
 				}
 			case token.String:
 			default:
@@ -496,34 +513,43 @@ func consumeFuncCall(start int, tokens []token.Token, c Context) (int, FuncCall,
 
 	// FIXME: This should support variadic functions, too.
 	args := decl.GetArgs()
-	if len(args) == 0 {
-		if tokens[start+1] == token.Char("(") && tokens[start+2] == token.Char(")") {
+
+	f.Returns = decl.ReturnTuple()
+
+	if tokens[start+1] == token.Char("(") && tokens[start+2] == token.Char(")") {
+		if len(args) == 0 {
 			return 2, f, nil
 		}
-		return 0, FuncCall{}, fmt.Errorf("Unexpected parameter to %v", name)
+		return 0, FuncCall{}, fmt.Errorf("Unexpected number of parameters to %v: got 0 want %v.", tokens[start], len(args))
 	}
+
 	argStart := start + 2 // start = name, +1 = "(", +2 = the first param..
-	for i := 0; i < len(args); i++ {
+argLoop:
+	for {
 		n, val, err := consumeValue(argStart, tokens, c)
 		if err != nil {
 			return 0, FuncCall{}, err
 		}
 		argStart += n
-		if i != len(args)-1 {
-			if tokens[argStart] != token.Char(",") {
-				return 0, FuncCall{}, fmt.Errorf("Invalid call to %v: missing comma between parameters at token %v (arg %d of %d)", name, argStart, i, len(args))
-			}
-		} else if tokens[argStart] != token.Char(")") {
-			return 0, FuncCall{}, fmt.Errorf("Invalid call to %v: missing closing bracket at token %v", name, argStart)
+		switch tokens[argStart] {
+		case token.Char(")"):
+			argStart++
+			f.UserArgs = append(f.UserArgs, val)
+			break argLoop
+		case token.Char(","):
+			argStart++
+			f.UserArgs = append(f.UserArgs, val)
+		default:
+			return 0, FuncCall{}, fmt.Errorf("Invalid token in %v. Expecting ')' or ',' in function argument list")
 		}
-		argStart++
-		f.Args = append(f.Args, val)
+	}
+	if len(args) != len(f.UserArgs) {
+		return 0, FuncCall{}, fmt.Errorf("Unexpected number of parameters to %v: got %v want %v.", tokens[start], len(f.UserArgs), len(args))
 	}
 	return argStart - start - 1, f, nil
-	//return 0, FuncCall{}, fmt.Errorf("Invalid function call to %v. Missing closing bracket", tokens[start])
 }
 
-func consumeLetStmt(start int, tokens []token.Token, c Context) (int, Node, error) {
+func consumeLetStmt(start int, tokens []token.Token, c *Context) (int, Node, error) {
 	l := LetStmt{}
 
 	if tokens[start] != token.Keyword("let") {
@@ -534,15 +560,18 @@ func consumeLetStmt(start int, tokens []token.Token, c Context) (int, Node, erro
 		case token.Unknown:
 			if l.Var.Name == "" {
 				l.Var.Name = Variable(t.String())
-				c.Variables[t.String()] = true
-			} else if l.Var.Type == "" {
-				l.Var.Type = t.String()
+				c.Variables[t.String()] = l.Var
+			} else if l.Var.Typ == "" {
+				l.Var.Typ = Type(t.String())
+				c.Variables[string(l.Var.Name)] = l.Var
 			} else {
 				return 0, nil, fmt.Errorf("Invalid name for let statement")
 			}
 		case token.Type:
-			if l.Var.Type == "" {
-				l.Var.Type = t.String()
+			if l.Var.Typ == "" {
+				l.Var.Typ = Type(t.String())
+				c.Variables[string(l.Var.Name)] = l.Var
+
 			} else {
 				return 0, nil, fmt.Errorf("Unexpected type in let statement")
 
@@ -552,6 +581,9 @@ func consumeLetStmt(start int, tokens []token.Token, c Context) (int, Node, erro
 				n, v, err := consumeValue(i+1, tokens, c)
 				if err != nil {
 					return 0, nil, err
+				}
+				if v.Type() != l.Type() {
+					return 0, nil, fmt.Errorf(`Incompatible type assignment: can not assign %v to %v for variable "%v".`, v.Type(), l.Type(), l.Var.Name)
 				}
 				l.Value = v
 				return i + n - start, l, nil
@@ -566,7 +598,7 @@ func consumeLetStmt(start int, tokens []token.Token, c Context) (int, Node, erro
 	return 0, nil, fmt.Errorf("Invalid let statement")
 }
 
-func consumeMutStmt(start int, tokens []token.Token, c Context) (int, Node, error) {
+func consumeMutStmt(start int, tokens []token.Token, c *Context) (int, Node, error) {
 	l := MutStmt{}
 
 	if tokens[start] != token.Keyword("mut") {
@@ -577,23 +609,27 @@ func consumeMutStmt(start int, tokens []token.Token, c Context) (int, Node, erro
 		case token.Unknown:
 			if l.Var.Name == "" {
 				l.Var.Name = Variable(t.String())
-				c.Variables[t.String()] = true
-				c.Mutables[t.String()] = true
-			} else if l.Var.Type == "" {
-				l.Var.Type = t.String()
+				c.Variables[t.String()] = l.Var
+				c.Mutables[t.String()] = l.Var
+			} else if l.Var.Typ == "" {
+				l.Var.Typ = Type(t.String())
+				c.Variables[string(l.Var.Name)] = l.Var
+				c.Mutables[string(l.Var.Name)] = l.Var
 			} else {
 				return 0, nil, fmt.Errorf("Invalid name for mut statement")
 			}
 		case token.Type:
-			if l.Var.Type == "" {
-				l.Var.Type = t.String()
+			if l.Var.Typ == "" {
+				l.Var.Typ = Type(t.String())
+				c.Variables[string(l.Var.Name)] = l.Var
+				c.Mutables[string(l.Var.Name)] = l.Var
 			} else {
 				return 0, nil, fmt.Errorf("Unexpected type in mut statement")
 
 			}
 		case token.Operator:
 			if t == token.Operator("=") {
-				if l.Var.Type == "" {
+				if l.Var.Type() == "" {
 					return 0, nil, fmt.Errorf("Type inference not yet implemented")
 				}
 				n, v, err := consumeValue(i+1, tokens, c)
@@ -613,7 +649,7 @@ func consumeMutStmt(start int, tokens []token.Token, c Context) (int, Node, erro
 	return 0, nil, fmt.Errorf("Invalid mut statement")
 }
 
-func consumeArgs(start int, tokens []token.Token, c Context) (int, []VarWithType, error) {
+func consumeArgs(start int, tokens []token.Token, c *Context) (int, []VarWithType, error) {
 	var args []VarWithType
 	started := false
 	parsingNames := true
@@ -643,7 +679,7 @@ func consumeArgs(start int, tokens []token.Token, c Context) (int, []VarWithType
 			for _, n := range names {
 				args = append(args, VarWithType{
 					Name: n,
-					Type: t.String(),
+					Typ:  Type(t.String()),
 				})
 			}
 			names = nil
@@ -672,7 +708,7 @@ func consumeTypeList(start int, tokens []token.Token) (int, []VarWithType, error
 		case token.Unknown, token.Type:
 			args = append(args, VarWithType{
 				Name: "",
-				Type: t.String(),
+				Typ:  Type(t.String()),
 			})
 			continue
 		default:

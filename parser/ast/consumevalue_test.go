@@ -232,7 +232,7 @@ func TestConsumeValue(t *testing.T) {
 		tokens, err := token.Tokenize(strings.NewReader(tc.Code))
 		tokens = stripWhitespace(tokens)
 
-		n, value, err := consumeValue(0, tokens, Context{})
+		n, value, err := consumeValue(0, tokens, &Context{})
 		if err != nil {
 			t.Fatal(err)
 		}

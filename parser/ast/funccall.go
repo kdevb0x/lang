@@ -3,8 +3,9 @@ package ast
 import "fmt"
 
 type FuncCall struct {
-	Name string
-	Args []Value
+	Name     string
+	UserArgs []Value
+	Returns  Tuple
 }
 
 func (f FuncCall) Node() Node {
@@ -16,5 +17,13 @@ func (f FuncCall) Value() interface{} {
 }
 
 func (f FuncCall) String() string {
-	return fmt.Sprintf("FuncCall{Name: %v Args: %v}", f.Name, f.Args)
+	return fmt.Sprintf("FuncCall{Name: %v Args: %v}", f.Name, f.UserArgs)
+}
+
+// FIXME: This needs to be updated to work with multiple return functions
+func (f FuncCall) Type() Type {
+	if len(f.Returns) == 0 {
+		return "(none)"
+	}
+	return f.Returns[0].Type()
 }
