@@ -34,6 +34,14 @@ type MutStmt struct {
 	Var          VarWithType
 	InitialValue Value
 }
+type TypeDefn struct {
+	Name         Type
+	ConcreteType Type
+}
+
+func (t TypeDefn) Node() Node {
+	return t
+}
 
 func (m MutStmt) Type() Type {
 	return m.Var.Type()

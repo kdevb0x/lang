@@ -17,13 +17,15 @@ const (
 
 func addToken(cur []Token, val string) []Token {
 	switch val {
-	case "proc", "func", "mut", "let", "while", "if", "else", "return":
+	case "proc", "func", "mut", "let", "while", "if", "else", "return", "type":
 		return append(cur, Keyword(val))
 	case "(", ")", "{", "}", `"`, `,`:
 		return append(cur, Char(val))
 	case "+", "-", "*", "/", "%", "<=", "<", "==", ">", ">=", "=", "!=":
 		return append(cur, Operator(val))
-	case "int", "bool", "string":
+	case "int", "bool", "string",
+		"uint8", "uint16", "uint32", "uint64",
+		"int8", "int16", "int32", "int64":
 		return append(cur, Type(val))
 	}
 	if strings.TrimSpace(val) == "" {

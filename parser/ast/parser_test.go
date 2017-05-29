@@ -20,7 +20,8 @@ func compare(v1, v2 Node) bool {
 		AdditionOperator, SubtractionOperator, AssignmentOperator,
 		MulOperator, DivOperator,
 		EqualityComparison, NotEqualsComparison, GreaterComparison,
-		GreaterOrEqualComparison, LessThanComparison, LessThanOrEqualComparison:
+		GreaterOrEqualComparison, LessThanComparison, LessThanOrEqualComparison,
+		TypeDefn:
 		return v1 == v2
 	}
 
@@ -1437,6 +1438,51 @@ func TestLessThanOrEqualComparisonMath(t *testing.T) {
 	for i, v := range expected {
 		if !compare(ast[i], v) {
 			t.Errorf("let statement (%d): got %v want %v", i, ast[i], v)
+		}
+	}
+
+}
+
+func TestUserDefinedType(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.UserDefinedType))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Node{
+		TypeDefn{
+			Name:         "Foo",
+			ConcreteType: "int",
+		},
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					LetStmt{
+						Var:   VarWithType{"x", "Foo"},
+						Value: IntLiteral(4),
+					},
+					FuncCall{
+						Name:     "print",
+						UserArgs: []Value{StringLiteral(`%d\n`), VarWithType{"x", "Foo"}},
+					},
+				},
+			},
+		},
+	}
+
+	if len(expected) != len(ast) {
+		t.Fatalf("Unexpected AST: got %v want %v", ast, expected)
+	}
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("user defined type (%d): got %v want %v", i, ast[i], v)
 		}
 	}
 

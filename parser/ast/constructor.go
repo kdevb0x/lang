@@ -2,16 +2,17 @@ package ast
 
 import (
 	"fmt"
-	"github.com/driusan/lang/parser/token"
-	// "os"
+	"reflect"
 	"strings"
+
+	"github.com/driusan/lang/parser/token"
 )
 
 type Context struct {
 	Variables   map[string]VarWithType
 	Mutables    map[string]VarWithType
 	Functions   map[string]Callable
-	Types       map[string]Type
+	Types       map[string]TypeDefn
 	PureContext bool // true if inside a pure function.
 }
 
@@ -21,7 +22,12 @@ func NewContext() Context {
 		Functions: map[string]Callable{
 			"print": FuncDecl{Name: "print"},
 		},
-		Mutables:    make(map[string]VarWithType),
+		Mutables: make(map[string]VarWithType),
+		Types: map[string]TypeDefn{
+			"int":    TypeDefn{"int", "int"},
+			"string": TypeDefn{"string", "string"},
+			"bool":   TypeDefn{"bool", "bool"},
+		},
 		PureContext: false,
 	}
 }
@@ -30,6 +36,7 @@ func (c Context) Clone() Context {
 	c2.Variables = make(map[string]VarWithType)
 	c2.Functions = make(map[string]Callable)
 	c2.Mutables = make(map[string]VarWithType)
+	c2.Types = make(map[string]TypeDefn)
 	for k, v := range c.Variables {
 		c2.Variables[k] = v
 	}
@@ -39,6 +46,9 @@ func (c Context) Clone() Context {
 
 	for k, v := range c.Functions {
 		c2.Functions[k] = v
+	}
+	for k, v := range c.Types {
+		c2.Types[k] = v
 	}
 	c2.PureContext = c.PureContext
 	return c2
@@ -78,17 +88,22 @@ func (c Context) ValidType(t Type) bool {
 	return false
 }
 func topLevelNode(T token.Token) (Node, error) {
-	switch T.(type) {
+	switch t := T.(type) {
 	case token.Whitespace:
 		return nil, nil
-	default:
-		if T.String() == "proc" {
+	case token.Keyword:
+		switch t.String() {
+		case "proc":
 			return ProcDecl{}, nil
-		} else if T.String() == "func" {
+		case "func":
 			return FuncDecl{}, nil
+		case "type":
+			return TypeDefn{}, nil
 		}
+		return nil, fmt.Errorf("Invalid top level keyword: %v", t)
+	default:
+		return nil, fmt.Errorf("Invalid top level token: %v %v", T, reflect.TypeOf(T))
 	}
-	return nil, fmt.Errorf("Invalid top level token %v", T)
 }
 
 func Parse(val string) ([]Node, error) {
@@ -206,8 +221,12 @@ func Construct(tokens []token.Token) ([]Node, error) {
 			cur.Body = block
 
 			i += n
-
 			nodes = append(nodes, cur)
+
+		case TypeDefn:
+			nodes = append(nodes, c.Types[tokens[i+1].String()])
+			i += 2
+
 		}
 	}
 	return nodes, nil
@@ -308,6 +327,13 @@ func extractPrototypes(tokens []token.Token, c *Context) error {
 			}
 			i--
 			c.Functions[cur.Name] = cur
+		case TypeDefn:
+			i++
+
+			cur.Name = Type(tokens[i].String())
+			i++
+			cur.ConcreteType = Type(tokens[i].String())
+			c.Types[string(cur.Name)] = cur
 
 		}
 	}
@@ -593,8 +619,14 @@ func consumeLetStmt(start int, tokens []token.Token, c *Context) (int, Node, err
 				if err != nil {
 					return 0, nil, err
 				}
-				if v.Type() != l.Type() {
-					return 0, nil, fmt.Errorf(`Incompatible type assignment: can not assign %v to %v for variable "%v".`, v.Type(), l.Type(), l.Var.Name)
+				if IsLiteral(v) {
+					if !IsCompatibleType(c.Types[string(l.Type())], v) {
+						return 0, nil, fmt.Errorf(`Incompatible type assignment: can not assign %v to %v for variable "%v".`, v.Type(), l.Type(), l.Var.Name)
+					}
+				} else {
+					if v.Type() != l.Type() {
+						return 0, nil, fmt.Errorf(`Incompatible type assignment: can not assign %v to %v for variable "%v".`, v.Type(), l.Type(), l.Var.Name)
+					}
 				}
 				l.Value = v
 				return i + n - start, l, nil
@@ -650,6 +682,16 @@ func consumeMutStmt(start int, tokens []token.Token, c *Context) (int, Node, err
 				if err != nil {
 					return 0, nil, err
 				}
+				if IsLiteral(v) {
+					if !IsCompatibleType(c.Types[string(l.Type())], v) {
+						return 0, nil, fmt.Errorf(`Incompatible type assignment: can not assign %v to %v for variable "%v".`, v.Type(), l.Type(), l.Var.Name)
+					}
+				} else {
+					if v.Type() != l.Type() {
+						return 0, nil, fmt.Errorf(`Incompatible type assignment: can not assign %v to %v for variable "%v".`, v.Type(), l.Type(), l.Var.Name)
+					}
+				}
+
 				l.InitialValue = v
 				return i + n - start, l, nil
 			}

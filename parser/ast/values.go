@@ -29,77 +29,6 @@ func consumeValue(start int, tokens []token.Token, c *Context) (int, Value, erro
 	return consumeBoolValue(start, tokens, c)
 }
 
-/*
-func consumeIntValue(start int, tokens []token.Token, c Context) (int, Value, error) {
-	var partial Value
-	for i := start; i < len(tokens); i++ {
-		switch t := tokens[i].(type) {
-		case token.Unknown:
-			if n, err := strconv.Atoi(t.String()); err == nil {
-				partial = IntLiteral(n)
-			} else if nm := t.String(); c.IsVariable(nm) {
-				// If it's a defined variable, that takes
-				// precedence as a symbol over a function
-				// name.
-				partial = c.Variables[nm]
-			} else if c.IsFunction(t.String()) {
-				// if it's a function, call it.
-				n, fc, err := consumeFuncCall(i, tokens, c)
-				if err != nil {
-					return 0, nil, err
-				}
-				partial = fc
-				i += n
-			} else {
-				// FIXME: Otherwise, it may still be a parameter.
-				// Validate this.
-				partial = c.Variables[t.String()]
-			}
-
-			switch tokens[i+1] {
-			case token.Operator("+"):
-				n, right, err := consumeIntValue(i+2, tokens, c)
-				if err != nil {
-					return 0, nil, err
-				}
-				i += n - 1
-				partial = AdditionOperator{
-					Left:  partial,
-					Right: right,
-				}
-			case token.Operator("-"):
-				n, right, err := consumeIntValue(i+2, tokens, c)
-				if err != nil {
-					return 0, nil, err
-				}
-				i += n - 1
-
-				partial = SubtractionOperator{
-					Left:  partial,
-					Right: right,
-				}
-			case token.Operator("%"):
-				n, right, err := consumeIntValue(i+2, tokens, c)
-				if err != nil {
-					return 0, nil, err
-				}
-				i += n - 1
-				partial = ModOperator{
-					Left:  partial,
-					Right: right,
-				}
-			}
-		default:
-			return i + 2 - start, partial, nil
-		}
-	}
-	if partial == nil {
-		return 0, nil, fmt.Errorf("No value")
-	}
-	panic("Don't know how many tokens were consumed")
-}
-*/
-
 func operatorPrecedence(op Value) int {
 	switch op.(type) {
 	case MulOperator, DivOperator, ModOperator:
@@ -349,6 +278,7 @@ func createOperatorNode(op token.Token, left, right Value) Value {
 	}
 	return invertPrecedence(v)
 }
+
 func consumeBoolValue(start int, tokens []token.Token, c *Context) (int, Value, error) {
 	for i := start; i < len(tokens); i++ {
 		switch t := tokens[i].(type) {

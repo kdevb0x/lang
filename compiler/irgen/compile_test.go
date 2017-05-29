@@ -782,3 +782,38 @@ func TestIRGenSomeMathStatement(t *testing.T) {
 		}
 	}
 }
+
+func TestIRGenUserType(t *testing.T) {
+	ast, err := ast.Parse(sampleprograms.UserDefinedType)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i, err := GenerateIR(ast[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if i.Name != "main" {
+		t.Errorf("Unexpected name: got %v want %v", i.Name, "main")
+	}
+	expected := []ir.Opcode{
+		ir.MOV{
+			Src: ir.IntLiteral(4),
+			Dst: ir.LocalValue(0),
+		},
+		ir.CALL{FName: "printf", Args: []ir.Register{
+			ir.StringLiteral(`%d\n`),
+			ir.LocalValue(0),
+		},
+		},
+	}
+	if len(i.Body) != len(expected) {
+		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
+	}
+
+	for j := range expected {
+		if !compareOp(expected[j], i.Body[j]) {
+			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
+		}
+	}
+}

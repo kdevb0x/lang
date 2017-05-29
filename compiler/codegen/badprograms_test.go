@@ -68,3 +68,9 @@ func ExampleInvalidType() {
 	}
 	// Output: Invalid type: fint
 }
+func ExampleWrongUsertype() {
+	if err := RunProgram("wrongusertype", invalidprograms.WrongUserType); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: Incompatible type assignment: can not assign int to fint for variable "y".
+}

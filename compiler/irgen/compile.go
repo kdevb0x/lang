@@ -77,6 +77,9 @@ func GenerateIR(node ast.Node) (ir.Func, error) {
 			return ir.Func{}, err
 		}
 		return ir.Func{Name: n.Name, Body: body, NumArgs: uint(len(n.Args))}, nil
+	case ast.TypeDefn:
+		// Do nothing, the types have already been validated
+		return ir.Func{}, fmt.Errorf("No IR to generate for type definitions.")
 	default:
 		panic(fmt.Sprintf("Unhandled Node type in compiler %v", reflect.TypeOf(n)))
 	}

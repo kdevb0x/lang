@@ -13,3 +13,11 @@ const InvalidType = `proc main() () {
 	print("%d\n", x)
 }
 `
+
+const WrongUserType = `type fint int
+proc main() () {
+	let x int = 3
+	let y fint = x
+	print("%d\n", x)
+}
+`

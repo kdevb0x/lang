@@ -33,12 +33,19 @@ func RunProgram(name, p string) error {
 	}
 
 	for _, v := range prog {
-		fnc, err := irgen.GenerateIR(v)
-		if err != nil {
-			return err
-		}
-		if err := Compile(f, fnc); err != nil {
-			return err
+		switch v.(type) {
+		case ast.FuncDecl, ast.ProcDecl:
+			fnc, err := irgen.GenerateIR(v)
+			if err != nil {
+				return err
+			}
+			if err := Compile(f, fnc); err != nil {
+				return err
+			}
+		case ast.TypeDefn:
+			// No IR for types, we've already verified them.
+		default:
+			panic("Unhandled AST node type for code generation")
 		}
 	}
 
@@ -333,4 +340,11 @@ func ExampleLessThanOrEqualComparison() {
 	// 1
 	// 2
 	// 3
+}
+
+func ExampleUserDefinedType() {
+	if err := RunProgram("usertype", sampleprograms.UserDefinedType); err != nil {
+		//fmt.Println(err.Error())
+	}
+	// Output: 4
 }

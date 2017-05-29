@@ -4,6 +4,34 @@ import (
 	"fmt"
 )
 
+func IsLiteral(v Value) bool {
+	switch v.(type) {
+	case IntLiteral, BoolLiteral, StringLiteral:
+		return true
+	default:
+		return false
+	}
+}
+
+func IsCompatibleType(t TypeDefn, v Value) bool {
+	switch t2 := v.(type) {
+	case BoolLiteral:
+		return t.ConcreteType == "bool"
+	case IntLiteral:
+		switch t.ConcreteType {
+		case "int":
+			return true
+		default:
+			return false
+		}
+	case StringLiteral:
+		return t.ConcreteType == "string"
+	default:
+		println(t2)
+		return false
+	}
+}
+
 type StringLiteral string
 
 func (v StringLiteral) Value() interface{} {
