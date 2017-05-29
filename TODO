@@ -1,5 +1,4 @@
 - Implement let statement shadowing
-- Implement type inference (add test case)
 - Add more standard datatypes:
 	- (u)int(8/16/32/64)
 	- sum types (add match keyword. add data or enum keyword to define enums or reuse type?)

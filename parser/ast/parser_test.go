@@ -1487,3 +1487,90 @@ func TestUserDefinedType(t *testing.T) {
 	}
 
 }
+
+func TestTypeInference(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.TypeInference))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Node{
+		FuncDecl{
+			Name:   "foo",
+			Args:   []VarWithType{{"x", "int"}},
+			Return: []VarWithType{{"", "int"}},
+
+			Body: BlockStmt{
+				[]Node{
+					MutStmt{
+						Var:          VarWithType{"a", "int"},
+						InitialValue: VarWithType{"x", "int"},
+					},
+					AssignmentOperator{
+						Variable: VarWithType{"a", "int"},
+						Value: AdditionOperator{
+							Left:  VarWithType{"a", "int"},
+							Right: IntLiteral(1),
+						},
+					},
+					LetStmt{
+						Var: VarWithType{"x", "int"},
+						Value: AdditionOperator{
+							Left:  VarWithType{"a", "int"},
+							Right: IntLiteral(1),
+						},
+					},
+					IfStmt{
+						Condition: GreaterComparison{
+							Left:  VarWithType{"x", "int"},
+							Right: IntLiteral(3),
+						},
+						Body: BlockStmt{
+							[]Node{
+								ReturnStmt{VarWithType{"a", "int"}},
+							},
+						},
+					},
+					ReturnStmt{IntLiteral(0)},
+				},
+			},
+		},
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					FuncCall{
+						Name: "print",
+						UserArgs: []Value{
+							StringLiteral(`%d, %d\n`),
+							FuncCall{
+								Name:     "foo",
+								UserArgs: []Value{IntLiteral(1)},
+							},
+							FuncCall{
+								Name:     "foo",
+								UserArgs: []Value{IntLiteral(3)},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if len(expected) != len(ast) {
+		t.Fatalf("Unexpected AST: got %v want %v", ast, expected)
+	}
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("type inference (%d): got %v want %v", i, ast[i], v)
+		}
+	}
+
+}

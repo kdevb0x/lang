@@ -348,3 +348,9 @@ func ExampleUserDefinedType() {
 	}
 	// Output: 4
 }
+func ExampleTypeInference() {
+	if err := RunProgram("typeinference", sampleprograms.TypeInference); err != nil {
+		//fmt.Println(err.Error())
+	}
+	// Output: 0, 4
+}

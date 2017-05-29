@@ -619,6 +619,11 @@ func consumeLetStmt(start int, tokens []token.Token, c *Context) (int, Node, err
 				if err != nil {
 					return 0, nil, err
 				}
+				if l.Var.Type() == "" {
+					l.Var.Typ = v.Type()
+					c.Variables[string(l.Var.Name)] = l.Var
+				}
+
 				if IsLiteral(v) {
 					if !IsCompatibleType(c.Types[string(l.Type())], v) {
 						return 0, nil, fmt.Errorf(`Incompatible type assignment: can not assign %v to %v for variable "%v".`, v.Type(), l.Type(), l.Var.Name)
@@ -675,12 +680,14 @@ func consumeMutStmt(start int, tokens []token.Token, c *Context) (int, Node, err
 			}
 		case token.Operator:
 			if t == token.Operator("=") {
-				if l.Var.Type() == "" {
-					return 0, nil, fmt.Errorf("Type inference not yet implemented")
-				}
 				n, v, err := consumeValue(i+1, tokens, c)
 				if err != nil {
 					return 0, nil, err
+				}
+				if l.Var.Type() == "" {
+					l.Var.Typ = v.Type()
+					c.Variables[string(l.Var.Name)] = l.Var
+					c.Mutables[string(l.Var.Name)] = l.Var
 				}
 				if IsLiteral(v) {
 					if !IsCompatibleType(c.Types[string(l.Type())], v) {

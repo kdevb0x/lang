@@ -175,7 +175,10 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 					Dst: reg,
 				})
 			case ast.AdditionOperator, ast.SubtractionOperator,
-				ast.DivOperator, ast.MulOperator, ast.ModOperator:
+				ast.DivOperator, ast.MulOperator, ast.ModOperator,
+				ast.GreaterComparison, ast.GreaterOrEqualComparison,
+				ast.EqualityComparison, ast.NotEqualsComparison,
+				ast.LessThanComparison, ast.LessThanOrEqualComparison:
 				body, r, err := evaluateValue(s.Value, context)
 				if err != nil {
 					return nil, err
@@ -195,9 +198,8 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 					Src: ir.FuncRetVal(0),
 					Dst: reg,
 				})
-
 			default:
-				panic("Unsupported let statement assignment")
+				panic(fmt.Sprintf("Unsupported let statement assignment type: %v", reflect.TypeOf(v)))
 			}
 		case ast.ReturnStmt:
 			switch arg := s.Val.(type) {

@@ -22,6 +22,10 @@ func (v VarWithType) Value() interface{} {
 	return v.Name
 }
 
+func (v VarWithType) BoolValue() bool {
+	return true
+}
+
 func (v VarWithType) String() string {
 	return fmt.Sprintf("VarWithType{%v %v}", v.Name, v.Typ)
 }

@@ -72,6 +72,16 @@ func consumeCondition(start int, tokens []token.Token, c *Context) (int, BoolVal
 		return n, val, nil
 	case BoolLiteral:
 		return n, val, nil
+	case VarWithType:
+		defn, ok := c.Types[string(val.Type())]
+		if !ok {
+			return 0, nil, fmt.Errorf("Undefined variable %v", val.Name)
+		}
+		if defn.ConcreteType == "bool" {
+			return n, val, nil
+		}
+		return 0, nil, fmt.Errorf("%s is not a boolean variable", val)
+
 	default:
 		return 0, nil, fmt.Errorf("Unsupported comparison %s", reflect.TypeOf(val))
 	}
