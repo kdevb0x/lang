@@ -125,6 +125,13 @@ func ExampleLetStatement() {
 	}
 	// Output: 5
 }
+func ExampleLetStatementShadow() {
+	if err := RunProgram("letstatementshadow", sampleprograms.LetStatementShadow); err != nil {
+		//fmt.Println(err.Error())
+	}
+	// Output: 5
+	// hello
+}
 
 func ExampleCompileHelloWorld2() {
 	if err := RunProgram("helloworld2", sampleprograms.HelloWorld2); err != nil {

@@ -68,9 +68,38 @@ func ExampleInvalidType() {
 	}
 	// Output: Invalid type: fint
 }
+
 func ExampleWrongUsertype() {
 	if err := RunProgram("wrongusertype", invalidprograms.WrongUserType); err != nil {
 		fmt.Println(err.Error())
 	}
 	// Output: Incompatible type assignment: can not assign int to fint for variable "y".
+}
+
+func ExampleMutStatementShadow() {
+	if err := RunProgram("mutstatementshadow", invalidprograms.MutStatementShadow); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: Can not shadow mutable variable "n".
+}
+
+func ExampleMutStatementShadow2() {
+	if err := RunProgram("mutstatementshadow2", invalidprograms.MutStatementShadow2); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: Can not shadow mutable variable "n".
+}
+
+func ExampleMutStatementScopeShadow() {
+	if err := RunProgram("mutstatementscopeshadow", invalidprograms.MutStatementScopeShadow); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: Can not shadow mutable variable "n".
+}
+
+func ExampleMutStatementScopeShadow2() {
+	if err := RunProgram("mutstatementscopeshadow2", invalidprograms.MutStatementScopeShadow2); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: Can not shadow mutable variable "n".
 }

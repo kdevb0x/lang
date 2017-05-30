@@ -108,6 +108,42 @@ func TestIRGenLetStatement(t *testing.T) {
 	}
 }
 
+func TestIRGenLetStatementShadow(t *testing.T) {
+	ast, err := ast.Parse(sampleprograms.LetStatementShadow)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i, err := GenerateIR(ast[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if i.Name != "main" {
+		t.Errorf("Unexpected name: got %v want %v", i.Name, "main")
+	}
+	expected := []ir.Opcode{
+		ir.MOV{
+			Src: ir.IntLiteral(5),
+			Dst: ir.LocalValue(0),
+		},
+		ir.CALL{FName: "printf", Args: []ir.Register{ir.StringLiteral(`%d\n`), ir.LocalValue(0)}},
+		ir.MOV{
+			Src: ir.StringLiteral("hello"),
+			Dst: ir.LocalValue(1),
+		},
+		ir.CALL{FName: "printf", Args: []ir.Register{ir.StringLiteral(`%s\n`), ir.LocalValue(1)}},
+	}
+	if len(i.Body) != len(expected) {
+		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
+	}
+
+	for j := range expected {
+		if !compareOp(expected[j], i.Body[j]) {
+			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
+		}
+	}
+}
+
 func TestIRGenHelloWorld2(t *testing.T) {
 	ast, err := ast.Parse(sampleprograms.HelloWorld2)
 	if err != nil {

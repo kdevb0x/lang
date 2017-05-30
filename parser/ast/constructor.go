@@ -593,6 +593,9 @@ func consumeLetStmt(start int, tokens []token.Token, c *Context) (int, Node, err
 		case token.Unknown:
 			if l.Var.Name == "" {
 				l.Var.Name = Variable(t.String())
+				if _, ok := c.Mutables[t.String()]; ok {
+					return 0, nil, fmt.Errorf("Can not shadow mutable variable \"%v\".", t.String())
+				}
 				c.Variables[t.String()] = l.Var
 			} else if l.Var.Typ == "" {
 				l.Var.Typ = Type(t.String())
@@ -657,6 +660,9 @@ func consumeMutStmt(start int, tokens []token.Token, c *Context) (int, Node, err
 		case token.Unknown:
 			if l.Var.Name == "" {
 				l.Var.Name = Variable(t.String())
+				if _, ok := c.Mutables[t.String()]; ok {
+					return 0, nil, fmt.Errorf("Can not shadow mutable variable \"%v\".", t.String())
+				}
 				c.Variables[t.String()] = l.Var
 				c.Mutables[t.String()] = l.Var
 			} else if l.Var.Typ == "" {

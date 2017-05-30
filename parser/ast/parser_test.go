@@ -425,6 +425,57 @@ func TestLetStatement(t *testing.T) {
 	}
 
 }
+func TestLetStatementShadow(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.LetStatementShadow))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Node{
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					LetStmt{
+						Var:   VarWithType{"n", "int"},
+						Value: IntLiteral(5),
+					},
+					FuncCall{
+						Name: "print",
+						UserArgs: []Value{
+							StringLiteral(`%d\n`),
+							VarWithType{"n", "int"},
+						},
+					},
+					LetStmt{
+						Var:   VarWithType{"n", "string"},
+						Value: StringLiteral("hello"),
+					},
+					FuncCall{
+						Name: "print",
+						UserArgs: []Value{
+							StringLiteral(`%s\n`),
+							VarWithType{"n", "string"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("let statement (%d): got %v want %v", i, ast[i], v)
+		}
+	}
+
+}
 
 func TestMutStatement(t *testing.T) {
 	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.MutAddition))
