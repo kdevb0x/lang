@@ -33,12 +33,12 @@ func compareOp(a, b ir.Opcode) bool {
 	}
 }
 func TestIRGenEmptyMain(t *testing.T) {
-	ast, err := ast.Parse(sampleprograms.EmptyMain)
+	ast, ti, err := ast.Parse(sampleprograms.EmptyMain)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(ast[0])
+	i, err := GenerateIR(ast[0], ti)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,12 +51,12 @@ func TestIRGenEmptyMain(t *testing.T) {
 }
 
 func TestIRGenHelloWorld(t *testing.T) {
-	ast, err := ast.Parse(sampleprograms.HelloWorld)
+	ast, ti, err := ast.Parse(sampleprograms.HelloWorld)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(ast[0])
+	i, err := GenerateIR(ast[0], ti)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,12 +78,12 @@ func TestIRGenHelloWorld(t *testing.T) {
 }
 
 func TestIRGenLetStatement(t *testing.T) {
-	ast, err := ast.Parse(sampleprograms.LetStatement)
+	as, ti, err := ast.Parse(sampleprograms.LetStatement)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(ast[0])
+	i, err := GenerateIR(as[0], ti)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,9 +93,13 @@ func TestIRGenLetStatement(t *testing.T) {
 	expected := []ir.Opcode{
 		ir.MOV{
 			Src: ir.IntLiteral(5),
-			Dst: ir.LocalValue(0),
+			Dst: ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
-		ir.CALL{FName: "printf", Args: []ir.Register{ir.StringLiteral(`%d\n`), ir.LocalValue(0)}},
+		ir.CALL{FName: "printf", Args: []ir.Register{
+			ir.StringLiteral(`%d\n`),
+			ir.LocalValue{0, ast.TypeInfo{8, true}},
+		},
+		},
 	}
 	if len(i.Body) != len(expected) {
 		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
@@ -109,12 +113,12 @@ func TestIRGenLetStatement(t *testing.T) {
 }
 
 func TestIRGenLetStatementShadow(t *testing.T) {
-	ast, err := ast.Parse(sampleprograms.LetStatementShadow)
+	as, ti, err := ast.Parse(sampleprograms.LetStatementShadow)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(ast[0])
+	i, err := GenerateIR(as[0], ti)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,14 +128,22 @@ func TestIRGenLetStatementShadow(t *testing.T) {
 	expected := []ir.Opcode{
 		ir.MOV{
 			Src: ir.IntLiteral(5),
-			Dst: ir.LocalValue(0),
+			Dst: ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
-		ir.CALL{FName: "printf", Args: []ir.Register{ir.StringLiteral(`%d\n`), ir.LocalValue(0)}},
+		ir.CALL{FName: "printf", Args: []ir.Register{
+			ir.StringLiteral(`%d\n`),
+			ir.LocalValue{0, ast.TypeInfo{8, true}},
+		},
+		},
 		ir.MOV{
 			Src: ir.StringLiteral("hello"),
-			Dst: ir.LocalValue(1),
+			Dst: ir.LocalValue{1, ast.TypeInfo{0, false}},
 		},
-		ir.CALL{FName: "printf", Args: []ir.Register{ir.StringLiteral(`%s\n`), ir.LocalValue(1)}},
+		ir.CALL{FName: "printf", Args: []ir.Register{
+			ir.StringLiteral(`%s\n`),
+			ir.LocalValue{1, ast.TypeInfo{0, false}},
+		},
+		},
 	}
 	if len(i.Body) != len(expected) {
 		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
@@ -145,12 +157,12 @@ func TestIRGenLetStatementShadow(t *testing.T) {
 }
 
 func TestIRGenHelloWorld2(t *testing.T) {
-	ast, err := ast.Parse(sampleprograms.HelloWorld2)
+	ast, ti, err := ast.Parse(sampleprograms.HelloWorld2)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(ast[0])
+	i, err := GenerateIR(ast[0], ti)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -178,12 +190,12 @@ func TestIRGenHelloWorld2(t *testing.T) {
 }
 
 func TestIRGenTwoProcs(t *testing.T) {
-	ast, err := ast.Parse(sampleprograms.TwoProcs)
+	as, ti, err := ast.Parse(sampleprograms.TwoProcs)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(ast[0])
+	i, err := GenerateIR(as[0], ti)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -193,7 +205,7 @@ func TestIRGenTwoProcs(t *testing.T) {
 	expected := []ir.Opcode{
 		ir.MOV{
 			Src: ir.IntLiteral(3),
-			Dst: ir.FuncRetVal(0),
+			Dst: ir.FuncRetVal{0, ast.TypeInfo{8, true}},
 		},
 		ir.RET{},
 	}
@@ -207,7 +219,7 @@ func TestIRGenTwoProcs(t *testing.T) {
 		}
 	}
 
-	i, err = GenerateIR(ast[1])
+	i, err = GenerateIR(as[1], ti)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -217,13 +229,13 @@ func TestIRGenTwoProcs(t *testing.T) {
 	expected = []ir.Opcode{
 		ir.CALL{FName: "foo"},
 		ir.MOV{
-			Src: ir.FuncRetVal(0),
-			Dst: ir.LocalValue(0),
+			Src: ir.FuncRetVal{0, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
 		ir.CALL{FName: "printf",
 			Args: []ir.Register{
 				ir.StringLiteral(`%d`),
-				ir.LocalValue(0),
+				ir.LocalValue{0, ast.TypeInfo{8, true}},
 			},
 		},
 	}
@@ -239,12 +251,12 @@ func TestIRGenTwoProcs(t *testing.T) {
 }
 
 func TestIRGenOutOfOrder(t *testing.T) {
-	ast, err := ast.Parse(sampleprograms.OutOfOrder)
+	as, ti, err := ast.Parse(sampleprograms.OutOfOrder)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(ast[0])
+	i, err := GenerateIR(as[0], ti)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -254,12 +266,12 @@ func TestIRGenOutOfOrder(t *testing.T) {
 	expected := []ir.Opcode{
 		ir.CALL{FName: "foo", Args: []ir.Register{}},
 		ir.MOV{
-			Src: ir.FuncRetVal(0),
-			Dst: ir.LocalValue(0),
+			Src: ir.FuncRetVal{0, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
 		ir.CALL{FName: "printf", Args: []ir.Register{
 			ir.StringLiteral(`%d`),
-			ir.LocalValue(0),
+			ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
 		},
 	}
@@ -273,7 +285,7 @@ func TestIRGenOutOfOrder(t *testing.T) {
 		}
 	}
 
-	i, err = GenerateIR(ast[1])
+	i, err = GenerateIR(as[1], ti)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -283,7 +295,7 @@ func TestIRGenOutOfOrder(t *testing.T) {
 	expected = []ir.Opcode{
 		ir.MOV{
 			Src: ir.IntLiteral(3),
-			Dst: ir.FuncRetVal(0),
+			Dst: ir.FuncRetVal{0, ast.TypeInfo{8, true}},
 		},
 		ir.RET{},
 	}
@@ -299,12 +311,12 @@ func TestIRGenOutOfOrder(t *testing.T) {
 }
 
 func TestIRGenMutAddition(t *testing.T) {
-	ast, err := ast.Parse(sampleprograms.MutAddition)
+	as, ti, err := ast.Parse(sampleprograms.MutAddition)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(ast[0])
+	i, err := GenerateIR(as[0], ti)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -314,43 +326,43 @@ func TestIRGenMutAddition(t *testing.T) {
 	expected := []ir.Opcode{
 		ir.MOV{
 			Src: ir.IntLiteral(3),
-			Dst: ir.LocalValue(0),
+			Dst: ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
 		ir.ADD{
-			Src: ir.LocalValue(0),
-			Dst: ir.LocalValue(2),
-		},
-		ir.ADD{
-			Src: ir.IntLiteral(1),
-			Dst: ir.LocalValue(2),
-		},
-		ir.MOV{
-			Src: ir.LocalValue(2),
-			Dst: ir.LocalValue(1),
-		},
-		ir.ADD{
-			Src: ir.LocalValue(0),
-			Dst: ir.LocalValue(3),
-		},
-		ir.ADD{
-			Src: ir.LocalValue(1),
-			Dst: ir.LocalValue(4),
+			Src: ir.LocalValue{0, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{2, ast.TypeInfo{8, true}},
 		},
 		ir.ADD{
 			Src: ir.IntLiteral(1),
-			Dst: ir.LocalValue(4),
-		},
-		ir.ADD{
-			Src: ir.LocalValue(4),
-			Dst: ir.LocalValue(3),
+			Dst: ir.LocalValue{2, ast.TypeInfo{8, true}},
 		},
 		ir.MOV{
-			Src: ir.LocalValue(3),
-			Dst: ir.LocalValue(0),
+			Src: ir.LocalValue{2, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{1, ast.TypeInfo{8, true}},
+		},
+		ir.ADD{
+			Src: ir.LocalValue{0, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{3, ast.TypeInfo{8, true}},
+		},
+		ir.ADD{
+			Src: ir.LocalValue{1, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{4, ast.TypeInfo{8, true}},
+		},
+		ir.ADD{
+			Src: ir.IntLiteral(1),
+			Dst: ir.LocalValue{4, ast.TypeInfo{8, true}},
+		},
+		ir.ADD{
+			Src: ir.LocalValue{4, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{3, ast.TypeInfo{8, true}},
+		},
+		ir.MOV{
+			Src: ir.LocalValue{3, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
 		ir.CALL{FName: "printf", Args: []ir.Register{
 			ir.StringLiteral(`%d\n`),
-			ir.LocalValue(0),
+			ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
 		},
 	}
@@ -366,12 +378,12 @@ func TestIRGenMutAddition(t *testing.T) {
 }
 
 func TestIRGenSimpleFunc(t *testing.T) {
-	ast, err := ast.Parse(sampleprograms.SimpleFunc)
+	as, ti, err := ast.Parse(sampleprograms.SimpleFunc)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(ast[0])
+	i, err := GenerateIR(as[0], ti)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -381,7 +393,7 @@ func TestIRGenSimpleFunc(t *testing.T) {
 	expected := []ir.Opcode{
 		ir.MOV{
 			Src: ir.IntLiteral(3),
-			Dst: ir.FuncRetVal(0),
+			Dst: ir.FuncRetVal{0, ast.TypeInfo{8, true}},
 		},
 		ir.RET{},
 	}
@@ -395,7 +407,7 @@ func TestIRGenSimpleFunc(t *testing.T) {
 		}
 	}
 
-	i, err = GenerateIR(ast[1])
+	i, err = GenerateIR(as[1], ti)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -404,10 +416,13 @@ func TestIRGenSimpleFunc(t *testing.T) {
 	}
 	expected = []ir.Opcode{
 		ir.CALL{FName: "foo", Args: []ir.Register{}},
-		ir.MOV{Src: ir.FuncRetVal(0), Dst: ir.LocalValue(0)},
+		ir.MOV{
+			Src: ir.FuncRetVal{0, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{0, ast.TypeInfo{8, true}},
+		},
 		ir.CALL{FName: "printf", Args: []ir.Register{
 			ir.StringLiteral("%d"),
-			ir.LocalValue(0),
+			ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
 		},
 	}
@@ -423,12 +438,12 @@ func TestIRGenSimpleFunc(t *testing.T) {
 }
 
 func TestIRGenSumToTen(t *testing.T) {
-	ast, err := ast.Parse(sampleprograms.SumToTen)
+	as, ti, err := ast.Parse(sampleprograms.SumToTen)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(ast[0])
+	i, err := GenerateIR(as[0], ti)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -437,46 +452,46 @@ func TestIRGenSumToTen(t *testing.T) {
 	}
 	expected := []ir.Opcode{
 		ir.MOV{
-			Src: ir.FuncArg(0),
-			Dst: ir.LocalValue(0),
+			Src: ir.FuncArg{0, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
 		ir.MOV{
 			Src: ir.IntLiteral(0),
-			Dst: ir.LocalValue(1),
+			Dst: ir.LocalValue{1, ast.TypeInfo{8, true}},
 		},
 		ir.Label("loop0cond"),
 		ir.JLE{
-			ir.ConditionalJump{Label: ir.Label("loop0end"), Src: ir.LocalValue(0), Dst: ir.IntLiteral(0)},
+			ir.ConditionalJump{Label: ir.Label("loop0end"), Src: ir.LocalValue{0, ast.TypeInfo{8, true}}, Dst: ir.IntLiteral(0)},
 		},
 		ir.ADD{
-			Src: ir.LocalValue(1),
-			Dst: ir.LocalValue(2),
+			Src: ir.LocalValue{1, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{2, ast.TypeInfo{8, true}},
 		},
 		ir.ADD{
-			Src: ir.LocalValue(0),
-			Dst: ir.LocalValue(2),
+			Src: ir.LocalValue{0, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{2, ast.TypeInfo{8, true}},
 		},
 		ir.MOV{
-			Src: ir.LocalValue(2),
-			Dst: ir.LocalValue(1),
+			Src: ir.LocalValue{2, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{1, ast.TypeInfo{8, true}},
 		},
 		ir.MOV{
-			Src: ir.LocalValue(0),
-			Dst: ir.LocalValue(3),
+			Src: ir.LocalValue{0, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{3, ast.TypeInfo{8, true}},
 		},
 		ir.SUB{
 			Src: ir.IntLiteral(1),
-			Dst: ir.LocalValue(3),
+			Dst: ir.LocalValue{3, ast.TypeInfo{8, true}},
 		},
 		ir.MOV{
-			Src: ir.LocalValue(3),
-			Dst: ir.LocalValue(0),
+			Src: ir.LocalValue{3, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
 		ir.JMP{"loop0cond"},
 		ir.Label("loop0end"),
 		ir.MOV{
-			Src: ir.LocalValue(1),
-			Dst: ir.FuncRetVal(0),
+			Src: ir.LocalValue{1, ast.TypeInfo{8, true}},
+			Dst: ir.FuncRetVal{0, ast.TypeInfo{8, true}},
 		},
 		ir.RET{},
 	}
@@ -489,7 +504,7 @@ func TestIRGenSumToTen(t *testing.T) {
 			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
 		}
 	}
-	i, err = GenerateIR(ast[1])
+	i, err = GenerateIR(as[1], ti)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -502,12 +517,12 @@ func TestIRGenSumToTen(t *testing.T) {
 		},
 		},
 		ir.MOV{
-			Src: ir.FuncRetVal(0),
-			Dst: ir.LocalValue(0),
+			Src: ir.FuncRetVal{0, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
 		ir.CALL{FName: "printf", Args: []ir.Register{
 			ir.StringLiteral(`%d\n`),
-			ir.LocalValue(0),
+			ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
 		},
 	}
@@ -523,12 +538,12 @@ func TestIRGenSumToTen(t *testing.T) {
 }
 
 func TestIRGenSumToTenRecursive(t *testing.T) {
-	ast, err := ast.Parse(sampleprograms.SumToTenRecursive)
+	as, ti, err := ast.Parse(sampleprograms.SumToTenRecursive)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(ast[0])
+	i, err := GenerateIR(as[0], ti)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -540,7 +555,7 @@ func TestIRGenSumToTenRecursive(t *testing.T) {
 			FName: "partial_sum",
 			Args: []ir.Register{
 				ir.IntLiteral(0),
-				ir.FuncArg(0),
+				ir.FuncArg{0, ast.TypeInfo{8, true}},
 			},
 			TailCall: true,
 		},
@@ -556,7 +571,7 @@ func TestIRGenSumToTenRecursive(t *testing.T) {
 		}
 	}
 
-	i, err = GenerateIR(ast[1])
+	i, err = GenerateIR(as[1], ti)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -565,37 +580,41 @@ func TestIRGenSumToTenRecursive(t *testing.T) {
 	}
 	expected = []ir.Opcode{
 		ir.JNE{
-			ir.ConditionalJump{Label: "if1else", Src: ir.FuncArg(1), Dst: ir.IntLiteral(0)},
+			ir.ConditionalJump{
+				Label: "if1else",
+				Src:   ir.FuncArg{1, ast.TypeInfo{8, true}},
+				Dst:   ir.IntLiteral(0),
+			},
 		},
 		ir.MOV{
-			Src: ir.FuncArg(0),
-			Dst: ir.FuncRetVal(0),
+			Src: ir.FuncArg{0, ast.TypeInfo{8, true}},
+			Dst: ir.FuncRetVal{0, ast.TypeInfo{8, true}},
 		},
 		ir.RET{},
 		ir.JMP{"if1elsedone"},
 		ir.Label("if1else"),
 		ir.Label("if1elsedone"),
 		ir.ADD{
-			Src: ir.FuncArg(0),
-			Dst: ir.LocalValue(0),
+			Src: ir.FuncArg{0, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
 		ir.ADD{
-			Src: ir.FuncArg(1),
-			Dst: ir.LocalValue(0),
+			Src: ir.FuncArg{1, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
 		ir.MOV{
-			Src: ir.FuncArg(1),
-			Dst: ir.LocalValue(1),
+			Src: ir.FuncArg{1, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{1, ast.TypeInfo{8, true}},
 		},
 		ir.SUB{
 			Src: ir.IntLiteral(1),
-			Dst: ir.LocalValue(1),
+			Dst: ir.LocalValue{1, ast.TypeInfo{8, true}},
 		},
 		ir.CALL{
 			FName: "partial_sum",
 			Args: []ir.Register{
-				ir.LocalValue(0),
-				ir.LocalValue(1),
+				ir.LocalValue{0, ast.TypeInfo{8, true}},
+				ir.LocalValue{1, ast.TypeInfo{8, true}},
 			},
 			TailCall: true,
 		},
@@ -611,7 +630,7 @@ func TestIRGenSumToTenRecursive(t *testing.T) {
 		}
 	}
 
-	i, err = GenerateIR(ast[2])
+	i, err = GenerateIR(as[2], ti)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -620,10 +639,10 @@ func TestIRGenSumToTenRecursive(t *testing.T) {
 	}
 	expected = []ir.Opcode{
 		ir.CALL{FName: "sum", Args: []ir.Register{ir.IntLiteral(10)}},
-		ir.MOV{Src: ir.FuncRetVal(0), Dst: ir.LocalValue(0)},
+		ir.MOV{Src: ir.FuncRetVal{0, ast.TypeInfo{8, true}}, Dst: ir.LocalValue{0, ast.TypeInfo{8, true}}},
 		ir.CALL{FName: "printf", Args: []ir.Register{
 			ir.StringLiteral(`%d\n`),
-			ir.LocalValue(0),
+			ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
 		},
 	}
@@ -640,12 +659,12 @@ func TestIRGenSumToTenRecursive(t *testing.T) {
 }
 
 func TestIRGenFizzBuzz(t *testing.T) {
-	ast, err := ast.Parse(sampleprograms.Fizzbuzz)
+	as, ti, err := ast.Parse(sampleprograms.Fizzbuzz)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(ast[0])
+	i, err := GenerateIR(as[0], ti)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -653,34 +672,34 @@ func TestIRGenFizzBuzz(t *testing.T) {
 		t.Errorf("Unexpected name: got %v want %v", i.Name, "main")
 	}
 	expected := []ir.Opcode{
-		ir.MOV{Src: ir.IntLiteral(0), Dst: ir.LocalValue(0)},
-		ir.MOV{Src: ir.IntLiteral(1), Dst: ir.LocalValue(1)},
+		ir.MOV{Src: ir.IntLiteral(0), Dst: ir.LocalValue{0, ast.TypeInfo{1, false}}},
+		ir.MOV{Src: ir.IntLiteral(1), Dst: ir.LocalValue{1, ast.TypeInfo{8, true}}},
 		ir.Label("loop2cond"),
-		ir.JE{ir.ConditionalJump{Label: "loop2end", Src: ir.LocalValue(0), Dst: ir.IntLiteral(1)}},
-		ir.MOD{Left: ir.LocalValue(1), Right: ir.IntLiteral(15), Dst: ir.LocalValue(2)},
-		ir.JNE{ir.ConditionalJump{Label: "if3else", Src: ir.LocalValue(2), Dst: ir.IntLiteral(0)}},
+		ir.JE{ir.ConditionalJump{Label: "loop2end", Src: ir.LocalValue{0, ast.TypeInfo{1, false}}, Dst: ir.IntLiteral(1)}},
+		ir.MOD{Left: ir.LocalValue{1, ast.TypeInfo{8, true}}, Right: ir.IntLiteral(15), Dst: ir.LocalValue{2, ast.TypeInfo{8, true}}},
+		ir.JNE{ir.ConditionalJump{Label: "if3else", Src: ir.LocalValue{2, ast.TypeInfo{8, true}}, Dst: ir.IntLiteral(0)}},
 		ir.CALL{FName: "printf", Args: []ir.Register{ir.StringLiteral(`fizzbuzz\n`)}},
 		ir.JMP{"if3elsedone"},
 		ir.Label("if3else"),
-		ir.MOD{Left: ir.LocalValue(1), Right: ir.IntLiteral(5), Dst: ir.LocalValue(3)},
-		ir.JNE{ir.ConditionalJump{Label: "if4else", Src: ir.LocalValue(3), Dst: ir.IntLiteral(0)}},
+		ir.MOD{Left: ir.LocalValue{1, ast.TypeInfo{8, true}}, Right: ir.IntLiteral(5), Dst: ir.LocalValue{3, ast.TypeInfo{8, true}}},
+		ir.JNE{ir.ConditionalJump{Label: "if4else", Src: ir.LocalValue{3, ast.TypeInfo{8, true}}, Dst: ir.IntLiteral(0)}},
 		ir.CALL{FName: "printf", Args: []ir.Register{ir.StringLiteral(`buzz\n`)}},
 		ir.JMP{"if4elsedone"},
 		ir.Label("if4else"),
-		ir.MOD{Left: ir.LocalValue(1), Right: ir.IntLiteral(3), Dst: ir.LocalValue(4)},
-		ir.JNE{ir.ConditionalJump{Label: "if5else", Src: ir.LocalValue(4), Dst: ir.IntLiteral(0)}},
+		ir.MOD{Left: ir.LocalValue{1, ast.TypeInfo{8, true}}, Right: ir.IntLiteral(3), Dst: ir.LocalValue{4, ast.TypeInfo{8, true}}},
+		ir.JNE{ir.ConditionalJump{Label: "if5else", Src: ir.LocalValue{4, ast.TypeInfo{8, true}}, Dst: ir.IntLiteral(0)}},
 		ir.CALL{FName: "printf", Args: []ir.Register{ir.StringLiteral(`fizz\n`)}},
 		ir.JMP{"if5elsedone"},
 		ir.Label("if5else"),
-		ir.CALL{FName: "printf", Args: []ir.Register{ir.StringLiteral(`%d\n`), ir.LocalValue(1)}},
+		ir.CALL{FName: "printf", Args: []ir.Register{ir.StringLiteral(`%d\n`), ir.LocalValue{1, ast.TypeInfo{8, true}}}},
 		ir.Label("if5elsedone"),
 		ir.Label("if4elsedone"),
 		ir.Label("if3elsedone"),
-		ir.ADD{Src: ir.LocalValue(1), Dst: ir.LocalValue(5)},
-		ir.ADD{Src: ir.IntLiteral(1), Dst: ir.LocalValue(5)},
-		ir.MOV{Src: ir.LocalValue(5), Dst: ir.LocalValue(1)},
-		ir.JL{ir.ConditionalJump{Label: ir.Label("if6else"), Src: ir.LocalValue(1), Dst: ir.IntLiteral(100)}},
-		ir.MOV{Src: ir.IntLiteral(1), Dst: ir.LocalValue(0)},
+		ir.ADD{Src: ir.LocalValue{1, ast.TypeInfo{8, true}}, Dst: ir.LocalValue{5, ast.TypeInfo{8, true}}},
+		ir.ADD{Src: ir.IntLiteral(1), Dst: ir.LocalValue{5, ast.TypeInfo{8, true}}},
+		ir.MOV{Src: ir.LocalValue{5, ast.TypeInfo{8, true}}, Dst: ir.LocalValue{1, ast.TypeInfo{8, true}}},
+		ir.JL{ir.ConditionalJump{Label: ir.Label("if6else"), Src: ir.LocalValue{1, ast.TypeInfo{8, true}}, Dst: ir.IntLiteral(100)}},
+		ir.MOV{Src: ir.IntLiteral(1), Dst: ir.LocalValue{0, ast.TypeInfo{1, false}}},
 		ir.JMP{"if6elsedone"},
 		ir.Label("if6else"),
 		ir.Label("if6elsedone"),
@@ -699,12 +718,12 @@ func TestIRGenFizzBuzz(t *testing.T) {
 }
 
 func TestIRGenSomeMathStatement(t *testing.T) {
-	ast, err := ast.Parse(sampleprograms.SomeMath)
+	as, ti, err := ast.Parse(sampleprograms.SomeMath)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(ast[0])
+	i, err := GenerateIR(as[0], ti)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -714,97 +733,97 @@ func TestIRGenSomeMathStatement(t *testing.T) {
 	expected := []ir.Opcode{
 		ir.ADD{
 			Src: ir.IntLiteral(1),
-			Dst: ir.LocalValue(1),
+			Dst: ir.LocalValue{1, ast.TypeInfo{8, true}},
 		},
 		ir.ADD{
 			Src: ir.IntLiteral(2),
-			Dst: ir.LocalValue(1),
+			Dst: ir.LocalValue{1, ast.TypeInfo{8, true}},
 		},
 		ir.MOV{
-			Src: ir.LocalValue(1),
-			Dst: ir.LocalValue(0),
+			Src: ir.LocalValue{1, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
 
 		ir.MOV{
 			Src: ir.IntLiteral(1),
-			Dst: ir.LocalValue(3),
+			Dst: ir.LocalValue{3, ast.TypeInfo{8, true}},
 		},
 		ir.SUB{
 			Src: ir.IntLiteral(2),
-			Dst: ir.LocalValue(3),
+			Dst: ir.LocalValue{3, ast.TypeInfo{8, true}},
 		},
 		ir.MOV{
-			Src: ir.LocalValue(3),
-			Dst: ir.LocalValue(2),
+			Src: ir.LocalValue{3, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{2, ast.TypeInfo{8, true}},
 		},
 
 		ir.MUL{
 			Left:  ir.IntLiteral(2),
 			Right: ir.IntLiteral(3),
-			Dst:   ir.LocalValue(5),
+			Dst:   ir.LocalValue{5, ast.TypeInfo{8, true}},
 		},
 		ir.MOV{
-			Src: ir.LocalValue(5),
-			Dst: ir.LocalValue(4),
+			Src: ir.LocalValue{5, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{4, ast.TypeInfo{8, true}},
 		},
 		ir.DIV{
 			Left:  ir.IntLiteral(6),
 			Right: ir.IntLiteral(2),
-			Dst:   ir.LocalValue(7),
+			Dst:   ir.LocalValue{7, ast.TypeInfo{8, true}},
 		},
 		ir.MOV{
-			Src: ir.LocalValue(7),
-			Dst: ir.LocalValue(6),
+			Src: ir.LocalValue{7, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{6, ast.TypeInfo{8, true}},
 		},
 		ir.ADD{
 			Src: ir.IntLiteral(1),
-			Dst: ir.LocalValue(9),
+			Dst: ir.LocalValue{9, ast.TypeInfo{8, true}},
 		},
 		ir.MUL{
 			Left:  ir.IntLiteral(2),
 			Right: ir.IntLiteral(3),
-			Dst:   ir.LocalValue(11),
+			Dst:   ir.LocalValue{11, ast.TypeInfo{8, true}},
 		},
 		ir.DIV{
 			Left:  ir.IntLiteral(4),
 			Right: ir.IntLiteral(2),
-			Dst:   ir.LocalValue(12),
+			Dst:   ir.LocalValue{12, ast.TypeInfo{8, true}},
 		},
 		ir.SUB{
-			Src: ir.LocalValue(12),
-			Dst: ir.LocalValue(11),
+			Src: ir.LocalValue{12, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{11, ast.TypeInfo{8, true}},
 		},
 		ir.ADD{
-			Src: ir.LocalValue(11),
-			Dst: ir.LocalValue(9),
+			Src: ir.LocalValue{11, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{9, ast.TypeInfo{8, true}},
 		},
 		ir.MOV{
-			Src: ir.LocalValue(9),
-			Dst: ir.LocalValue(8),
+			Src: ir.LocalValue{9, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{8, ast.TypeInfo{8, true}},
 		},
 		ir.CALL{FName: "printf", Args: []ir.Register{
 			ir.StringLiteral(`Add: %d\n`),
-			ir.LocalValue(0),
+			ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
 		},
 		ir.CALL{FName: "printf", Args: []ir.Register{
 			ir.StringLiteral(`Sub: %d\n`),
-			ir.LocalValue(2),
+			ir.LocalValue{2, ast.TypeInfo{8, true}},
 		},
 		},
 		ir.CALL{FName: "printf", Args: []ir.Register{
 			ir.StringLiteral(`Mul: %d\n`),
-			ir.LocalValue(4),
+			ir.LocalValue{4, ast.TypeInfo{8, true}},
 		},
 		},
 		ir.CALL{FName: "printf", Args: []ir.Register{
 			ir.StringLiteral(`Div: %d\n`),
-			ir.LocalValue(6),
+			ir.LocalValue{6, ast.TypeInfo{8, true}},
 		},
 		},
 		ir.CALL{FName: "printf", Args: []ir.Register{
 			ir.StringLiteral(`Complex: %d\n`),
-			ir.LocalValue(8),
+			ir.LocalValue{8, ast.TypeInfo{8, true}},
 		},
 		},
 	}
@@ -820,12 +839,12 @@ func TestIRGenSomeMathStatement(t *testing.T) {
 }
 
 func TestIRGenUserType(t *testing.T) {
-	ast, err := ast.Parse(sampleprograms.UserDefinedType)
+	as, ti, err := ast.Parse(sampleprograms.UserDefinedType)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(ast[1])
+	i, err := GenerateIR(as[1], ti)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -835,11 +854,291 @@ func TestIRGenUserType(t *testing.T) {
 	expected := []ir.Opcode{
 		ir.MOV{
 			Src: ir.IntLiteral(4),
-			Dst: ir.LocalValue(0),
+			Dst: ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
 		ir.CALL{FName: "printf", Args: []ir.Register{
 			ir.StringLiteral(`%d\n`),
-			ir.LocalValue(0),
+			ir.LocalValue{0, ast.TypeInfo{8, true}},
+		},
+		},
+	}
+	if len(i.Body) != len(expected) {
+		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
+	}
+
+	for j := range expected {
+		if !compareOp(expected[j], i.Body[j]) {
+			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
+		}
+	}
+}
+
+func TestIRGenConcreteTypeUint8(t *testing.T) {
+	as, ti, err := ast.Parse(sampleprograms.ConcreteTypeUint8)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i, err := GenerateIR(as[0], ti)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if i.Name != "main" {
+		t.Errorf("Unexpected name: got %v want %v", i.Name, "main")
+	}
+	expected := []ir.Opcode{
+		ir.MOV{
+			Src: ir.IntLiteral(4),
+			Dst: ir.LocalValue{0, ast.TypeInfo{1, false}},
+		},
+		ir.CALL{FName: "printf", Args: []ir.Register{
+			ir.StringLiteral(`%d\n`),
+			ir.LocalValue{0, ast.TypeInfo{1, false}},
+		},
+		},
+	}
+	if len(i.Body) != len(expected) {
+		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
+	}
+
+	for j := range expected {
+		if !compareOp(expected[j], i.Body[j]) {
+			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
+		}
+	}
+}
+
+func TestIRGenConcreteTypeInt8(t *testing.T) {
+	as, ti, err := ast.Parse(sampleprograms.ConcreteTypeInt8)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i, err := GenerateIR(as[0], ti)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if i.Name != "main" {
+		t.Errorf("Unexpected name: got %v want %v", i.Name, "main")
+	}
+	expected := []ir.Opcode{
+		ir.MOV{
+			Src: ir.IntLiteral(-4),
+			Dst: ir.LocalValue{0, ast.TypeInfo{1, true}},
+		},
+		ir.CALL{FName: "printf", Args: []ir.Register{
+			ir.StringLiteral(`%d\n`),
+			ir.LocalValue{0, ast.TypeInfo{1, true}},
+		},
+		},
+	}
+	if len(i.Body) != len(expected) {
+		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
+	}
+
+	for j := range expected {
+		if !compareOp(expected[j], i.Body[j]) {
+			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
+		}
+	}
+}
+
+func TestIRGenConcreteTypeUint16(t *testing.T) {
+	as, ti, err := ast.Parse(sampleprograms.ConcreteTypeUint16)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i, err := GenerateIR(as[0], ti)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if i.Name != "main" {
+		t.Errorf("Unexpected name: got %v want %v", i.Name, "main")
+	}
+	expected := []ir.Opcode{
+		ir.MOV{
+			Src: ir.IntLiteral(4),
+			Dst: ir.LocalValue{0, ast.TypeInfo{2, false}},
+		},
+		ir.CALL{FName: "printf", Args: []ir.Register{
+			ir.StringLiteral(`%d\n`),
+			ir.LocalValue{0, ast.TypeInfo{2, false}},
+		},
+		},
+	}
+	if len(i.Body) != len(expected) {
+		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
+	}
+
+	for j := range expected {
+		if !compareOp(expected[j], i.Body[j]) {
+			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
+		}
+	}
+}
+
+func TestIRGenConcreteTypeInt16(t *testing.T) {
+	as, ti, err := ast.Parse(sampleprograms.ConcreteTypeInt16)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i, err := GenerateIR(as[0], ti)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if i.Name != "main" {
+		t.Errorf("Unexpected name: got %v want %v", i.Name, "main")
+	}
+	expected := []ir.Opcode{
+		ir.MOV{
+			Src: ir.IntLiteral(-4),
+			Dst: ir.LocalValue{0, ast.TypeInfo{2, true}},
+		},
+		ir.CALL{FName: "printf", Args: []ir.Register{
+			ir.StringLiteral(`%d\n`),
+			ir.LocalValue{0, ast.TypeInfo{2, true}},
+		},
+		},
+	}
+	if len(i.Body) != len(expected) {
+		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
+	}
+
+	for j := range expected {
+		if !compareOp(expected[j], i.Body[j]) {
+			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
+		}
+	}
+}
+
+func TestIRGenConcreteTypeUint32(t *testing.T) {
+	as, ti, err := ast.Parse(sampleprograms.ConcreteTypeUint32)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i, err := GenerateIR(as[0], ti)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if i.Name != "main" {
+		t.Errorf("Unexpected name: got %v want %v", i.Name, "main")
+	}
+	expected := []ir.Opcode{
+		ir.MOV{
+			Src: ir.IntLiteral(4),
+			Dst: ir.LocalValue{0, ast.TypeInfo{4, false}},
+		},
+		ir.CALL{FName: "printf", Args: []ir.Register{
+			ir.StringLiteral(`%d\n`),
+			ir.LocalValue{0, ast.TypeInfo{4, false}},
+		},
+		},
+	}
+	if len(i.Body) != len(expected) {
+		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
+	}
+
+	for j := range expected {
+		if !compareOp(expected[j], i.Body[j]) {
+			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
+		}
+	}
+}
+
+func TestIRGenConcreteTypeInt32(t *testing.T) {
+	as, ti, err := ast.Parse(sampleprograms.ConcreteTypeInt32)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i, err := GenerateIR(as[0], ti)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if i.Name != "main" {
+		t.Errorf("Unexpected name: got %v want %v", i.Name, "main")
+	}
+	expected := []ir.Opcode{
+		ir.MOV{
+			Src: ir.IntLiteral(-4),
+			Dst: ir.LocalValue{0, ast.TypeInfo{4, true}},
+		},
+		ir.CALL{FName: "printf", Args: []ir.Register{
+			ir.StringLiteral(`%d\n`),
+			ir.LocalValue{0, ast.TypeInfo{4, true}},
+		},
+		},
+	}
+	if len(i.Body) != len(expected) {
+		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
+	}
+
+	for j := range expected {
+		if !compareOp(expected[j], i.Body[j]) {
+			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
+		}
+	}
+}
+
+func TestIRGenConcreteTypeUint64(t *testing.T) {
+	as, ti, err := ast.Parse(sampleprograms.ConcreteTypeUint64)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i, err := GenerateIR(as[0], ti)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if i.Name != "main" {
+		t.Errorf("Unexpected name: got %v want %v", i.Name, "main")
+	}
+	expected := []ir.Opcode{
+		ir.MOV{
+			Src: ir.IntLiteral(4),
+			Dst: ir.LocalValue{0, ast.TypeInfo{8, false}},
+		},
+		ir.CALL{FName: "printf", Args: []ir.Register{
+			ir.StringLiteral(`%d\n`),
+			ir.LocalValue{0, ast.TypeInfo{8, false}},
+		},
+		},
+	}
+	if len(i.Body) != len(expected) {
+		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
+	}
+
+	for j := range expected {
+		if !compareOp(expected[j], i.Body[j]) {
+			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
+		}
+	}
+}
+
+func TestIRGenConcreteTypeInt64(t *testing.T) {
+	as, ti, err := ast.Parse(sampleprograms.ConcreteTypeInt64)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i, err := GenerateIR(as[0], ti)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if i.Name != "main" {
+		t.Errorf("Unexpected name: got %v want %v", i.Name, "main")
+	}
+	expected := []ir.Opcode{
+		ir.MOV{
+			Src: ir.IntLiteral(-4),
+			Dst: ir.LocalValue{0, ast.TypeInfo{8, true}},
+		},
+		ir.CALL{FName: "printf", Args: []ir.Register{
+			ir.StringLiteral(`%d\n`),
+			ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
 		},
 	}

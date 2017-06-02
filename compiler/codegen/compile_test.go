@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/driusan/lang/compiler/irgen"
-
 	"github.com/driusan/lang/parser/ast"
 	"github.com/driusan/lang/parser/sampleprograms"
 )
@@ -27,7 +26,7 @@ func RunProgram(name, p string) error {
 	}
 	defer f.Close()
 
-	prog, err := ast.Parse(p)
+	prog, ti, err := ast.Parse(p)
 	if err != nil {
 		return err
 	}
@@ -35,7 +34,7 @@ func RunProgram(name, p string) error {
 	for _, v := range prog {
 		switch v.(type) {
 		case ast.FuncDecl, ast.ProcDecl:
-			fnc, err := irgen.GenerateIR(v)
+			fnc, err := irgen.GenerateIR(v, ti)
 			if err != nil {
 				return err
 			}
@@ -70,13 +69,13 @@ func RunProgram(name, p string) error {
 }
 
 func TestCompileHelloWorld(t *testing.T) {
-	prgAst, err := ast.Parse(sampleprograms.HelloWorld)
+	prgAst, types, err := ast.Parse(sampleprograms.HelloWorld)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	var w bytes.Buffer
-	fnc, err := irgen.GenerateIR(prgAst[0])
+	fnc, err := irgen.GenerateIR(prgAst[0], types)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -355,9 +354,66 @@ func ExampleUserDefinedType() {
 	}
 	// Output: 4
 }
+
 func ExampleTypeInference() {
 	if err := RunProgram("typeinference", sampleprograms.TypeInference); err != nil {
 		//fmt.Println(err.Error())
 	}
 	// Output: 0, 4
+}
+
+func ExampleConcreteUint8() {
+	if err := RunProgram("concreteuint8", sampleprograms.ConcreteTypeUint8); err != nil {
+		//fmt.Println(err.Error())
+	}
+	// Output: 4
+}
+
+func ExampleConcreteInt8() {
+	if err := RunProgram("concreteint8", sampleprograms.ConcreteTypeInt8); err != nil {
+		//fmt.Println(err.Error())
+	}
+	// Output: -4
+}
+
+func ExampleConcreteUint16() {
+	if err := RunProgram("concreteuint16", sampleprograms.ConcreteTypeUint16); err != nil {
+		//fmt.Println(err.Error())
+	}
+	// Output: 4
+}
+
+func ExampleConcreteInt16() {
+	if err := RunProgram("concreteint16", sampleprograms.ConcreteTypeInt16); err != nil {
+		//fmt.Println(err.Error())
+	}
+	// Output: -4
+}
+
+func ExampleConcreteUint32() {
+	if err := RunProgram("concreteuint32", sampleprograms.ConcreteTypeUint32); err != nil {
+		//fmt.Println(err.Error())
+	}
+	// Output: 4
+}
+
+func ExampleConcreteInt32() {
+	if err := RunProgram("concreteint32", sampleprograms.ConcreteTypeInt32); err != nil {
+		//fmt.Println(err.Error())
+	}
+	// Output: -4
+}
+
+func ExampleConcreteUint64() {
+	if err := RunProgram("concreteuint64", sampleprograms.ConcreteTypeUint64); err != nil {
+		//fmt.Println(err.Error())
+	}
+	// Output: 4
+}
+
+func ExampleConcreteInt64() {
+	if err := RunProgram("concreteint64", sampleprograms.ConcreteTypeInt64); err != nil {
+		//fmt.Println(err.Error())
+	}
+	// Output: -4
 }

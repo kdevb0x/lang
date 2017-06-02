@@ -11,16 +11,21 @@ import (
 type variableLayout struct {
 	values   map[ast.VarWithType]ir.Register
 	tempVars int
+	typeinfo ast.TypeInformation
 }
 
 // Reserves the next available register for varname
 func (c *variableLayout) NextLocalRegister(varname ast.VarWithType) ir.Register {
+	if varname.Type() == "" {
+		panic("No type for variable.")
+	}
+	ti := c.typeinfo
 	if varname.Name == "" {
 		c.tempVars++
-		return ir.LocalValue(len(c.values) + c.tempVars - 1)
+		return ir.LocalValue{uint(len(c.values) + c.tempVars - 1), ti[varname.Type()]}
 	}
 
-	c.values[varname] = ir.LocalValue(len(c.values) + c.tempVars)
+	c.values[varname] = ir.LocalValue{uint(len(c.values) + c.tempVars), ti[varname.Type()]}
 	return c.values[varname]
 }
 
@@ -28,8 +33,8 @@ func (c *variableLayout) NextLocalRegister(varname ast.VarWithType) ir.Register 
 // parameter, before any LocalRegister calls are made.
 func (c *variableLayout) FuncParamRegister(varname ast.VarWithType, i int) ir.Register {
 	c.tempVars--
-
-	c.values[varname] = ir.FuncArg(i)
+	ti := c.typeinfo
+	c.values[varname] = ir.FuncArg{uint(i), ti[varname.Type()]}
 	return c.values[varname]
 }
 
@@ -56,8 +61,8 @@ func (c variableLayout) SafeGet(varname ast.VarWithType) (ir.Register, bool) {
 
 // Compile takes an AST and writes the assembly that it compiles to to
 // w.
-func GenerateIR(node ast.Node) (ir.Func, error) {
-	context := &variableLayout{make(map[ast.VarWithType]ir.Register), 0}
+func GenerateIR(node ast.Node, typeInfo ast.TypeInformation) (ir.Func, error) {
+	context := &variableLayout{make(map[ast.VarWithType]ir.Register), 0, typeInfo}
 	switch n := node.(type) {
 	case ast.ProcDecl:
 		for i, arg := range n.Args {
@@ -91,7 +96,6 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]ir.Opc
 	var argRegs []ir.Register
 	for _, arg := range fc.UserArgs {
 		switch a := arg.(type) {
-
 		case ast.StringLiteral, ast.IntLiteral, ast.BoolLiteral:
 			argRegs = append(argRegs, getRegister(a, context))
 		case ast.VarWithType:
@@ -105,11 +109,12 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]ir.Opc
 				return nil, err
 			}
 			ops = append(ops, fc...)
-			reg := context.NextLocalRegister(ast.VarWithType{})
 
+			ti := context.typeinfo[a.Returns[0].Type()]
+			reg := context.NextLocalRegister(ast.VarWithType{"", a.Returns[0].Type()})
 			ops = append(ops,
 				ir.MOV{
-					Src: ir.FuncRetVal(0),
+					Src: ir.FuncRetVal{0, ti},
 					Dst: reg,
 				},
 			)
@@ -195,7 +200,7 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 				}
 				ops = append(ops, fc...)
 				ops = append(ops, ir.MOV{
-					Src: ir.FuncRetVal(0),
+					Src: ir.FuncRetVal{0, ast.TypeInfo{0, true}},
 					Dst: reg,
 				})
 			default:
@@ -216,7 +221,7 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 			default:
 				ops = append(ops, ir.MOV{
 					Src: getRegister(arg, context),
-					Dst: ir.FuncRetVal(0),
+					Dst: ir.FuncRetVal{0, ast.TypeInfo{8, true}},
 				})
 				ops = append(ops, ir.RET{})
 			}
@@ -464,7 +469,8 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]ir.Opcode, ir.Regi
 	var ops []ir.Opcode
 	switch s := val.(type) {
 	case ast.AdditionOperator:
-		a := context.NextLocalRegister(ast.VarWithType{})
+		// FIXME: int shouldn't be hardcoded.
+		a := context.NextLocalRegister(ast.VarWithType{"", "int"})
 		switch s.Left.(type) {
 		case ast.IntLiteral, ast.VarWithType:
 			ops = append(ops, ir.ADD{
@@ -503,7 +509,8 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]ir.Opcode, ir.Regi
 		})
 		return ops, a, nil
 	case ast.SubtractionOperator:
-		a := context.NextLocalRegister(ast.VarWithType{})
+		// FIXME: int shouldn't be hardcoded.
+		a := context.NextLocalRegister(ast.VarWithType{"", "int"})
 		switch s.Left.(type) {
 		case ast.IntLiteral, ast.VarWithType:
 			ops = append(ops, ir.MOV{
@@ -553,7 +560,8 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]ir.Opcode, ir.Regi
 			return nil, nil, err
 		}
 
-		a := context.NextLocalRegister(ast.VarWithType{})
+		// FIXME: This shouldn't hard code int.
+		a := context.NextLocalRegister(ast.VarWithType{"", "int"})
 		ops = append(ops, bodyb...)
 		ops = append(ops, ir.MOD{
 			Left:  ra,
@@ -562,7 +570,8 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]ir.Opcode, ir.Regi
 		})
 		return ops, a, nil
 	case ast.MulOperator:
-		a := context.NextLocalRegister(ast.VarWithType{})
+		// FIXME: This shouldn't hard code int.
+		a := context.NextLocalRegister(ast.VarWithType{"", "int"})
 		var l, r ir.Register
 		switch s.Left.(type) {
 		case ast.IntLiteral, ast.VarWithType:
@@ -589,7 +598,8 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]ir.Opcode, ir.Regi
 		})
 		return ops, a, nil
 	case ast.DivOperator:
-		a := context.NextLocalRegister(ast.VarWithType{})
+		// FIXME: This shouldn't hardcode int
+		a := context.NextLocalRegister(ast.VarWithType{"", "int"})
 		var l, r ir.Register
 		switch s.Left.(type) {
 		case ast.IntLiteral, ast.VarWithType:

@@ -1,20 +1,30 @@
 - Add more standard datatypes:
-	- (u)int(8/16/32/64)
-	- sum types (add match keyword. add data or enum keyword to define enums or reuse type?)
-	- struct
-	- arrays?
-	- slices
-	- pointers? (pointers with GC? or just references? Are sum types, generics and a maybe monad enough to not have pointers?)
-	- float? dec64?
-	- tuples? (are two product types really needed? Or is struct enough?)
+	- sum types (start with just simple enums with no options)
+- Add match keyword
+	- exhaustive pattern matching
+	- use as if/elseif chain
+	- add let y match x {} .. variable declarations
 - Implement generics
-- Implement interfaces
-- add test case for non-recursive tail call optimization with different stack
-  sizes
-- Implement multireturn (does this add anything over returning a struct?)
+	- generic sum types (ie the maybe monad)
+		- expand pattern matching in match to handle this
+		- ^^^ seems like a lot of work
+	- generic functions?
+	- generic product types?
+- Add ability to output WASM as an IR?
 - Compile time evaluation of pure functions with constant arguments
+- Investigate and decide on what other types should be implemented:
+	- struct? or tuples? (are two product types really needed?)
+	- arrays? lists instead? Define a way to overload indexing and provide both?
+	- slices? 
+	- pointers? (pointers with GC? Just references? Are sum types, generics and a maybe monad enough to not have pointers?)
+	- float? dec64?
+	- interfaces?
+	- remove "int" and force an explicit size?
+- Multiple dispatch?
+- add better test cases for non-recursive tail call optimization with different stack sizes
+- Implement multireturn (does this add anything over returning a product type?)
 - Add better documentation
-- Support Go calling conventions in generated ASM.
+- Support Go calling conventions in generated ASM? (Or just add the ability to output different asm syntax on non-Plan9 architectures?)
 - Add method invocation syntax
 - Write some non-test sample programs
 	(linker? autoformatter?)

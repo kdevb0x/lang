@@ -25,6 +25,15 @@ func NewContext() Context {
 		Mutables: make(map[string]VarWithType),
 		Types: map[string]TypeDefn{
 			"int":    TypeDefn{"int", "int"},
+			"uint":   TypeDefn{"uint", "uint"},
+			"uint8":  TypeDefn{"uint8", "uint8"},
+			"uint16": TypeDefn{"uint16", "uint16"},
+			"uint32": TypeDefn{"uint32", "uint32"},
+			"uint64": TypeDefn{"uint64", "uint64"},
+			"int8":   TypeDefn{"int8", "int8"},
+			"int16":  TypeDefn{"int16", "int16"},
+			"int32":  TypeDefn{"int32", "int32"},
+			"int64":  TypeDefn{"int64", "int64"},
 			"string": TypeDefn{"string", "string"},
 			"bool":   TypeDefn{"bool", "bool"},
 		},
@@ -106,10 +115,17 @@ func topLevelNode(T token.Token) (Node, error) {
 	}
 }
 
-func Parse(val string) ([]Node, error) {
+type TypeInfo struct {
+	Size   int
+	Signed bool
+}
+
+type TypeInformation map[Type]TypeInfo
+
+func Parse(val string) ([]Node, TypeInformation, error) {
 	tokens, err := token.Tokenize(strings.NewReader(val))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	return Construct(tokens)
 }
@@ -130,8 +146,22 @@ func stripWhitespace(tokens []token.Token) []token.Token {
 }
 
 // Construct constructs the top level ASTNodes for a file.
-func Construct(tokens []token.Token) ([]Node, error) {
+func Construct(tokens []token.Token) ([]Node, TypeInformation, error) {
 	var nodes []Node
+	ti := TypeInformation{
+		"int":    TypeInfo{8, true},
+		"uint":   TypeInfo{8, false},
+		"int8":   TypeInfo{1, true},
+		"uint8":  TypeInfo{1, false},
+		"int16":  TypeInfo{2, true},
+		"uint16": TypeInfo{2, false},
+		"int32":  TypeInfo{4, true},
+		"uint32": TypeInfo{4, false},
+		"int64":  TypeInfo{8, true},
+		"uint64": TypeInfo{8, false},
+		"bool":   TypeInfo{1, false},
+		"string": TypeInfo{0, false},
+	}
 
 	c := NewContext()
 
@@ -145,14 +175,14 @@ func Construct(tokens []token.Token) ([]Node, error) {
 
 	err := extractPrototypes(tokens, &c)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	for i := 0; i < len(tokens); i++ {
 		// Parse the top level "func" or "proc" keyword
 		cn, err := topLevelNode(tokens[i])
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		switch cur := cn.(type) {
@@ -171,7 +201,7 @@ func Construct(tokens []token.Token) ([]Node, error) {
 
 			n, a, r, err := consumePrototype(i, tokens, &c)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			cur.Args = a
 			cur.Return = r
@@ -182,7 +212,7 @@ func Construct(tokens []token.Token) ([]Node, error) {
 			}
 			n, block, err := consumeBlock(i, tokens, &c)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			cur.Body = block
 
@@ -205,7 +235,7 @@ func Construct(tokens []token.Token) ([]Node, error) {
 
 			n, a, r, err := consumePrototype(i, tokens, &c)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			cur.Args = a
 			cur.Return = r
@@ -216,20 +246,27 @@ func Construct(tokens []token.Token) ([]Node, error) {
 
 			n, block, err := consumeBlock(i, tokens, &c)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			cur.Body = block
 
 			i += n
 			nodes = append(nodes, cur)
-
 		case TypeDefn:
-			nodes = append(nodes, c.Types[tokens[i+1].String()])
+			typeName := tokens[i+1].String()
+			nodes = append(nodes, c.Types[typeName])
+			switch concrete := c.Types[typeName].ConcreteType; concrete {
+			case "int", "uint", "int8", "uint8", "int16", "uint16",
+				"int32", "uint32", "int64", "uint64", "bool", "string":
+				ti[Type(typeName)] = ti[concrete]
+			default:
+				panic("Unhandled concrete type: " + string(c.Types[typeName].ConcreteType))
+			}
 			i += 2
 
 		}
 	}
-	return nodes, nil
+	return nodes, ti, nil
 }
 
 func consumePrototype(start int, tokens []token.Token, c *Context) (n int, args []VarWithType, retn []VarWithType, err error) {
@@ -628,12 +665,12 @@ func consumeLetStmt(start int, tokens []token.Token, c *Context) (int, Node, err
 				}
 
 				if IsLiteral(v) {
-					if !IsCompatibleType(c.Types[string(l.Type())], v) {
-						return 0, nil, fmt.Errorf(`Incompatible type assignment: can not assign %v to %v for variable "%v".`, v.Type(), l.Type(), l.Var.Name)
+					if err := IsCompatibleType(c.Types[string(l.Type())], v); err != nil {
+						return 0, nil, fmt.Errorf(`Incompatible assignment for variable "%v": %v.`, l.Var.Name, err)
 					}
 				} else {
 					if v.Type() != l.Type() {
-						return 0, nil, fmt.Errorf(`Incompatible type assignment: can not assign %v to %v for variable "%v".`, v.Type(), l.Type(), l.Var.Name)
+						return 0, nil, fmt.Errorf(`Incompatible assignment for variable "%v": can not assign %v to %v.`, l.Var.Name, v.Type(), l.Type())
 					}
 				}
 				l.Value = v
@@ -696,12 +733,12 @@ func consumeMutStmt(start int, tokens []token.Token, c *Context) (int, Node, err
 					c.Mutables[string(l.Var.Name)] = l.Var
 				}
 				if IsLiteral(v) {
-					if !IsCompatibleType(c.Types[string(l.Type())], v) {
-						return 0, nil, fmt.Errorf(`Incompatible type assignment: can not assign %v to %v for variable "%v".`, v.Type(), l.Type(), l.Var.Name)
+					if err := IsCompatibleType(c.Types[string(l.Type())], v); err != nil {
+						return 0, nil, fmt.Errorf(`Incompatible assignment for variable "%v": %v.`, l.Var.Name, err)
 					}
 				} else {
 					if v.Type() != l.Type() {
-						return 0, nil, fmt.Errorf(`Incompatible type assignment: can not assign %v to %v for variable "%v".`, v.Type(), l.Type(), l.Var.Name)
+						return 0, nil, fmt.Errorf(`Incompatible assignment for variable "%v": can not assign %v to %v.`, l.Var.Name, v.Type(), l.Type())
 					}
 				}
 

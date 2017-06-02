@@ -187,7 +187,7 @@ func TestParseFizzBuzz(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, err := Construct(tokens)
+	ast, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -332,7 +332,7 @@ func TestHelloWorld(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, err := Construct(tokens)
+	ast, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -365,7 +365,7 @@ func TestEmptyMain(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, err := Construct(tokens)
+	ast, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -390,7 +390,7 @@ func TestLetStatement(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, err := Construct(tokens)
+	ast, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -430,7 +430,7 @@ func TestLetStatementShadow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, err := Construct(tokens)
+	ast, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -482,7 +482,7 @@ func TestMutStatement(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, err := Construct(tokens)
+	ast, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -540,7 +540,7 @@ func TestTwoProcs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, err := Construct(tokens)
+	ast, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -590,7 +590,7 @@ func TestOutOfOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, err := Construct(tokens)
+	ast, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -641,7 +641,7 @@ func TestSumToTen(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, err := Construct(tokens)
+	ast, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -725,7 +725,7 @@ func TestSimpleFunc(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, err := Construct(tokens)
+	ast, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -776,7 +776,7 @@ func TestSumToTenRecursive(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, err := Construct(tokens)
+	ast, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -881,7 +881,7 @@ func TestSomeMath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, err := Construct(tokens)
+	ast, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -995,7 +995,7 @@ func TestEqualComparisonMath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, err := Construct(tokens)
+	ast, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1079,7 +1079,7 @@ func TestNotEqualComparisonMath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, err := Construct(tokens)
+	ast, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1163,7 +1163,7 @@ func TestGreaterComparisonMath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, err := Construct(tokens)
+	ast, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1247,7 +1247,7 @@ func TestGreaterOrEqualComparisonMath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, err := Construct(tokens)
+	ast, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1331,7 +1331,7 @@ func TestLessThanComparisonMath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, err := Construct(tokens)
+	ast, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1415,7 +1415,7 @@ func TestLessThanOrEqualComparisonMath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, err := Construct(tokens)
+	ast, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1499,7 +1499,7 @@ func TestUserDefinedType(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, err := Construct(tokens)
+	ast, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1544,7 +1544,7 @@ func TestTypeInference(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, err := Construct(tokens)
+	ast, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}

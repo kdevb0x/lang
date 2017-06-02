@@ -15,7 +15,7 @@ func Compile(w io.Writer, f ir.Func) error {
 	fmt.Fprintf(w, "TEXT %v(SB), $%d\n", f.Name, reserveStackSize(f))
 	data := dataLiterals(w, f)
 	cpu := Amd64{stringLiterals: data, numArgs: f.NumArgs}
-	cpu.clearRegisterMapping()
+	cpu.clearRegisterMapping(f)
 	for i := range f.Body {
 		// For debugging, add a comment with the IR serialization
 		//fmt.Fprintf(w, "\t%s // %s", cpu.ConvertInstruction(i, f.Body), f.Body[i])

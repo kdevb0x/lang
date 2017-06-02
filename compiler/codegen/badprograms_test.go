@@ -38,7 +38,7 @@ func ExampleWrongType() {
 	if err := RunProgram("wrongtype", invalidprograms.WrongType); err != nil {
 		fmt.Println(err.Error())
 	}
-	// Output: Incompatible type assignment: can not assign string to int for variable "x".
+	// Output: Incompatible assignment for variable "x": Can not assign string to int.
 }
 
 func ExampleUndefinedVariable() {
@@ -73,7 +73,7 @@ func ExampleWrongUsertype() {
 	if err := RunProgram("wrongusertype", invalidprograms.WrongUserType); err != nil {
 		fmt.Println(err.Error())
 	}
-	// Output: Incompatible type assignment: can not assign int to fint for variable "y".
+	// Output: Incompatible assignment for variable "y": can not assign int to fint.
 }
 
 func ExampleMutStatementShadow() {
@@ -102,4 +102,12 @@ func ExampleMutStatementScopeShadow2() {
 		fmt.Println(err.Error())
 	}
 	// Output: Can not shadow mutable variable "n".
+}
+
+func ExampleTooBigUInt8() {
+	if err := RunProgram("biguint8", invalidprograms.TooBigUint8); err != nil {
+		fmt.Println(err.Error())
+	}
+
+	// Output: Incompatible assignment for variable "y": value (256) must be between 0 and 255.
 }
