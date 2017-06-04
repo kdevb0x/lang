@@ -199,10 +199,7 @@ func (a *Amd64) ToPhysical(r ir.Register) PhysicalRegister {
 		}
 		return PhysicalRegister(fmt.Sprintf("%d(SP)", 8*v.Id))
 	case ir.LocalValue:
-		if a.numArgs == 0 {
-			return PhysicalRegister(fmt.Sprintf("%v+%d(FP)", v.String(), (int(v.Id))*8))
-		}
-		return PhysicalRegister(fmt.Sprintf("%v+%d(FP)", v.String(), (int(v.Id)+int(a.numArgs-1))*8))
+		return PhysicalRegister(fmt.Sprintf("%v+%d(FP)", v.String(), (int(v.Id-a.numArgs)*8)+(int(a.numArgs)*8)))
 	case ir.FuncRetVal:
 		if v.Id == 0 {
 			return "AX"

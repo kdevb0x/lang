@@ -8,65 +8,17 @@ import (
 	"github.com/driusan/lang/parser/ast"
 )
 
-type variableLayout struct {
-	values   map[ast.VarWithType]ir.Register
-	tempVars int
-	typeinfo ast.TypeInformation
-}
-
-// Reserves the next available register for varname
-func (c *variableLayout) NextLocalRegister(varname ast.VarWithType) ir.Register {
-	if varname.Type() == "" {
-		panic("No type for variable.")
-	}
-	ti := c.typeinfo
-	if varname.Name == "" {
-		c.tempVars++
-		return ir.LocalValue{uint(len(c.values) + c.tempVars - 1), ti[varname.Type()]}
-	}
-
-	c.values[varname] = ir.LocalValue{uint(len(c.values) + c.tempVars), ti[varname.Type()]}
-	return c.values[varname]
-}
-
-// Reserves a register for a function parameter. This must be done for every
-// parameter, before any LocalRegister calls are made.
-func (c *variableLayout) FuncParamRegister(varname ast.VarWithType, i int) ir.Register {
-	c.tempVars--
-	ti := c.typeinfo
-	c.values[varname] = ir.FuncArg{uint(i), ti[varname.Type()]}
-	return c.values[varname]
-}
-
-// Sets a variable to refer to an existing register, without generating a new
-// one.
-func (c *variableLayout) SetLocalRegister(varname ast.VarWithType, val ir.Register) {
-	c.values[varname] = val
-}
-
-// Gets the register for an existing variable. Panics on invalid variables.
-func (c variableLayout) Get(varname ast.VarWithType) ir.Register {
-	if varname.Name == "" {
-		panic("Can not get empty varname")
-	}
-	return c.values[varname]
-}
-
-// Gets the register for an existing variable, and a bool denoting whether
-// the variable exists or not.
-func (c variableLayout) SafeGet(varname ast.VarWithType) (ir.Register, bool) {
-	v, ok := c.values[varname]
-	return v, ok
-}
-
 // Compile takes an AST and writes the assembly that it compiles to to
 // w.
 func GenerateIR(node ast.Node, typeInfo ast.TypeInformation) (ir.Func, error) {
-	context := &variableLayout{make(map[ast.VarWithType]ir.Register), 0, typeInfo}
+	context := &variableLayout{make(map[ast.VarWithType]ir.Register), 0, typeInfo, nil}
 	switch n := node.(type) {
 	case ast.ProcDecl:
 		for i, arg := range n.Args {
 			context.FuncParamRegister(arg, i)
+		}
+		for _, rv := range n.Return {
+			context.rettypes = append(context.rettypes, context.GetTypeInfo(rv.Type()))
 		}
 		body, err := compileBlock(n.Body, context)
 		if err != nil {
@@ -76,6 +28,9 @@ func GenerateIR(node ast.Node, typeInfo ast.TypeInformation) (ir.Func, error) {
 	case ast.FuncDecl:
 		for i, arg := range n.Args {
 			context.FuncParamRegister(arg, i)
+		}
+		for _, rv := range n.Return {
+			context.rettypes = append(context.rettypes, context.GetTypeInfo(rv.Type()))
 		}
 		body, err := compileBlock(n.Body, context)
 		if err != nil {
@@ -214,17 +169,17 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 					return nil, err
 				}
 				ops = append(ops, fc...)
-
 				// Calling the function already will have left
 				// the value in FuncRetValRegister[0]
-				ops = append(ops, ir.RET{})
 			default:
-				ops = append(ops, ir.MOV{
-					Src: getRegister(arg, context),
-					Dst: ir.FuncRetVal{0, ast.TypeInfo{8, true}},
-				})
-				ops = append(ops, ir.RET{})
+				if len(context.rettypes) != 0 {
+					ops = append(ops, ir.MOV{
+						Src: getRegister(arg, context),
+						Dst: ir.FuncRetVal{0, context.GetReturnTypeInfo(0)},
+					})
+				}
 			}
+			ops = append(ops, ir.RET{})
 		case ast.MutStmt:
 			switch v := s.InitialValue.(type) {
 			case ast.IntLiteral, ast.BoolLiteral, ast.StringLiteral:
@@ -469,10 +424,18 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]ir.Opcode, ir.Regi
 	var ops []ir.Opcode
 	switch s := val.(type) {
 	case ast.AdditionOperator:
-		// FIXME: int shouldn't be hardcoded.
 		a := context.NextLocalRegister(ast.VarWithType{"", "int"})
-		switch s.Left.(type) {
-		case ast.IntLiteral, ast.VarWithType:
+		switch v := s.Left.(type) {
+		case ast.VarWithType:
+			lv := a.(ir.LocalValue)
+			lv.Info = context.GetTypeInfo(v.Type())
+			a = lv
+
+			ops = append(ops, ir.ADD{
+				Src: getRegister(s.Left, context),
+				Dst: a,
+			})
+		case ast.IntLiteral:
 			ops = append(ops, ir.ADD{
 				Src: getRegister(s.Left, context),
 				Dst: a,
@@ -491,6 +454,7 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]ir.Opcode, ir.Regi
 		var r ir.Register
 		switch s.Right.(type) {
 		case ast.IntLiteral, ast.VarWithType:
+			// FIXME: This should validate type compatability
 			r = getRegister(s.Right, context)
 		case ast.AdditionOperator, ast.SubtractionOperator, ast.MulOperator, ast.DivOperator, ast.ModOperator:
 			body, r2, err := evaluateValue(s.Right, context)
@@ -509,10 +473,18 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]ir.Opcode, ir.Regi
 		})
 		return ops, a, nil
 	case ast.SubtractionOperator:
-		// FIXME: int shouldn't be hardcoded.
 		a := context.NextLocalRegister(ast.VarWithType{"", "int"})
-		switch s.Left.(type) {
-		case ast.IntLiteral, ast.VarWithType:
+		switch v := s.Left.(type) {
+		case ast.VarWithType:
+			lv := a.(ir.LocalValue)
+			lv.Info = context.GetTypeInfo(v.Type())
+			a = lv
+
+			ops = append(ops, ir.MOV{
+				Src: getRegister(s.Left, context),
+				Dst: a,
+			})
+		case ast.IntLiteral:
 			ops = append(ops, ir.MOV{
 				Src: getRegister(s.Left, context),
 				Dst: a,

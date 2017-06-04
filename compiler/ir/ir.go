@@ -26,6 +26,7 @@ type FuncCallArg struct {
 
 func (fa FuncCallArg) String() string {
 	return fmt.Sprintf("FA%d", fa.Id)
+	//	return fmt.Sprintf("FA%d (%v)", fa.Id, fa.Info)
 }
 
 func (fa FuncCallArg) Size() int {
@@ -44,6 +45,7 @@ type FuncRetVal struct {
 
 func (fa FuncRetVal) String() string {
 	return fmt.Sprintf("FR%d", fa.Id)
+	//	return fmt.Sprintf("FR%d (%v)", fa.Id, fa.Info)
 }
 
 func (fa FuncRetVal) Size() int {
@@ -63,6 +65,8 @@ type FuncArg struct {
 
 func (fa FuncArg) String() string {
 	return fmt.Sprintf("P%d", fa.Id)
+	//return fmt.Sprintf("P%d (%v)", fa.Id, fa.Info)
+
 }
 
 func (fa FuncArg) Size() int {
@@ -80,6 +84,7 @@ type LocalValue struct {
 
 func (lv LocalValue) String() string {
 	return fmt.Sprintf("LV%d", lv.Id)
+	//return fmt.Sprintf("LV%d (%v)", lv.Id, lv.Info)
 }
 
 func (lv LocalValue) Size() int {

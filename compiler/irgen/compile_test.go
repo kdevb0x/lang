@@ -1152,3 +1152,93 @@ func TestIRGenConcreteTypeInt64(t *testing.T) {
 		}
 	}
 }
+
+func TestIRGenFibonacci(t *testing.T) {
+	loopNum = 0
+	as, ti, err := ast.Parse(sampleprograms.Fibonacci)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i, err := GenerateIR(as[0], ti)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if i.Name != "fib_rec" {
+		t.Errorf("Unexpected name: got %v want %v", i.Name, "main")
+	}
+	expected := []ir.Opcode{
+		ir.ADD{
+			Src: ir.FuncArg{0, ast.TypeInfo{8, false}},
+			Dst: ir.LocalValue{1, ast.TypeInfo{8, false}},
+		},
+		ir.ADD{
+			Src: ir.FuncArg{1, ast.TypeInfo{8, false}},
+			Dst: ir.LocalValue{1, ast.TypeInfo{8, false}},
+		},
+		ir.MOV{
+			Src: ir.LocalValue{1, ast.TypeInfo{8, false}},
+			Dst: ir.LocalValue{0, ast.TypeInfo{8, false}},
+		},
+		ir.JL{ir.ConditionalJump{Label: "if0else", Src: ir.LocalValue{0, ast.TypeInfo{8, false}}, Dst: ir.IntLiteral(200)}},
+		ir.MOV{
+			Src: ir.FuncArg{1, ast.TypeInfo{8, false}},
+			Dst: ir.FuncRetVal{0, ast.TypeInfo{8, false}},
+		},
+		ir.RET{},
+		ir.JMP{"if0elsedone"},
+		ir.Label("if0else"),
+		ir.Label("if0elsedone"),
+		ir.CALL{
+			FName: "printf",
+			Args: []ir.Register{
+				ir.StringLiteral(`%u\n`),
+				ir.LocalValue{0, ast.TypeInfo{8, false}},
+			},
+		},
+		ir.CALL{
+			FName: "fib_rec",
+			Args: []ir.Register{
+				ir.FuncArg{1, ast.TypeInfo{8, false}},
+				ir.LocalValue{0, ast.TypeInfo{8, false}},
+			},
+			TailCall: true,
+		},
+		ir.RET{},
+	}
+	if len(i.Body) != len(expected) {
+		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
+	}
+
+	for j := range expected {
+		if !compareOp(expected[j], i.Body[j]) {
+			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
+		}
+	}
+
+	i, err = GenerateIR(as[1], ti)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if i.Name != "main" {
+		t.Errorf("Unexpected name: got %v want %v", i.Name, "main")
+	}
+	expected = []ir.Opcode{
+		ir.CALL{FName: "fib_rec", Args: []ir.Register{
+			ir.IntLiteral(1),
+			ir.IntLiteral(1),
+		},
+		},
+	}
+	if len(i.Body) != len(expected) {
+		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
+	}
+
+	for j := range expected {
+		if !compareOp(expected[j], i.Body[j]) {
+			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
+		}
+	}
+
+}

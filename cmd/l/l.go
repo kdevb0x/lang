@@ -1,21 +1,20 @@
 package main
 
 import (
-//	"fmt"
+	//	"fmt"
+	"bufio"
 	"io"
-"path/filepath"
-"bufio"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 
-	"github.com/driusan/lang/compiler/irgen"
 	"github.com/driusan/lang/compiler/codegen"
+	"github.com/driusan/lang/compiler/irgen"
 	"github.com/driusan/lang/parser/ast"
 	"github.com/driusan/lang/parser/token"
 )
-
 
 func main() {
 	// For now, jut assume the command is building a program in the
@@ -108,4 +107,3 @@ func BuildProgram(src io.Reader) error {
 	_, err = cmd.Output()
 	return err
 }
-
