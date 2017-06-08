@@ -17,7 +17,7 @@ func (k Keyword) IsValid() bool {
 	switch k {
 	case "proc", "while", "mut", "let", "func",
 		"if", "else", "else if", "return",
-		"type":
+		"type", "match":
 		return true
 	}
 	return false
@@ -52,29 +52,6 @@ func (o Operator) IsValid() bool {
 	return false
 }
 func (t Operator) String() string {
-	return string(t)
-}
-
-// BuiltIn functions (only until the language is well-defined enough
-// to have a standard library.)
-type BuiltIn string
-
-func (bi BuiltIn) IsValid() bool {
-	switch bi {
-	case "println":
-		// prints a builtin type to the screen
-		return true
-	case "Read":
-		// reads an int or string from stdin
-		return true
-	case "extract":
-		// Converts an io value to the underlying type.
-		return true
-	}
-	return false
-}
-
-func (t BuiltIn) String() string {
 	return string(t)
 }
 

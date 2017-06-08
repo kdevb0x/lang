@@ -31,17 +31,35 @@ func RunProgram(name, p string) error {
 		return err
 	}
 
+	enums := make(irgen.EnumMap)
 	for _, v := range prog {
 		switch v.(type) {
+		case ast.SumTypeDefn:
+			_, opts, err := irgen.GenerateIR(v, ti, enums)
+			if err != nil {
+				return err
+			}
+			for k, v := range opts {
+				enums[k] = v
+			}
+		default:
+			// Handled below
+		}
+
+	}
+
+	for _, v := range prog {
+		switch v.(type) {
+
 		case ast.FuncDecl, ast.ProcDecl:
-			fnc, err := irgen.GenerateIR(v, ti)
+			fnc, _, err := irgen.GenerateIR(v, ti, enums)
 			if err != nil {
 				return err
 			}
 			if err := Compile(f, fnc); err != nil {
 				return err
 			}
-		case ast.TypeDefn:
+		case ast.TypeDefn, ast.SumTypeDefn:
 			// No IR for types, we've already verified them.
 		default:
 			panic("Unhandled AST node type for code generation")
@@ -75,7 +93,7 @@ func TestCompileHelloWorld(t *testing.T) {
 	}
 
 	var w bytes.Buffer
-	fnc, err := irgen.GenerateIR(prgAst[0], types)
+	fnc, _, err := irgen.GenerateIR(prgAst[0], types, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -432,4 +450,18 @@ func ExampleFibonacci() {
 	// 55
 	// 89
 	// 144
+}
+
+func ExampleEnumType() {
+	if err := RunProgram("enumtype", sampleprograms.EnumType); err != nil {
+		//fmt.Println(err.Error())
+	}
+	// Output: I am A!
+}
+
+func ExampleEnumTypeInferred() {
+	if err := RunProgram("enumtypeinferred", sampleprograms.EnumTypeInferred); err != nil {
+		//fmt.Println(err.Error())
+	}
+	// Output: I am B!
 }

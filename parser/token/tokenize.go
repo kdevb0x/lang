@@ -17,11 +17,14 @@ const (
 
 func addToken(cur []Token, val string) []Token {
 	switch val {
-	case "proc", "func", "mut", "let", "while", "if", "else", "return", "type":
+	case "proc", "func", "mut", "let", "while", "if", "else", "return", "type",
+		"data", "match", "case":
 		return append(cur, Keyword(val))
-	case "(", ")", "{", "}", `"`, `,`:
+	case "(", ")", "{", "}", `"`, `,`, ":":
 		return append(cur, Char(val))
-	case "+", "-", "*", "/", "%", "<=", "<", "==", ">", ">=", "=", "!=":
+	case "+", "-", "*", "/", "%",
+		"<=", "<", "==", ">", ">=", "=", "!=",
+		"|":
 		return append(cur, Operator(val))
 	case "int", "bool", "string",
 		"uint8", "uint16", "uint32", "uint64",
@@ -64,7 +67,7 @@ func Tokenize(r io.RuneReader) ([]Token, error) {
 			fallthrough
 		case DefaultContext:
 			switch c {
-			case '(', ')', '{', '}', '"', ',':
+			case '(', ')', '{', '}', '"', ',', ':':
 				if currentToken != "" {
 					tokens = addToken(tokens, currentToken)
 				}

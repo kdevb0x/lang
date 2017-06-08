@@ -21,7 +21,7 @@ func compare(v1, v2 Node) bool {
 		MulOperator, DivOperator,
 		EqualityComparison, NotEqualsComparison, GreaterComparison,
 		GreaterOrEqualComparison, LessThanComparison, LessThanOrEqualComparison,
-		TypeDefn:
+		TypeDefn, EnumOption:
 		return v1 == v2
 	}
 
@@ -178,6 +178,49 @@ func compare(v1, v2 Node) bool {
 			return false
 		}
 		return compare(v1a.Condition, v2a.Condition) && compare(v1a.Body, v2a.Body) && compare(v1a.Else, v2a.Else)
+	}
+	if v1a, ok := v1.(SumTypeDefn); ok {
+		v2a, ok := v2.(SumTypeDefn)
+		if !ok {
+			return false
+		}
+		if v1a.Name != v2a.Name {
+			return false
+		}
+		if len(v1a.Options) != len(v2a.Options) {
+			return false
+		}
+		for i := range v1a.Options {
+			if !compare(v1a.Options[i], v2a.Options[i]) {
+				return false
+			}
+		}
+		return true
+	}
+	if v1a, ok := v1.(MatchStmt); ok {
+		v2a, ok := v2.(MatchStmt)
+		if !ok {
+			return false
+		}
+		if !compare(v1a.Condition, v2a.Condition) {
+			return false
+		}
+		if len(v1a.Cases) != len(v2a.Cases) {
+			return false
+		}
+		for i := range v1a.Cases {
+			if !compare(v1a.Cases[i], v2a.Cases[i]) {
+				return false
+			}
+		}
+		return true
+	}
+	if v1a, ok := v1.(MatchCase); ok {
+		v2a, ok := v2.(MatchCase)
+		if !ok {
+			return false
+		}
+		return compare(v1a.Variable, v2a.Variable) && compare(v1a.Body, v2a.Body)
 	}
 	panic(fmt.Sprintf("Unimplemented type for compare %v vs %v", reflect.TypeOf(v1), reflect.TypeOf(v2)))
 }
@@ -1621,6 +1664,158 @@ func TestTypeInference(t *testing.T) {
 	for i, v := range expected {
 		if !compare(ast[i], v) {
 			t.Errorf("type inference (%d): got %v want %v", i, ast[i], v)
+		}
+	}
+
+}
+
+func TestEnumType(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.EnumType))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Node{
+		SumTypeDefn{
+			"Foo",
+			[]EnumOption{
+				EnumOption{"A", "Foo"},
+				EnumOption{"B", "Foo"},
+			},
+		},
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+
+					LetStmt{
+						Var:   VarWithType{"a", "Foo"},
+						Value: EnumOption{"A", "Foo"},
+					},
+					MatchStmt{
+						Condition: VarWithType{"a", "Foo"},
+						Cases: []MatchCase{
+							MatchCase{
+								Variable: EnumOption{"A", "Foo"},
+								Body: BlockStmt{
+									[]Node{
+										FuncCall{
+											Name: "print",
+											UserArgs: []Value{
+												StringLiteral(`I am A!\n`),
+											},
+										},
+									},
+								},
+							},
+							MatchCase{
+								Variable: EnumOption{"B", "Foo"},
+								Body: BlockStmt{
+									[]Node{
+										FuncCall{
+											Name: "print",
+											UserArgs: []Value{
+												StringLiteral(`I am B!\n`),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if len(expected) != len(ast) {
+		t.Fatalf("Unexpected AST: got %v want %v", ast, expected)
+	}
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("enum test (%d): got %v want %v", i, ast[i], v)
+		}
+	}
+
+}
+
+func TestEnumTypeInferred(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.EnumTypeInferred))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Node{
+		SumTypeDefn{
+			"Foo",
+			[]EnumOption{
+				EnumOption{"A", "Foo"},
+				EnumOption{"B", "Foo"},
+			},
+		},
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+
+					LetStmt{
+						Var:   VarWithType{"a", "Foo"},
+						Value: EnumOption{"B", "Foo"},
+					},
+					MatchStmt{
+						Condition: VarWithType{"a", "Foo"},
+						Cases: []MatchCase{
+							MatchCase{
+								Variable: EnumOption{"A", "Foo"},
+								Body: BlockStmt{
+									[]Node{
+										FuncCall{
+											Name: "print",
+											UserArgs: []Value{
+												StringLiteral(`I am A!\n`),
+											},
+										},
+									},
+								},
+							},
+							MatchCase{
+								Variable: EnumOption{"B", "Foo"},
+								Body: BlockStmt{
+									[]Node{
+										FuncCall{
+											Name: "print",
+											UserArgs: []Value{
+												StringLiteral(`I am B!\n`),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if len(expected) != len(ast) {
+		t.Fatalf("Unexpected AST: got %v want %v", ast, expected)
+	}
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("enum test (%d): got %v want %v", i, ast[i], v)
 		}
 	}
 

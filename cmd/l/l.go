@@ -76,11 +76,29 @@ func BuildProgram(src io.Reader) error {
 		return err
 	}
 
-	// Generate the IR
+	// Generate the type information before the functions.
+	enums := make(irgen.EnumMap)
+	for _, v := range prog {
+		switch v.(type) {
+		case ast.SumTypeDefn:
+			_, opts, err := irgen.GenerateIR(v, ti, enums)
+			if err != nil {
+				return err
+			}
+			for k, v := range opts {
+				enums[k] = v
+			}
+		default:
+			// Handled below
+		}
+
+	}
+
+	// Generate the IR for the functions.
 	for _, v := range prog {
 		switch v.(type) {
 		case ast.FuncDecl, ast.ProcDecl:
-			fnc, err := irgen.GenerateIR(v, ti)
+			fnc, _, err := irgen.GenerateIR(v, ti, enums)
 			if err != nil {
 				return err
 			}

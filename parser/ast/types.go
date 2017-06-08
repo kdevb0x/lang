@@ -6,6 +6,26 @@ import (
 
 type Type string
 
+type EnumOption struct {
+	Constructor string
+	ParentType  Type
+}
+
+func (eo EnumOption) Node() Node {
+	return eo
+}
+
+func (eo EnumOption) Value() interface{} {
+	return eo.Constructor
+}
+func (eo EnumOption) Type() Type {
+	return eo.ParentType
+}
+
+func (eo EnumOption) String() string {
+	return fmt.Sprintf("EnumOption{%v ParentType: %v}", eo.Constructor, eo.ParentType)
+}
+
 type VarWithType struct {
 	Name Variable
 	Typ  Type
@@ -38,6 +58,7 @@ type MutStmt struct {
 	Var          VarWithType
 	InitialValue Value
 }
+
 type TypeDefn struct {
 	Name         Type
 	ConcreteType Type
@@ -47,6 +68,19 @@ func (t TypeDefn) Node() Node {
 	return t
 }
 
+type SumTypeDefn struct {
+	Name    Type
+	Options []EnumOption
+}
+
+func (t SumTypeDefn) Node() Node {
+	return t
+}
+
+func (t SumTypeDefn) String() string {
+	return fmt.Sprintf("SumTypeDefn{%v, Options: %v}", t.Name, t.Options)
+
+}
 func (m MutStmt) Type() Type {
 	return m.Var.Type()
 }

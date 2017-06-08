@@ -38,7 +38,7 @@ func TestIRGenEmptyMain(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(ast[0], ti)
+	i, _, err := GenerateIR(ast[0], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,7 +56,7 @@ func TestIRGenHelloWorld(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(ast[0], ti)
+	i, _, err := GenerateIR(ast[0], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +83,7 @@ func TestIRGenLetStatement(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(as[0], ti)
+	i, _, err := GenerateIR(as[0], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,7 +118,7 @@ func TestIRGenLetStatementShadow(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(as[0], ti)
+	i, _, err := GenerateIR(as[0], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +162,7 @@ func TestIRGenHelloWorld2(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(ast[0], ti)
+	i, _, err := GenerateIR(ast[0], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -195,7 +195,7 @@ func TestIRGenTwoProcs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(as[0], ti)
+	i, _, err := GenerateIR(as[0], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -219,7 +219,7 @@ func TestIRGenTwoProcs(t *testing.T) {
 		}
 	}
 
-	i, err = GenerateIR(as[1], ti)
+	i, _, err = GenerateIR(as[1], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -256,7 +256,7 @@ func TestIRGenOutOfOrder(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(as[0], ti)
+	i, _, err := GenerateIR(as[0], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -285,7 +285,7 @@ func TestIRGenOutOfOrder(t *testing.T) {
 		}
 	}
 
-	i, err = GenerateIR(as[1], ti)
+	i, _, err = GenerateIR(as[1], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -316,7 +316,7 @@ func TestIRGenMutAddition(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(as[0], ti)
+	i, _, err := GenerateIR(as[0], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -383,7 +383,7 @@ func TestIRGenSimpleFunc(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(as[0], ti)
+	i, _, err := GenerateIR(as[0], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -407,7 +407,7 @@ func TestIRGenSimpleFunc(t *testing.T) {
 		}
 	}
 
-	i, err = GenerateIR(as[1], ti)
+	i, _, err = GenerateIR(as[1], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -443,7 +443,7 @@ func TestIRGenSumToTen(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(as[0], ti)
+	i, _, err := GenerateIR(as[0], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -504,7 +504,7 @@ func TestIRGenSumToTen(t *testing.T) {
 			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
 		}
 	}
-	i, err = GenerateIR(as[1], ti)
+	i, _, err = GenerateIR(as[1], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -543,7 +543,7 @@ func TestIRGenSumToTenRecursive(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(as[0], ti)
+	i, _, err := GenerateIR(as[0], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -571,7 +571,7 @@ func TestIRGenSumToTenRecursive(t *testing.T) {
 		}
 	}
 
-	i, err = GenerateIR(as[1], ti)
+	i, _, err = GenerateIR(as[1], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -630,7 +630,7 @@ func TestIRGenSumToTenRecursive(t *testing.T) {
 		}
 	}
 
-	i, err = GenerateIR(as[2], ti)
+	i, _, err = GenerateIR(as[2], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -664,7 +664,7 @@ func TestIRGenFizzBuzz(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(as[0], ti)
+	i, _, err := GenerateIR(as[0], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -723,7 +723,7 @@ func TestIRGenSomeMathStatement(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(as[0], ti)
+	i, _, err := GenerateIR(as[0], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -844,7 +844,7 @@ func TestIRGenUserType(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(as[1], ti)
+	i, _, err := GenerateIR(as[1], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -879,7 +879,7 @@ func TestIRGenConcreteTypeUint8(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(as[0], ti)
+	i, _, err := GenerateIR(as[0], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -914,7 +914,7 @@ func TestIRGenConcreteTypeInt8(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(as[0], ti)
+	i, _, err := GenerateIR(as[0], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -949,7 +949,7 @@ func TestIRGenConcreteTypeUint16(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(as[0], ti)
+	i, _, err := GenerateIR(as[0], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -984,7 +984,7 @@ func TestIRGenConcreteTypeInt16(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(as[0], ti)
+	i, _, err := GenerateIR(as[0], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1019,7 +1019,7 @@ func TestIRGenConcreteTypeUint32(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(as[0], ti)
+	i, _, err := GenerateIR(as[0], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1054,7 +1054,7 @@ func TestIRGenConcreteTypeInt32(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(as[0], ti)
+	i, _, err := GenerateIR(as[0], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1089,7 +1089,7 @@ func TestIRGenConcreteTypeUint64(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(as[0], ti)
+	i, _, err := GenerateIR(as[0], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1124,7 +1124,7 @@ func TestIRGenConcreteTypeInt64(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(as[0], ti)
+	i, _, err := GenerateIR(as[0], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1160,7 +1160,7 @@ func TestIRGenFibonacci(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, err := GenerateIR(as[0], ti)
+	i, _, err := GenerateIR(as[0], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1216,7 +1216,7 @@ func TestIRGenFibonacci(t *testing.T) {
 		}
 	}
 
-	i, err = GenerateIR(as[1], ti)
+	i, _, err = GenerateIR(as[1], ti, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1241,4 +1241,60 @@ func TestIRGenFibonacci(t *testing.T) {
 		}
 	}
 
+}
+
+func TestIREnumType(t *testing.T) {
+	loopNum = 0
+	as, ti, err := ast.Parse(sampleprograms.EnumType)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, enums, err := GenerateIR(as[0], ti, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, err := GenerateIR(as[1], ti, enums)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if i.Name != "main" {
+		t.Errorf("Unexpected name: got %v want %v", i.Name, "main")
+	}
+	expected := []ir.Opcode{
+		ir.MOV{
+			Src: ir.IntLiteral(0),
+			Dst: ir.LocalValue{0, ast.TypeInfo{8, false}},
+		},
+		ir.JE{ir.ConditionalJump{Label: "match0v0", Src: ir.LocalValue{0, ast.TypeInfo{8, false}}, Dst: ir.IntLiteral(0)}},
+		ir.JE{ir.ConditionalJump{Label: "match0v1", Src: ir.LocalValue{0, ast.TypeInfo{8, false}}, Dst: ir.IntLiteral(1)}},
+		ir.JMP{"match0done"},
+		ir.Label("match0v0"),
+		ir.CALL{
+			FName: "printf",
+			Args: []ir.Register{
+				ir.StringLiteral(`I am A!\n`),
+			},
+		},
+		ir.JMP{"match0done"},
+
+		ir.Label("match0v1"),
+		ir.CALL{
+			FName: "printf",
+			Args: []ir.Register{
+				ir.StringLiteral(`I am B!\n`),
+			},
+		},
+		ir.JMP{"match0done"},
+		ir.Label("match0done"),
+	}
+	if len(i.Body) != len(expected) {
+		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
+	}
+
+	for j := range expected {
+		if !compareOp(expected[j], i.Body[j]) {
+			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
+		}
+	}
 }

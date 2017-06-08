@@ -303,6 +303,8 @@ func consumeBoolValue(start int, tokens []token.Token, c *Context) (int, Value, 
 				}
 				partial = fc
 				i += n
+			} else if eo := c.EnumeratedOption(t.String()); eo != nil {
+				return i + 1 - start, *eo, nil
 			} else {
 				// FIXME: Otherwise, it may still be a parameter.
 				// Validate this.

@@ -1,15 +1,18 @@
 package irgen
 
 import (
+	"fmt"
+
 	"github.com/driusan/lang/compiler/ir"
 	"github.com/driusan/lang/parser/ast"
 )
 
 type variableLayout struct {
-	values   map[ast.VarWithType]ir.Register
-	tempVars int
-	typeinfo ast.TypeInformation
-	rettypes []ast.TypeInfo
+	values     map[ast.VarWithType]ir.Register
+	tempVars   int
+	typeinfo   ast.TypeInformation
+	rettypes   []ast.TypeInfo
+	enumvalues EnumMap
 }
 
 func (c variableLayout) GetTypeInfo(t ast.Type) ast.TypeInfo {
@@ -62,4 +65,12 @@ func (c variableLayout) Get(varname ast.VarWithType) ir.Register {
 func (c variableLayout) SafeGet(varname ast.VarWithType) (ir.Register, bool) {
 	v, ok := c.values[varname]
 	return v, ok
+}
+
+func (c variableLayout) GetEnumIndex(v string) int {
+	val, ok := c.enumvalues[v]
+	if !ok {
+		panic(fmt.Sprintf("Attempt to retrieve invalid enum option %v: ", v))
+	}
+	return val
 }

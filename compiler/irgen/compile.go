@@ -8,10 +8,12 @@ import (
 	"github.com/driusan/lang/parser/ast"
 )
 
+type EnumMap map[string]int
+
 // Compile takes an AST and writes the assembly that it compiles to to
 // w.
-func GenerateIR(node ast.Node, typeInfo ast.TypeInformation) (ir.Func, error) {
-	context := &variableLayout{make(map[ast.VarWithType]ir.Register), 0, typeInfo, nil}
+func GenerateIR(node ast.Node, typeInfo ast.TypeInformation, enums EnumMap) (ir.Func, EnumMap, error) {
+	context := &variableLayout{make(map[ast.VarWithType]ir.Register), 0, typeInfo, nil, enums}
 	switch n := node.(type) {
 	case ast.ProcDecl:
 		for i, arg := range n.Args {
@@ -22,9 +24,9 @@ func GenerateIR(node ast.Node, typeInfo ast.TypeInformation) (ir.Func, error) {
 		}
 		body, err := compileBlock(n.Body, context)
 		if err != nil {
-			return ir.Func{}, err
+			return ir.Func{}, nil, err
 		}
-		return ir.Func{Name: n.Name, Body: body, NumArgs: uint(len(n.Args))}, nil
+		return ir.Func{Name: n.Name, Body: body, NumArgs: uint(len(n.Args))}, enums, nil
 	case ast.FuncDecl:
 		for i, arg := range n.Args {
 			context.FuncParamRegister(arg, i)
@@ -34,12 +36,18 @@ func GenerateIR(node ast.Node, typeInfo ast.TypeInformation) (ir.Func, error) {
 		}
 		body, err := compileBlock(n.Body, context)
 		if err != nil {
-			return ir.Func{}, err
+			return ir.Func{}, nil, err
 		}
-		return ir.Func{Name: n.Name, Body: body, NumArgs: uint(len(n.Args))}, nil
+		return ir.Func{Name: n.Name, Body: body, NumArgs: uint(len(n.Args))}, enums, nil
+	case ast.SumTypeDefn:
+		e := make(EnumMap)
+		for i, v := range n.Options {
+			e[v.Constructor] = i
+		}
+		return ir.Func{}, e, nil
 	case ast.TypeDefn:
 		// Do nothing, the types have already been validated
-		return ir.Func{}, fmt.Errorf("No IR to generate for type definitions.")
+		return ir.Func{}, enums, fmt.Errorf("No IR to generate for type definitions.")
 	default:
 		panic(fmt.Sprintf("Unhandled Node type in compiler %v", reflect.TypeOf(n)))
 	}
@@ -111,6 +119,8 @@ func getRegister(n ast.Node, context *variableLayout) ir.Register {
 		return ir.IntLiteral(0)
 	case ast.VarWithType:
 		return context.Get(v)
+	case ast.EnumOption:
+		return ir.IntLiteral(context.GetEnumIndex(v.Constructor))
 	default:
 		panic(fmt.Sprintf("Unhandled type in getRegister: %v", reflect.TypeOf(v)))
 	}
@@ -129,7 +139,8 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 		case ast.LetStmt:
 			reg := context.NextLocalRegister(s.Var)
 			switch v := s.Value.(type) {
-			case ast.IntLiteral, ast.StringLiteral, ast.BoolLiteral:
+			case ast.IntLiteral, ast.StringLiteral, ast.BoolLiteral,
+				ast.EnumOption:
 				ops = append(ops, ir.MOV{
 					Src: getRegister(v, context),
 					Dst: reg,
@@ -278,6 +289,43 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 				ops = append(ops, body...)
 			}
 			ops = append(ops, dname)
+		case ast.MatchStmt:
+			mname := ir.Label(fmt.Sprintf("match%d", loopNum))
+			loopNum++
+			body, src, err := evaluateValue(s.Condition, context)
+			if err != nil {
+				return nil, err
+			}
+			ops = append(ops, body...)
+			// Generate jump table
+			for i := range s.Cases {
+				body, dst, err := evaluateValue(s.Cases[i].Variable, context)
+				if err != nil {
+					return nil, err
+				}
+				ops = append(ops, body...)
+
+				ops = append(ops, ir.JE{
+					ir.ConditionalJump{Label: ir.Label(fmt.Sprintf("%vv%d", mname.Inline(), i)),
+						Src: src,
+						Dst: dst,
+					},
+				})
+			}
+			// FIXME: The AST should verify that match cases are exhaustive, and
+			// this safety JMP should be unnecessary.
+			ops = append(ops, ir.JMP{ir.Label(fmt.Sprintf("%vdone", mname.Inline()))})
+			// Generate bodies
+			for i := range s.Cases {
+				ops = append(ops, ir.Label(fmt.Sprintf("%vv%d", mname.Inline(), i)))
+				body, err := compileBlock(s.Cases[i].Body, context)
+				if err != nil {
+					return nil, err
+				}
+				ops = append(ops, body...)
+				ops = append(ops, ir.JMP{ir.Label(fmt.Sprintf("%vdone", mname.Inline()))})
+			}
+			ops = append(ops, ir.Label(fmt.Sprintf("%vdone", mname.Inline())))
 		default:
 			panic(fmt.Sprintf("Statement type not implemented: %v", reflect.TypeOf(s)))
 		}
@@ -600,7 +648,7 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]ir.Opcode, ir.Regi
 			Dst:   a,
 		})
 		return ops, a, nil
-	case ast.VarWithType, ast.IntLiteral, ast.BoolLiteral:
+	case ast.VarWithType, ast.IntLiteral, ast.BoolLiteral, ast.EnumOption:
 		return nil, getRegister(s, context), nil
 	default:
 		panic(fmt.Errorf("Unhandled value type: %v", reflect.TypeOf(s)))

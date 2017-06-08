@@ -2,6 +2,7 @@ package ast
 
 import (
 	"fmt"
+	//	"os"
 	"reflect"
 	"strings"
 
@@ -14,6 +15,7 @@ type Context struct {
 	Functions   map[string]Callable
 	Types       map[string]TypeDefn
 	PureContext bool // true if inside a pure function.
+	EnumOptions map[string]EnumOption
 }
 
 func NewContext() Context {
@@ -38,6 +40,7 @@ func NewContext() Context {
 			"bool":   TypeDefn{"bool", "bool"},
 		},
 		PureContext: false,
+		EnumOptions: make(map[string]EnumOption),
 	}
 }
 func (c Context) Clone() Context {
@@ -46,6 +49,7 @@ func (c Context) Clone() Context {
 	c2.Functions = make(map[string]Callable)
 	c2.Mutables = make(map[string]VarWithType)
 	c2.Types = make(map[string]TypeDefn)
+	c2.EnumOptions = make(map[string]EnumOption)
 	for k, v := range c.Variables {
 		c2.Variables[k] = v
 	}
@@ -58,6 +62,9 @@ func (c Context) Clone() Context {
 	}
 	for k, v := range c.Types {
 		c2.Types[k] = v
+	}
+	for k, v := range c.EnumOptions {
+		c2.EnumOptions[k] = v
 	}
 	c2.PureContext = c.PureContext
 	return c2
@@ -96,6 +103,14 @@ func (c Context) ValidType(t Type) bool {
 	}
 	return false
 }
+
+func (c Context) EnumeratedOption(t string) *EnumOption {
+	if eo, ok := c.EnumOptions[t]; ok {
+		return &eo
+	}
+	return nil
+}
+
 func topLevelNode(T token.Token) (Node, error) {
 	switch t := T.(type) {
 	case token.Whitespace:
@@ -108,6 +123,8 @@ func topLevelNode(T token.Token) (Node, error) {
 			return FuncDecl{}, nil
 		case "type":
 			return TypeDefn{}, nil
+		case "data":
+			return SumTypeDefn{}, nil
 		}
 		return nil, fmt.Errorf("Invalid top level keyword: %v", t)
 	default:
@@ -166,13 +183,12 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, error) {
 	c := NewContext()
 
 	tokens = stripWhitespace(tokens)
+	// For debugging only.
 	/*
-		// For debugging only.
 		for i := 0; i < len(tokens); i++ {
 			fmt.Fprintf(os.Stderr, "%d: '%v'\n", i, tokens[i].String())
 		}
 	*/
-
 	err := extractPrototypes(tokens, &c)
 	if err != nil {
 		return nil, nil, err
@@ -263,7 +279,29 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, error) {
 				panic("Unhandled concrete type: " + string(c.Types[typeName].ConcreteType))
 			}
 			i += 2
+		case SumTypeDefn:
+			n, typeNames, err := consumeIdentifiersUntilEquals(i+1, tokens, &c)
+			if err != nil {
+				return nil, nil, err
+			}
+			if len(typeNames) != 1 {
+				panic("Generic sum types not yet implemented.")
+			}
+			i += n + 1
 
+			cur.Name = Type(typeNames[0].String())
+			n, options, err := consumeSumTypeList(i+1, tokens, &c)
+			if err != nil {
+				return nil, nil, err
+			}
+			for _, constructor := range options {
+				cur.Options = append(cur.Options, EnumOption{constructor, cur.Name})
+			}
+			// FIXME: This type info is completely wrong.
+			ti[cur.Name] = TypeInfo{8, false}
+
+			i += n
+			nodes = append(nodes, cur)
 		}
 	}
 	return nodes, ti, nil
@@ -371,7 +409,31 @@ func extractPrototypes(tokens []token.Token, c *Context) error {
 			i++
 			cur.ConcreteType = Type(tokens[i].String())
 			c.Types[string(cur.Name)] = cur
+		case SumTypeDefn:
+			n, typeNames, err := consumeIdentifiersUntilEquals(i+1, tokens, c)
+			if err != nil {
+				return err
+			}
+			if len(typeNames) != 1 {
+				panic("Generic sum types not yet implemented.")
+			}
+			i += n + 1
 
+			cur.Name = Type(typeNames[0].String())
+
+			n, options, err := consumeSumTypeList(i+1, tokens, c)
+			if err != nil {
+				return err
+			}
+
+			for _, o := range options {
+				c.EnumOptions[o] = EnumOption{o, cur.Name}
+			}
+			// FIXME: There needs to be a type interface so that
+			// SumTypeDefn and TypeDefn can be in the same map.
+			c.Types[string(cur.Name)] = TypeDefn{Name: "sumtype"}
+
+			i += n
 		}
 	}
 	return nil
@@ -508,6 +570,13 @@ func consumeBlock(start int, tokens []token.Token, c *Context) (int, BlockStmt, 
 					}
 				}
 				blockStmt.Stmts = append(blockStmt.Stmts, firstIf)
+			case "match":
+				n, v, err := consumeMatchStmt(i, tokens, c)
+				if err != nil {
+					return 0, BlockStmt{}, err
+				}
+				blockStmt.Stmts = append(blockStmt.Stmts, v)
+				i += n
 			default:
 				panic(fmt.Sprintf("Unimplemented keyword: %v at %v", tokens[i], i))
 			}
@@ -519,6 +588,105 @@ func consumeBlock(start int, tokens []token.Token, c *Context) (int, BlockStmt, 
 	return 0, BlockStmt{}, fmt.Errorf("Unterminated block statement")
 }
 
+func consumeStmt(start int, tokens []token.Token, c *Context) (int, Node, error) {
+	switch t := tokens[start].(type) {
+	case token.Unknown:
+		if start+1 >= len(tokens) {
+			return 0, BlockStmt{}, fmt.Errorf("Invalid token at end of file.")
+		}
+		switch tokens[start+1] {
+		case token.Char("("):
+			if c.IsFunction(tokens[start].String()) {
+				n, fc, err := consumeFuncCall(start, tokens, c)
+				if err == nil {
+					return n + 1, fc, nil
+				}
+				return 0, nil, err
+			} else {
+				return 0, nil, fmt.Errorf("Call to undefined function: %v", tokens[start])
+			}
+
+		case token.Operator("="):
+			if !c.IsVariable(t.String()) {
+				return 0, nil, fmt.Errorf("Invalid variable for assignment: %v", tokens[start])
+			}
+
+			if !c.IsMutable(t.String()) {
+				return 0, nil, fmt.Errorf(`Can not assign to immutable let variable "%v".`, tokens[start])
+			}
+			n, val, err := consumeValue(start+2, tokens, c)
+			if err != nil {
+				return 0, nil, err
+			}
+
+			return n, AssignmentOperator{
+				Variable: c.Variables[tokens[start].String()],
+				Value:    val,
+			}, nil
+		default:
+			panic(fmt.Sprintf("Don't know how to handle token: %v at token %d", tokens[start+1], start+1))
+		}
+	case token.Keyword:
+		switch t {
+		case "let":
+			return consumeLetStmt(start, tokens, c)
+		case "mut":
+			return consumeMutStmt(start, tokens, c)
+		case "return":
+			return consumeValue(start+1, tokens, c)
+		case "while":
+			return consumeWhileLoop(start, tokens, c)
+			/*
+				case "if":
+					n, v, err := consumeIfStmt(start, tokens, c)
+					if err != nil {
+						return 0, BlockStmt{}, err
+					}
+					start += n
+
+					// This is more complicated than it should be.
+					var firstIf *IfStmt = &v
+					var lastIf *IfStmt = &v
+					for i < len(tokens) && tokens[i+1] == token.Keyword("else") {
+						if i < len(tokens)-2 && tokens[i+2] == token.Keyword("if") {
+							n, nextIf, err := consumeIfStmt(i+2, tokens, c)
+								if err != nil {
+								return 0, BlockStmt{}, err
+							}
+							lastIf.Else = BlockStmt{
+								[]Node{
+											&nextIf,
+										},
+									}
+
+									i += n + 2
+									lastIf = &nextIf
+								} else {
+									n, elseB, err := consumeBlock(i+2, tokens, c)
+									if err != nil {
+										return 0, BlockStmt{}, err
+									}
+									lastIf.Else = elseB
+									i += n + 2
+								}
+							}
+							blockStmt.Stmts = append(blockStmt.Stmts, firstIf)
+						case "match":
+							n, v, err := consumeMatchStmt(i, tokens, c)
+							if err != nil {
+								return 0, BlockStmt{}, err
+							}
+							blockStmt.Stmts = append(blockStmt.Stmts, v)
+							i += n
+			*/
+		default:
+			panic(fmt.Sprintf("Unimplemented keyword: %v at %v", tokens[start], start))
+		}
+	default:
+		panic(fmt.Sprintf("Unhandled token type in block %v for token %v", tokens[start].String(), start))
+	}
+
+}
 func consumeFuncCall(start int, tokens []token.Token, c *Context) (int, FuncCall, error) {
 	name := tokens[start].String()
 	f := FuncCall{
@@ -822,4 +990,40 @@ func consumeTypeList(start int, tokens []token.Token) (int, []VarWithType, error
 		}
 	}
 	return 0, nil, fmt.Errorf("Could not parse arguments")
+}
+
+func consumeIdentifiersUntilEquals(start int, tokens []token.Token, c *Context) (int, []token.Token, error) {
+	var vals []token.Token
+	for i := start; i < len(tokens); i++ {
+		switch t := tokens[i].(type) {
+		case token.Unknown:
+			vals = append(vals, t)
+		case token.Operator:
+			if t == "=" {
+				return i - start, vals, nil
+			}
+			return 0, nil, fmt.Errorf("Unexpected operator: %v", t)
+		default:
+			return 0, nil, fmt.Errorf("Invalid token: %v", t)
+		}
+	}
+	return 0, nil, fmt.Errorf("Could not parse identifiers")
+}
+
+func consumeSumTypeList(start int, tokens []token.Token, c *Context) (int, []string, error) {
+	var vals []string
+	for i := start; i < len(tokens); i++ {
+		switch t := tokens[i].(type) {
+		case token.Unknown:
+			vals = append(vals, t.String())
+			if tokens[i+1] == token.Operator("|") {
+				i += 1
+			}
+		case token.Keyword:
+			return i - start, vals, nil
+		default:
+			return 0, nil, fmt.Errorf("Invalid token in sumtype: %v", t)
+		}
+	}
+	return 0, nil, fmt.Errorf("Could not consume type list")
 }
