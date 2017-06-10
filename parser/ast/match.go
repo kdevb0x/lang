@@ -34,9 +34,17 @@ func consumeMatchStmt(start int, tokens []token.Token, c *Context) (int, MatchSt
 	if tokens[start] != token.Keyword("match") {
 		return 0, MatchStmt{}, fmt.Errorf("Invalid match statement")
 	}
-	cn, cv, err := consumeValue(start+1, tokens, c)
-	if err != nil {
-		return 0, MatchStmt{}, err
+	var cn int
+	var cv Value
+	var err error
+	if tokens[start+1] == token.Char("{") {
+		cn = 0
+		cv = BoolLiteral(true)
+	} else {
+		cn, cv, err = consumeValue(start+1, tokens, c)
+		if err != nil {
+			return 0, MatchStmt{}, err
+		}
 	}
 	l.Condition = cv
 
@@ -53,6 +61,11 @@ func consumeMatchStmt(start int, tokens []token.Token, c *Context) (int, MatchSt
 		l.Cases = append(l.Cases, cs)
 		i += n
 		if tokens[i+1] == token.Char("}") {
+			if c.Types[string(l.Condition.Type())] == (TypeDefn{Name: "sumtype"}) {
+				if err := checkExhaustiveness(l.Condition.Type(), l.Cases, c); err != nil {
+					return 0, MatchStmt{}, err
+				}
+			}
 			return i - start, l, nil
 		}
 	}
@@ -85,4 +98,25 @@ func consumeCase(start int, tokens []token.Token, c *Context) (int, MatchCase, e
 		i += n
 	}
 	return 0, MatchCase{}, fmt.Errorf("Unterminated case statement")
+}
+
+func checkExhaustiveness(t Type, mc []MatchCase, c *Context) error {
+	allcases := make(map[string]bool)
+	for _, eo := range c.EnumOptions {
+		if eo.Type() == t {
+			allcases[eo.Constructor] = false
+		}
+	}
+
+	for _, m := range mc {
+		if eo, ok := m.Variable.(EnumOption); ok {
+			allcases[eo.Constructor] = true
+		}
+	}
+	for c, v := range allcases {
+		if v == false {
+			return fmt.Errorf(`Inexhaustive match for enum type "%v": Missing case "%v".`, t, c)
+		}
+	}
+	return nil
 }

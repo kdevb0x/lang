@@ -1820,3 +1820,96 @@ func TestEnumTypeInferred(t *testing.T) {
 	}
 
 }
+
+func TestIfElseMatch(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.IfElseMatch))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Node{
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+
+					LetStmt{
+						Var:   VarWithType{"x", "int"},
+						Value: IntLiteral(3),
+					},
+					MatchStmt{
+						Condition: BoolLiteral(true),
+						Cases: []MatchCase{
+							MatchCase{
+								Variable: LessThanComparison{
+									Left:  VarWithType{"x", "int"},
+									Right: IntLiteral(3),
+								},
+								Body: BlockStmt{
+									[]Node{
+										FuncCall{
+											Name: "print",
+											UserArgs: []Value{
+												StringLiteral(`x is less than 3\n`),
+											},
+										},
+									},
+								},
+							},
+							MatchCase{
+								Variable: GreaterComparison{
+									Left:  VarWithType{"x", "int"},
+									Right: IntLiteral(3),
+								},
+
+								Body: BlockStmt{
+									[]Node{
+										FuncCall{
+											Name: "print",
+											UserArgs: []Value{
+												StringLiteral(`x is greater than 3\n`),
+											},
+										},
+									},
+								},
+							},
+							MatchCase{
+								Variable: LessThanComparison{
+									Left:  VarWithType{"x", "int"},
+									Right: IntLiteral(4),
+								},
+
+								Body: BlockStmt{
+									[]Node{
+										FuncCall{
+											Name: "print",
+											UserArgs: []Value{
+												StringLiteral(`x is less than 4\n`),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if len(expected) != len(ast) {
+		t.Fatalf("Unexpected AST: got %v want %v", ast, expected)
+	}
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("enum test (%d): got %v want %v", i, ast[i], v)
+		}
+	}
+
+}

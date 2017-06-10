@@ -465,3 +465,17 @@ func ExampleEnumTypeInferred() {
 	}
 	// Output: I am B!
 }
+
+func ExampleSimpleMatch() {
+	if err := RunProgram("simplematch", sampleprograms.SimpleMatch); err != nil {
+		//fmt.Println(err.Error())
+	}
+	// Output: I am 3
+}
+
+func ExampleIfElseMatch() {
+	if err := RunProgram("ifelsematch", sampleprograms.IfElseMatch); err != nil {
+		//fmt.Println(err.Error())
+	}
+	// Output: x is less than 4
+}

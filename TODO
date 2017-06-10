@@ -1,6 +1,4 @@
 - Improve match keyword
-	- ensure match keyword is exhaustive
-	- use as if/elseif chain
 	- add let y match x {} .. variable declarations
 - Implement generics
 	- generic sum types (add the maybe monad)

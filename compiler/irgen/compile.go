@@ -648,6 +648,36 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]ir.Opcode, ir.Regi
 			Dst:   a,
 		})
 		return ops, a, nil
+	case ast.LessThanComparison, ast.LessThanOrEqualComparison,
+		ast.EqualityComparison, ast.NotEqualsComparison,
+		ast.GreaterComparison, ast.GreaterOrEqualComparison:
+		cname := ir.Label(fmt.Sprintf("comparison%d", loopNum))
+		loopNum++
+
+		a := context.NextLocalRegister(ast.VarWithType{"", "int"})
+		bv, ok := s.(ast.BoolValue)
+		if !ok {
+			panic("Comparison operator doesn't implement BoolValue")
+		}
+		comp, err := evaluateCondition(bv, context, cname+"false")
+		if err != nil {
+			return nil, nil, err
+		}
+		ops = append(ops, comp...)
+		ops = append(ops, ir.MOV{
+			Src: ir.IntLiteral(1),
+			Dst: a,
+		})
+		ops = append(ops, ir.JMP{cname + "done"})
+		ops = append(ops, ir.Label(cname+"false"))
+		ops = append(ops, ir.MOV{
+			Src: ir.IntLiteral(0),
+			Dst: a,
+		})
+		ops = append(ops, ir.Label(cname+"done"))
+
+		return ops, a, nil
+
 	case ast.VarWithType, ast.IntLiteral, ast.BoolLiteral, ast.EnumOption:
 		return nil, getRegister(s, context), nil
 	default:

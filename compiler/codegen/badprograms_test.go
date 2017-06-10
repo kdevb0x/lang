@@ -111,3 +111,11 @@ func ExampleTooBigUInt8() {
 
 	// Output: Incompatible assignment for variable "y": value (256) must be between 0 and 255.
 }
+
+func ExampleIncompleteMatch() {
+	if err := RunProgram("incompletematch", invalidprograms.IncompleteMatch); err != nil {
+		fmt.Println(err.Error())
+	}
+
+	// Output: Inexhaustive match for enum type "Foo": Missing case "C".
+}
