@@ -1,25 +1,26 @@
+- Implement generics sum types
+	- Implement code generation
 - Improve match keyword
-	- add let y match x {} .. variable declarations
-- Implement generics
-	- generic sum types (add the maybe monad)
-		- expand pattern matching in match to handle this
-		- ^^^ seems like a lot of work
-	- generic functions?
-	- generic product types? (need product types first)
-- Add ability to output WASM as an IR?
+	- Add let x match y {} ... syntax for extracting value from sum type
 - Compile time evaluation of pure functions with constant arguments
+- Add better documentation
+- Casting
+- Add ability to output WASM as an IR?
+- Add other base types:
+	- tuples
+	- lists
+- Generic functions/macros?
 - Investigate and decide on what other types should be implemented:
-	- struct? or tuples? (are two product types really needed?)
-	- arrays? lists instead? Define a way to overload indexing and provide both?
-	- slices? 
-	- pointers? (pointers with GC? Just references? Are sum types, generics and a maybe monad enough to not have pointers?)
-	- float? dec64?
 	- interfaces?
+	- structs?
+	- pointers? (pointers with GC? Just references? Are sum types, generics and a maybe monad enough to not have pointers?) references?
+	- arrays?
+	- slices? 
+	- float? dec64?
 	- remove "int" and force an explicit size?
 - Multiple dispatch?
 - add better test cases for non-recursive tail call optimization with different stack sizes
 - Implement multireturn (does this add anything over returning a product type?)
-- Add better documentation
 - Support Go calling conventions in generated ASM? (Or just add the ability to output different asm syntax on non-Plan9 architectures?)
 - Add method invocation syntax
 - Write some non-test sample programs

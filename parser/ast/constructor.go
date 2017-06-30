@@ -26,18 +26,18 @@ func NewContext() Context {
 		},
 		Mutables: make(map[string]VarWithType),
 		Types: map[string]TypeDefn{
-			"int":    TypeDefn{"int", "int"},
-			"uint":   TypeDefn{"uint", "uint"},
-			"uint8":  TypeDefn{"uint8", "uint8"},
-			"uint16": TypeDefn{"uint16", "uint16"},
-			"uint32": TypeDefn{"uint32", "uint32"},
-			"uint64": TypeDefn{"uint64", "uint64"},
-			"int8":   TypeDefn{"int8", "int8"},
-			"int16":  TypeDefn{"int16", "int16"},
-			"int32":  TypeDefn{"int32", "int32"},
-			"int64":  TypeDefn{"int64", "int64"},
-			"string": TypeDefn{"string", "string"},
-			"bool":   TypeDefn{"bool", "bool"},
+			"int":    TypeDefn{"int", "int", nil},
+			"uint":   TypeDefn{"uint", "uint", nil},
+			"uint8":  TypeDefn{"uint8", "uint8", nil},
+			"uint16": TypeDefn{"uint16", "uint16", nil},
+			"uint32": TypeDefn{"uint32", "uint32", nil},
+			"uint64": TypeDefn{"uint64", "uint64", nil},
+			"int8":   TypeDefn{"int8", "int8", nil},
+			"int16":  TypeDefn{"int16", "int16", nil},
+			"int32":  TypeDefn{"int32", "int32", nil},
+			"int64":  TypeDefn{"int64", "int64", nil},
+			"string": TypeDefn{"string", "string", nil},
+			"bool":   TypeDefn{"bool", "bool", nil},
 		},
 		PureContext: false,
 		EnumOptions: make(map[string]EnumOption),
@@ -183,12 +183,13 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, error) {
 	c := NewContext()
 
 	tokens = stripWhitespace(tokens)
-	// For debugging only.
 	/*
+		// For debugging only.
 		for i := 0; i < len(tokens); i++ {
 			fmt.Fprintf(os.Stderr, "%d: '%v'\n", i, tokens[i].String())
 		}
 	*/
+
 	err := extractPrototypes(tokens, &c)
 	if err != nil {
 		return nil, nil, err
@@ -284,9 +285,6 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, error) {
 			if err != nil {
 				return nil, nil, err
 			}
-			if len(typeNames) != 1 {
-				panic("Generic sum types not yet implemented.")
-			}
 			i += n + 1
 
 			cur.Name = Type(typeNames[0].String())
@@ -295,7 +293,8 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, error) {
 				return nil, nil, err
 			}
 			for _, constructor := range options {
-				cur.Options = append(cur.Options, EnumOption{constructor, cur.Name})
+				constructor.ParentType = cur.Name
+				cur.Options = append(cur.Options, constructor)
 			}
 			// FIXME: This type info is completely wrong.
 			ti[cur.Name] = TypeInfo{8, false}
@@ -313,7 +312,7 @@ func consumePrototype(start int, tokens []token.Token, c *Context) (n int, args 
 		return 0, nil, nil, err
 	}
 
-	n2, retDefn, err := consumeTypeList(start+n, tokens)
+	n2, retDefn, err := consumeTypeList(start+n, tokens, *c)
 	if err != nil {
 		return 0, nil, nil, err
 	}
@@ -321,6 +320,84 @@ func consumePrototype(start int, tokens []token.Token, c *Context) (n int, args 
 }
 
 func extractPrototypes(tokens []token.Token, c *Context) error {
+	// First pass: extract all the types, so that we can get the type
+	// signatures on the second pass.
+	for i := 0; i < len(tokens); i++ {
+		// Parse the top level "func" or "proc" keyword
+		cn, err := topLevelNode(tokens[i])
+		if err != nil {
+			return err
+		}
+
+		switch cur := cn.(type) {
+		case ProcDecl:
+			i++
+
+			cur.Name = tokens[i].String()
+			i++
+
+			n, err := skipPrototype(i, tokens, c)
+			if err != nil {
+				return err
+			}
+			i += n
+
+			n, err = skipBlock(i, tokens, c)
+			if err != nil {
+				return err
+			}
+			i += n
+
+			// Now that we know the function is valid, add it to
+			// the context's list of functions
+			c.Functions[cur.Name] = cur
+		case FuncDecl:
+			i++
+
+			cur.Name = tokens[i].String()
+			i++
+
+			n, err := skipPrototype(i, tokens, c)
+			if err != nil {
+				return err
+			}
+			i += n
+			n, err = skipBlock(i, tokens, c)
+			if err != nil {
+				return err
+			}
+			i += n
+
+			c.Functions[cur.Name] = cur
+		case TypeDefn:
+			i++
+
+			cur.Name = Type(tokens[i].String())
+			i++
+			cur.ConcreteType = Type(tokens[i].String())
+			c.Types[string(cur.Name)] = cur
+		case SumTypeDefn:
+			n, typeNames, err := consumeIdentifiersUntilEquals(i+1, tokens, c)
+			if err != nil {
+				return err
+			}
+			i += n + 1
+
+			cur.Name = Type(typeNames[0].String())
+
+			n, _, err = consumeSumTypeList(i+1, tokens, c)
+			if err != nil {
+				return err
+			}
+
+			c.Types[string(cur.Name)] = TypeDefn{ConcreteType: "sumtype"}
+
+			i += n
+		}
+	}
+
+	// Second pass, extract the parameter lists of the functions, so that
+	// we have all the information we need to validate function calls.
 	for i := 0; i < len(tokens); i++ {
 		// Parse the top level "func" or "proc" keyword
 		cn, err := topLevelNode(tokens[i])
@@ -343,27 +420,11 @@ func extractPrototypes(tokens []token.Token, c *Context) error {
 			cur.Return = r
 			i += n
 
-			if tokens[i] != token.Char("{") {
-				return fmt.Errorf("Invalid syntax for %v. Missing body.", cur.Name)
+			n, err = skipBlock(i, tokens, c)
+			if err != nil {
+				return err
 			}
-
-			// Skip over the block, we're only trying to
-			// extract the prototype.
-			blockLevel := 1
-			for i++; blockLevel > 0; i++ {
-				if i >= len(tokens) {
-					return fmt.Errorf("Missing closing bracket for %v", cur.Name)
-				}
-				switch tokens[i] {
-				case token.Char("{"):
-					blockLevel++
-				case token.Char("}"):
-					blockLevel--
-				}
-			}
-			// the for loop overshot by one token before doing the
-			// comparison.
-			i--
+			i += n
 
 			// Now that we know the function is valid, add it to
 			// the context's list of functions
@@ -382,25 +443,12 @@ func extractPrototypes(tokens []token.Token, c *Context) error {
 			cur.Return = r
 			i += n
 
-			if tokens[i] != token.Char("{") {
-				return fmt.Errorf("Invalid syntax for %v. Missing body.", cur.Name)
+			n, err = skipBlock(i, tokens, c)
+			if err != nil {
+				return err
 			}
+			i += n
 
-			// Skip over the block, we're only trying to
-			// extract the prototype.
-			blockLevel := 1
-			for i++; blockLevel > 0; i++ {
-				if i >= len(tokens) {
-					return fmt.Errorf("Missing closing bracket for %v", cur.Name)
-				}
-				switch tokens[i] {
-				case token.Char("{"):
-					blockLevel++
-				case token.Char("}"):
-					blockLevel--
-				}
-			}
-			i--
 			c.Functions[cur.Name] = cur
 		case TypeDefn:
 			i++
@@ -414,24 +462,28 @@ func extractPrototypes(tokens []token.Token, c *Context) error {
 			if err != nil {
 				return err
 			}
-			if len(typeNames) != 1 {
-				panic("Generic sum types not yet implemented.")
-			}
 			i += n + 1
 
 			cur.Name = Type(typeNames[0].String())
-
+			var pv []Type
+			for _, param := range typeNames[1:] {
+				pv = append(pv, Type(param.String()))
+			}
 			n, options, err := consumeSumTypeList(i+1, tokens, c)
 			if err != nil {
 				return err
 			}
 
 			for _, o := range options {
-				c.EnumOptions[o] = EnumOption{o, cur.Name}
+				o.ParentType = cur.Name
+				c.EnumOptions[o.Constructor] = o
 			}
-			// FIXME: There needs to be a type interface so that
-			// SumTypeDefn and TypeDefn can be in the same map.
-			c.Types[string(cur.Name)] = TypeDefn{Name: "sumtype"}
+
+			c.Types[string(cur.Name)] = TypeDefn{
+				Name:         cur.Name,
+				ConcreteType: "sumtype",
+				Parameters:   pv,
+			}
 
 			i += n
 		}
@@ -966,7 +1018,7 @@ func consumeArgs(start int, tokens []token.Token, c *Context) (int, []VarWithTyp
 	return 0, nil, fmt.Errorf("Could not parse arguments")
 }
 
-func consumeTypeList(start int, tokens []token.Token) (int, []VarWithType, error) {
+func consumeTypeList(start int, tokens []token.Token, c Context) (int, []VarWithType, error) {
 	var args []VarWithType
 	for i := start; i < len(tokens); i++ {
 		switch t := tokens[i].(type) {
@@ -980,16 +1032,34 @@ func consumeTypeList(start int, tokens []token.Token) (int, []VarWithType, error
 			}
 			continue
 		case token.Unknown, token.Type:
-			args = append(args, VarWithType{
-				Name: "",
-				Typ:  Type(t.String()),
-			})
+			n, tk, err := consumeType(i, tokens, c)
+			if err != nil {
+				return 0, nil, err
+			}
+			i += n - 1
+			args = append(args, VarWithType{"", tk})
 			continue
 		default:
 			return 0, nil, fmt.Errorf("Invalid token in argument list: %v", t)
 		}
 	}
 	return 0, nil, fmt.Errorf("Could not parse arguments")
+}
+
+func consumeType(start int, tokens []token.Token, c Context) (int, Type, error) {
+	nm := tokens[start].String()
+	consumed := 1
+	typedef := c.Types[nm]
+	rv := Type(nm)
+	for range typedef.Parameters {
+		n, t, err := consumeType(start+consumed, tokens, c)
+		if err != nil {
+			return 0, "", err
+		}
+		consumed += n
+		rv += " " + t
+	}
+	return consumed, rv, nil
 }
 
 func consumeIdentifiersUntilEquals(start int, tokens []token.Token, c *Context) (int, []token.Token, error) {
@@ -1010,20 +1080,82 @@ func consumeIdentifiersUntilEquals(start int, tokens []token.Token, c *Context) 
 	return 0, nil, fmt.Errorf("Could not parse identifiers")
 }
 
-func consumeSumTypeList(start int, tokens []token.Token, c *Context) (int, []string, error) {
-	var vals []string
+func consumeSumTypeList(start int, tokens []token.Token, c *Context) (int, []EnumOption, error) {
+	var vals []EnumOption
+	var val EnumOption
 	for i := start; i < len(tokens); i++ {
 		switch t := tokens[i].(type) {
 		case token.Unknown:
-			vals = append(vals, t.String())
-			if tokens[i+1] == token.Operator("|") {
+			if val.Constructor != "" {
+				val.Parameters = append(val.Parameters, Type(t.String()))
+			} else {
+				val = EnumOption{Constructor: t.String()}
+			}
+
+			if i+1 < len(tokens) && tokens[i+1] == token.Operator("|") {
+				vals = append(vals, val)
+				val = EnumOption{}
 				i += 1
 			}
 		case token.Keyword:
+			vals = append(vals, val)
 			return i - start, vals, nil
 		default:
 			return 0, nil, fmt.Errorf("Invalid token in sumtype: %v", t)
 		}
 	}
-	return 0, nil, fmt.Errorf("Could not consume type list")
+	vals = append(vals, val)
+	return len(tokens) - start, vals, nil
+}
+
+func skipBlock(start int, tokens []token.Token, c *Context) (int, error) {
+	i := start
+	if tokens[i] != token.Char("{") {
+		return 0, fmt.Errorf("Can not skip block. Not a block start.")
+	}
+
+	// Skip over the block, we're only trying to
+	// extract the prototype.
+	blockLevel := 1
+	for i++; blockLevel > 0; i++ {
+		if i >= len(tokens) {
+			return 0, fmt.Errorf("Missing closing bracket for block")
+		}
+		switch tokens[i] {
+		case token.Char("{"):
+			blockLevel++
+		case token.Char("}"):
+			blockLevel--
+		}
+	}
+	if blockLevel > 0 {
+		return 0, fmt.Errorf("Missing closing bracket for block")
+	}
+	return i - 1 - start, nil
+}
+
+func skipPrototype(start int, tokens []token.Token, c *Context) (int, error) {
+	n, err := skipTuple(start, tokens, c)
+	if err != nil {
+		return 0, err
+	}
+	n2, err := skipTuple(start+n, tokens, c)
+	if err != nil {
+		return 0, err
+	}
+	return n + n2, nil
+}
+
+func skipTuple(start int, tokens []token.Token, c *Context) (int, error) {
+	i := start
+	if tokens[i] != token.Char("(") {
+		return 0, fmt.Errorf("Can not skip tuple. Expecting '(', not %v", tokens[i])
+	}
+
+	for ; i < len(tokens); i++ {
+		if tokens[i] == token.Char(")") {
+			return i + 1 - start, nil
+		}
+	}
+	return 0, fmt.Errorf("Missing closing ')' for tuple.")
 }

@@ -4,10 +4,16 @@ import (
 	"fmt"
 )
 
+// FIXME: This should be eliminated
 type Type string
+
+type TypeDef interface {
+	TypeDefn() TypeDef
+}
 
 type EnumOption struct {
 	Constructor string
+	Parameters  []Type
 	ParentType  Type
 }
 
@@ -23,7 +29,27 @@ func (eo EnumOption) Type() Type {
 }
 
 func (eo EnumOption) String() string {
-	return fmt.Sprintf("EnumOption{%v ParentType: %v}", eo.Constructor, eo.ParentType)
+	return fmt.Sprintf("EnumOption{%v, Parameters: %v ParentType: %v}", eo.Constructor, eo.Parameters, eo.ParentType)
+}
+
+type EnumValue struct {
+	Constructor EnumOption
+	Parameters  []Value
+}
+
+func (ev EnumValue) Value() interface{} {
+	return ev.Constructor
+}
+
+func (ev EnumValue) Node() Node {
+	return ev
+}
+func (ev EnumValue) Type() Type {
+	return ev.Constructor.Type()
+}
+
+func (ev EnumValue) String() string {
+	return fmt.Sprintf("EnumValue{%v, Parameters: %v}", ev.Constructor, ev.Parameters)
 }
 
 type VarWithType struct {
@@ -62,15 +88,21 @@ type MutStmt struct {
 type TypeDefn struct {
 	Name         Type
 	ConcreteType Type
+	Parameters   []Type
 }
 
 func (t TypeDefn) Node() Node {
 	return t
 }
 
+func (t TypeDefn) TypeDefn() TypeDef {
+	return t
+}
+
 type SumTypeDefn struct {
-	Name    Type
-	Options []EnumOption
+	Name       Type
+	Options    []EnumOption
+	Parameters []Type
 }
 
 func (t SumTypeDefn) Node() Node {
@@ -81,6 +113,11 @@ func (t SumTypeDefn) String() string {
 	return fmt.Sprintf("SumTypeDefn{%v, Options: %v}", t.Name, t.Options)
 
 }
+
+func (t SumTypeDefn) TypeDefn() TypeDef {
+	return t
+}
+
 func (m MutStmt) Type() Type {
 	return m.Var.Type()
 }

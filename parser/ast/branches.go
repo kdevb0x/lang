@@ -30,7 +30,7 @@ func consumeWhileLoop(start int, tokens []token.Token, c *Context) (int, Node, e
 }
 
 func consumeCondition(start int, tokens []token.Token, c *Context) (int, BoolValue, error) {
-	n, cond, err := consumeBoolValue(start, tokens, c)
+	n, cond, err := consumeValue(start, tokens, c)
 	if err != nil {
 		return 0, nil, err
 	}

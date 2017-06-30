@@ -16,12 +16,10 @@ func compare(v1, v2 Node) bool {
 	switch v1.(type) {
 	case StringLiteral, BoolLiteral, IntLiteral,
 		Variable, VarWithType,
-		LetStmt, MutStmt,
 		AdditionOperator, SubtractionOperator, AssignmentOperator,
 		MulOperator, DivOperator,
 		EqualityComparison, NotEqualsComparison, GreaterComparison,
-		GreaterOrEqualComparison, LessThanComparison, LessThanOrEqualComparison,
-		TypeDefn, EnumOption:
+		GreaterOrEqualComparison, LessThanComparison, LessThanOrEqualComparison:
 		return v1 == v2
 	}
 
@@ -30,6 +28,18 @@ func compare(v1, v2 Node) bool {
 			return compare(*v1a, v2a)
 		} else if v2a, ok := v2.(*IfStmt); ok {
 			return v1a == v2a
+		}
+		return false
+	}
+	if v1a, ok := v1.(LetStmt); ok {
+		if v2a, ok := v2.(LetStmt); ok {
+			return compare(v1a.Var, v2a.Var) && compare(v1a.Value, v2a.Value)
+		}
+		return false
+	}
+	if v1a, ok := v1.(MutStmt); ok {
+		if v2a, ok := v2.(MutStmt); ok {
+			return compare(v1a.Var, v2a.Var) && compare(v1a.InitialValue, v2a.InitialValue)
 		}
 		return false
 	}
@@ -197,6 +207,24 @@ func compare(v1, v2 Node) bool {
 		}
 		return true
 	}
+	if v1a, ok := v1.(TypeDefn); ok {
+		v2a, ok := v2.(TypeDefn)
+		if !ok {
+			return false
+		}
+		if v1a.Name != v2a.Name {
+			return false
+		}
+		if len(v1a.Parameters) != len(v2a.Parameters) {
+			return false
+		}
+		for i := range v1a.Parameters {
+			if v1a.Parameters[i] != v2a.Parameters[i] {
+				return false
+			}
+		}
+		return v1a.ConcreteType == v2a.ConcreteType
+	}
 	if v1a, ok := v1.(MatchStmt); ok {
 		v2a, ok := v2.(MatchStmt)
 		if !ok {
@@ -221,6 +249,45 @@ func compare(v1, v2 Node) bool {
 			return false
 		}
 		return compare(v1a.Variable, v2a.Variable) && compare(v1a.Body, v2a.Body)
+	}
+	if v1a, ok := v1.(EnumOption); ok {
+		v2a, ok := v2.(EnumOption)
+		if !ok {
+			return false
+		}
+		if v1a.Constructor != v2a.Constructor {
+			return false
+		}
+		if v1a.ParentType != v2a.ParentType {
+			return false
+		}
+		if len(v1a.Parameters) != len(v2a.Parameters) {
+			return false
+		}
+		for i := range v1a.Parameters {
+			if v1a.Parameters[i] != v2a.Parameters[i] {
+				return false
+			}
+		}
+		return true
+	}
+	if v1a, ok := v1.(EnumValue); ok {
+		v2a, ok := v2.(EnumValue)
+		if !ok {
+			return false
+		}
+		if !compare(v1a.Constructor, v2a.Constructor) {
+			return false
+		}
+		if len(v1a.Parameters) != len(v2a.Parameters) {
+			return false
+		}
+		for i := range v1a.Parameters {
+			if !compare(v1a.Parameters[i], v2a.Parameters[i]) {
+				return false
+			}
+		}
+		return true
 	}
 	panic(fmt.Sprintf("Unimplemented type for compare %v vs %v", reflect.TypeOf(v1), reflect.TypeOf(v2)))
 }
@@ -1682,9 +1749,10 @@ func TestEnumType(t *testing.T) {
 		SumTypeDefn{
 			"Foo",
 			[]EnumOption{
-				EnumOption{"A", "Foo"},
-				EnumOption{"B", "Foo"},
+				EnumOption{"A", nil, "Foo"},
+				EnumOption{"B", nil, "Foo"},
 			},
+			nil,
 		},
 		ProcDecl{
 			Name:   "main",
@@ -1696,13 +1764,13 @@ func TestEnumType(t *testing.T) {
 
 					LetStmt{
 						Var:   VarWithType{"a", "Foo"},
-						Value: EnumOption{"A", "Foo"},
+						Value: EnumValue{Constructor: EnumOption{"A", nil, "Foo"}},
 					},
 					MatchStmt{
 						Condition: VarWithType{"a", "Foo"},
 						Cases: []MatchCase{
 							MatchCase{
-								Variable: EnumOption{"A", "Foo"},
+								Variable: EnumOption{"A", nil, "Foo"},
 								Body: BlockStmt{
 									[]Node{
 										FuncCall{
@@ -1715,7 +1783,7 @@ func TestEnumType(t *testing.T) {
 								},
 							},
 							MatchCase{
-								Variable: EnumOption{"B", "Foo"},
+								Variable: EnumOption{"B", nil, "Foo"},
 								Body: BlockStmt{
 									[]Node{
 										FuncCall{
@@ -1758,9 +1826,10 @@ func TestEnumTypeInferred(t *testing.T) {
 		SumTypeDefn{
 			"Foo",
 			[]EnumOption{
-				EnumOption{"A", "Foo"},
-				EnumOption{"B", "Foo"},
+				EnumOption{"A", nil, "Foo"},
+				EnumOption{"B", nil, "Foo"},
 			},
+			nil,
 		},
 		ProcDecl{
 			Name:   "main",
@@ -1772,13 +1841,13 @@ func TestEnumTypeInferred(t *testing.T) {
 
 					LetStmt{
 						Var:   VarWithType{"a", "Foo"},
-						Value: EnumOption{"B", "Foo"},
+						Value: EnumValue{Constructor: EnumOption{"B", nil, "Foo"}},
 					},
 					MatchStmt{
 						Condition: VarWithType{"a", "Foo"},
 						Cases: []MatchCase{
 							MatchCase{
-								Variable: EnumOption{"A", "Foo"},
+								Variable: EnumOption{"A", nil, "Foo"},
 								Body: BlockStmt{
 									[]Node{
 										FuncCall{
@@ -1791,7 +1860,7 @@ func TestEnumTypeInferred(t *testing.T) {
 								},
 							},
 							MatchCase{
-								Variable: EnumOption{"B", "Foo"},
+								Variable: EnumOption{"B", nil, "Foo"},
 								Body: BlockStmt{
 									[]Node{
 										FuncCall{
@@ -1891,6 +1960,159 @@ func TestIfElseMatch(t *testing.T) {
 											Name: "print",
 											UserArgs: []Value{
 												StringLiteral(`x is less than 4\n`),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if len(expected) != len(ast) {
+		t.Fatalf("Unexpected AST: got %v want %v", ast, expected)
+	}
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("enum test (%d): got %v want %v", i, ast[i], v)
+		}
+	}
+}
+
+func TestGenericEnumType(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.GenericEnumType))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Node{
+		SumTypeDefn{
+			"Maybe",
+			[]EnumOption{
+				EnumOption{"Nothing", nil, "Maybe"},
+				EnumOption{"Just", []Type{"a"}, "Maybe"},
+			},
+			nil,
+		},
+		FuncDecl{
+			Name: "DoSomething",
+			Args: []VarWithType{{"x", "int"}},
+			Return: []VarWithType{
+				{
+					"",
+					"Maybe int",
+				},
+			},
+			Body: BlockStmt{
+				[]Node{
+					IfStmt{
+						Condition: GreaterComparison{
+							Left:  VarWithType{"x", "int"},
+							Right: IntLiteral(3),
+						},
+						Body: BlockStmt{
+							[]Node{
+								ReturnStmt{EnumValue{Constructor: EnumOption{"Nothing", nil, "Maybe"}}},
+							},
+						},
+					},
+					ReturnStmt{EnumValue{
+						Constructor: EnumOption{"Just", []Type{"a"}, "Maybe"},
+						Parameters:  []Value{IntLiteral(3)},
+					},
+					},
+				},
+			},
+		},
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+
+					LetStmt{
+						Var: VarWithType{"x", "Maybe int"},
+						Value: FuncCall{
+							Name: "DoSomething",
+							UserArgs: []Value{
+								IntLiteral(3),
+							},
+						},
+					},
+					MatchStmt{
+						Condition: VarWithType{"x", "Maybe int"},
+						Cases: []MatchCase{
+							MatchCase{
+								Variable: EnumOption{"Nothing", nil, "Maybe"},
+								Body: BlockStmt{
+									[]Node{
+										FuncCall{
+											Name: "print",
+											UserArgs: []Value{
+												StringLiteral(`I am nothing!`),
+											},
+										},
+									},
+								},
+							},
+							MatchCase{
+								Variable: EnumOption{"Just", []Type{"a"}, "Maybe"},
+								Body: BlockStmt{
+									[]Node{
+										FuncCall{
+											Name: "print",
+											UserArgs: []Value{
+												StringLiteral(`%d`),
+												VarWithType{"n", "int"},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					LetStmt{
+						Var: VarWithType{"x", "Maybe int"},
+						Value: FuncCall{
+							Name: "DoSomething",
+							UserArgs: []Value{
+								IntLiteral(4),
+							},
+						},
+					},
+					MatchStmt{
+						Condition: VarWithType{"x", "Maybe int"},
+						Cases: []MatchCase{
+							MatchCase{
+								Variable: EnumOption{"Nothing", nil, "Maybe"},
+								Body: BlockStmt{
+									[]Node{
+										FuncCall{
+											Name: "print",
+											UserArgs: []Value{
+												StringLiteral(`I am nothing!`),
+											},
+										},
+									},
+								},
+							},
+							MatchCase{
+								Variable: EnumOption{"Just", []Type{"a"}, "Maybe"},
+								Body: BlockStmt{
+									[]Node{
+										FuncCall{
+											Name: "print",
+											UserArgs: []Value{
+												StringLiteral(`%d`),
+												VarWithType{"n", "int"},
 											},
 										},
 									},

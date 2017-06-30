@@ -1,9 +1,10 @@
 package ast
 
 import (
-	"github.com/driusan/lang/parser/token"
-
 	"fmt"
+	"strings"
+
+	"github.com/driusan/lang/parser/token"
 )
 
 type MatchCase struct {
@@ -52,16 +53,32 @@ func consumeMatchStmt(start int, tokens []token.Token, c *Context) (int, MatchSt
 		return 0, MatchStmt{}, fmt.Errorf("Invalid match statement")
 	}
 
+	concreteMap := make(map[Type]Type)
 	for i := start + cn + 2; i < len(tokens); {
 		c2 := c.Clone()
-		n, cs, err := consumeCase(i, tokens, &c2)
+
+		if concretes := strings.Fields(string(l.Condition.Type())); len(concretes) > 1 {
+			// Convert the generic type's parameters to the concrete typename,
+			// not the generic type, so that the case can look them up properly.
+			// FIXME: There should be a better way than splitting the type name
+			// on whitespace
+			td, ok := c.Types[concretes[0]]
+			if !ok {
+				panic("Expected parameterized enumerated option")
+			}
+			for i, v := range concretes[1:] {
+				concreteMap[td.Parameters[i]] = Type(v)
+			}
+		}
+
+		n, cs, err := consumeCase(i, tokens, &c2, concreteMap)
 		if err != nil {
 			return 0, MatchStmt{}, err
 		}
 		l.Cases = append(l.Cases, cs)
 		i += n
-		if tokens[i+1] == token.Char("}") {
-			if c.Types[string(l.Condition.Type())] == (TypeDefn{Name: "sumtype"}) {
+		if tokens[i] == token.Char("}") {
+			if c.Types[string(l.Condition.Type())].ConcreteType == "sumtype" {
 				if err := checkExhaustiveness(l.Condition.Type(), l.Cases, c); err != nil {
 					return 0, MatchStmt{}, err
 				}
@@ -72,17 +89,32 @@ func consumeMatchStmt(start int, tokens []token.Token, c *Context) (int, MatchSt
 	return 0, MatchStmt{}, fmt.Errorf("Invalid match statement")
 }
 
-func consumeCase(start int, tokens []token.Token, c *Context) (int, MatchCase, error) {
+func consumeCase(start int, tokens []token.Token, c *Context, genericMap map[Type]Type) (int, MatchCase, error) {
 	l := MatchCase{}
-
+	var n int
 	if tokens[start] != token.Keyword("case") {
 		return 0, MatchCase{}, fmt.Errorf("Invalid case statement. Unexpected '%v' at %d", tokens[start], start)
 	}
-	n, v, err := consumeValue(start+1, tokens, c)
-	if err != nil {
-		return 0, MatchCase{}, err
+	if eo := c.EnumeratedOption(tokens[start+1].String()); eo != nil {
+		n = 1
+		for _, t := range eo.Parameters {
+			varname := tokens[start+1+n].String()
+			c.Variables[varname] = VarWithType{
+				Name: Variable(varname),
+				Typ:  genericMap[t],
+			}
+			n += 1
+		}
+		l.Variable = *eo
+	} else {
+		n2, v, err := consumeValue(start+1, tokens, c)
+		if err != nil {
+			return 0, MatchCase{}, err
+		}
+		l.Variable = v
+		n = n2
+
 	}
-	l.Variable = v
 	if tokens[start+n+1] != token.Char(":") {
 		return 0, MatchCase{}, fmt.Errorf("Invalid case statement at token %v. Expected ':', not '%v'", start, tokens[start+n+1])
 	}

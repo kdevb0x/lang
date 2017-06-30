@@ -121,6 +121,8 @@ func getRegister(n ast.Node, context *variableLayout) ir.Register {
 		return context.Get(v)
 	case ast.EnumOption:
 		return ir.IntLiteral(context.GetEnumIndex(v.Constructor))
+	case ast.EnumValue:
+		return ir.IntLiteral(context.GetEnumIndex(v.Constructor.Constructor))
 	default:
 		panic(fmt.Sprintf("Unhandled type in getRegister: %v", reflect.TypeOf(v)))
 	}
@@ -140,7 +142,7 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 			reg := context.NextLocalRegister(s.Var)
 			switch v := s.Value.(type) {
 			case ast.IntLiteral, ast.StringLiteral, ast.BoolLiteral,
-				ast.EnumOption:
+				ast.EnumValue:
 				ops = append(ops, ir.MOV{
 					Src: getRegister(v, context),
 					Dst: reg,

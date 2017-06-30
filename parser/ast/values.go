@@ -24,11 +24,6 @@ func isInfixOperator(pos int, tokens []token.Token) bool {
 	return false
 }
 
-func consumeValue(start int, tokens []token.Token, c *Context) (int, Value, error) {
-	// FIXME: Implement this properly
-	return consumeBoolValue(start, tokens, c)
-}
-
 func operatorPrecedence(op Value) int {
 	switch op.(type) {
 	case MulOperator, DivOperator, ModOperator:
@@ -279,7 +274,7 @@ func createOperatorNode(op token.Token, left, right Value) Value {
 	return invertPrecedence(v)
 }
 
-func consumeBoolValue(start int, tokens []token.Token, c *Context) (int, Value, error) {
+func consumeValue(start int, tokens []token.Token, c *Context) (int, Value, error) {
 	for i := start; i < len(tokens); i++ {
 		switch t := tokens[i].(type) {
 		case token.Unknown:
@@ -295,6 +290,19 @@ func consumeBoolValue(start int, tokens []token.Token, c *Context) (int, Value, 
 				// precedence as a symbol over a function
 				// name.
 				partial = c.Variables[t.String()]
+			} else if eo := c.EnumeratedOption(t.String()); eo != nil {
+				ev := EnumValue{Constructor: *eo}
+				i += 1
+				for j := 0; j < len(eo.Parameters); j++ {
+					n, param, err := consumeValue(i, tokens, c)
+					if err != nil {
+						return 0, nil, err
+					}
+					ev.Parameters = append(ev.Parameters, param)
+					i += n
+				}
+				i -= 1
+				partial = ev
 			} else if c.IsFunction(t.String()) {
 				// if it's a function, call it.
 				n, fc, err := consumeFuncCall(i, tokens, c)

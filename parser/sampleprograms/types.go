@@ -33,3 +33,31 @@ proc main() () {
 		print("I am B!\n")
 	}
 }`
+
+const GenericEnumType = `
+data Maybe a = Nothing | Just a
+
+func DoSomething(x int) (Maybe int) {
+	if x > 3 {
+		return Nothing
+	}
+	return Just 3
+}
+
+proc main() () {
+	let x = DoSomething(3)
+	match x {
+	case Nothing:
+		print("I am nothing!")
+	case Just n:
+		print("%d", n)
+	}
+	let x = DoSomething(4)
+	match x {
+	case Nothing:
+		print("I am nothing!")
+	case Just n:
+		print("%d", n)
+	}
+}
+`
