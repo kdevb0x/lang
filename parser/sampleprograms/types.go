@@ -41,23 +41,23 @@ func DoSomething(x int) (Maybe int) {
 	if x > 3 {
 		return Nothing
 	}
-	return Just 3
+	return Just 5
 }
 
 proc main() () {
 	let x = DoSomething(3)
 	match x {
 	case Nothing:
-		print("I am nothing!")
+		print("I am nothing!\n")
 	case Just n:
-		print("%d", n)
+		print("%d\n", n)
 	}
 	let x = DoSomething(4)
 	match x {
 	case Nothing:
-		print("I am nothing!")
+		print("I am nothing!\n")
 	case Just n:
-		print("%d", n)
+		print("%d\n", n)
 	}
 }
 `

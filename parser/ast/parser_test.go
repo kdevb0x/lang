@@ -248,6 +248,14 @@ func compare(v1, v2 Node) bool {
 		if !ok {
 			return false
 		}
+		if len(v1a.LocalVariables) != len(v2a.LocalVariables) {
+			return false
+		}
+		for i := range v1a.LocalVariables {
+			if !compare(v1a.LocalVariables[i], v2a.LocalVariables[i]) {
+				return false
+			}
+		}
 		return compare(v1a.Variable, v2a.Variable) && compare(v1a.Body, v2a.Body)
 	}
 	if v1a, ok := v1.(EnumOption); ok {
@@ -2024,7 +2032,7 @@ func TestGenericEnumType(t *testing.T) {
 					},
 					ReturnStmt{EnumValue{
 						Constructor: EnumOption{"Just", []Type{"a"}, "Maybe"},
-						Parameters:  []Value{IntLiteral(3)},
+						Parameters:  []Value{IntLiteral(5)},
 					},
 					},
 				},
@@ -2057,20 +2065,23 @@ func TestGenericEnumType(t *testing.T) {
 										FuncCall{
 											Name: "print",
 											UserArgs: []Value{
-												StringLiteral(`I am nothing!`),
+												StringLiteral(`I am nothing!\n`),
 											},
 										},
 									},
 								},
 							},
 							MatchCase{
+								LocalVariables: []VarWithType{
+									VarWithType{"n", "int"},
+								},
 								Variable: EnumOption{"Just", []Type{"a"}, "Maybe"},
 								Body: BlockStmt{
 									[]Node{
 										FuncCall{
 											Name: "print",
 											UserArgs: []Value{
-												StringLiteral(`%d`),
+												StringLiteral(`%d\n`),
 												VarWithType{"n", "int"},
 											},
 										},
@@ -2098,20 +2109,23 @@ func TestGenericEnumType(t *testing.T) {
 										FuncCall{
 											Name: "print",
 											UserArgs: []Value{
-												StringLiteral(`I am nothing!`),
+												StringLiteral(`I am nothing!\n`),
 											},
 										},
 									},
 								},
 							},
 							MatchCase{
+								LocalVariables: []VarWithType{
+									VarWithType{"n", "int"},
+								},
 								Variable: EnumOption{"Just", []Type{"a"}, "Maybe"},
 								Body: BlockStmt{
 									[]Node{
 										FuncCall{
 											Name: "print",
 											UserArgs: []Value{
-												StringLiteral(`%d`),
+												StringLiteral(`%d\n`),
 												VarWithType{"n", "int"},
 											},
 										},

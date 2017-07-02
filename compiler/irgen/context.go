@@ -2,6 +2,7 @@ package irgen
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/driusan/lang/compiler/ir"
 	"github.com/driusan/lang/parser/ast"
@@ -16,7 +17,11 @@ type variableLayout struct {
 }
 
 func (c variableLayout) GetTypeInfo(t ast.Type) ast.TypeInfo {
-	return c.typeinfo[t]
+	ti, ok := c.typeinfo[t]
+	if !ok {
+		panic("Could not get type info for " + string(t))
+	}
+	return ti
 }
 func (c variableLayout) GetReturnTypeInfo(v uint) ast.TypeInfo {
 	return c.rettypes[v]
@@ -28,12 +33,22 @@ func (c *variableLayout) NextLocalRegister(varname ast.VarWithType) ir.Register 
 		panic("No type for variable.")
 	}
 	ti := c.typeinfo
+	typ := varname.Type()
+	firstType := ast.Type(strings.Fields(string(typ))[0])
+
 	if varname.Name == "" {
 		c.tempVars++
-		return ir.LocalValue{uint(len(c.values) + c.tempVars - 1), ti[varname.Type()]}
+		return ir.LocalValue{uint(len(c.values) + c.tempVars - 1), ti[firstType]}
 	}
 
-	c.values[varname] = ir.LocalValue{uint(len(c.values) + c.tempVars), ti[varname.Type()]}
+	// If this variable is shadowing another variable, increase tempVars to
+	// make sure the next calls increment the LocalVariable number and don't
+	// reuse the same variable.
+	_, postInc := c.values[varname]
+	c.values[varname] = ir.LocalValue{uint(len(c.values) + c.tempVars), ti[firstType]}
+	if postInc {
+		c.tempVars++
+	}
 	return c.values[varname]
 }
 

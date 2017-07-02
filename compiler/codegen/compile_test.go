@@ -480,12 +480,10 @@ func ExampleIfElseMatch() {
 	// Output: x is less than 4
 }
 
-/*
 func ExampleGenericEnumType() {
 	if err := RunProgram("genericenumtype", sampleprograms.GenericEnumType); err != nil {
 		//fmt.Println(err.Error())
 	}
-	// Output: I am nothing!
-	// 3
+	// Output: 5
+	// I am nothing!
 }
-*/

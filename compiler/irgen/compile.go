@@ -3,6 +3,7 @@ package irgen
 import (
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/driusan/lang/compiler/ir"
 	"github.com/driusan/lang/parser/ast"
@@ -32,7 +33,11 @@ func GenerateIR(node ast.Node, typeInfo ast.TypeInformation, enums EnumMap) (ir.
 			context.FuncParamRegister(arg, i)
 		}
 		for _, rv := range n.Return {
-			context.rettypes = append(context.rettypes, context.GetTypeInfo(rv.Type()))
+			words := strings.Fields(string(rv.Type()))
+			for _, typePiece := range words {
+
+				context.rettypes = append(context.rettypes, context.GetTypeInfo(ast.Type(typePiece)))
+			}
 		}
 		body, err := compileBlock(n.Body, context)
 		if err != nil {
@@ -141,12 +146,17 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 		case ast.LetStmt:
 			reg := context.NextLocalRegister(s.Var)
 			switch v := s.Value.(type) {
-			case ast.IntLiteral, ast.StringLiteral, ast.BoolLiteral,
-				ast.EnumValue:
+			case ast.IntLiteral, ast.StringLiteral, ast.BoolLiteral:
 				ops = append(ops, ir.MOV{
 					Src: getRegister(v, context),
 					Dst: reg,
 				})
+			case ast.EnumValue:
+				ops = append(ops, ir.MOV{
+					Src: getRegister(v, context),
+					Dst: reg,
+				})
+				// FIXME: Need to handle parameters here.
 			case ast.AdditionOperator, ast.SubtractionOperator,
 				ast.DivOperator, ast.MulOperator, ast.ModOperator,
 				ast.GreaterComparison, ast.GreaterOrEqualComparison,
@@ -167,10 +177,26 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 					return nil, err
 				}
 				ops = append(ops, fc...)
-				ops = append(ops, ir.MOV{
-					Src: ir.FuncRetVal{0, ast.TypeInfo{0, true}},
-					Dst: reg,
-				})
+
+				multiwordoffset := 0
+				for i, v := range v.Returns {
+					words := strings.Fields(string(v.Type()))
+					for word := range words {
+						var r ir.Register
+						ti := context.GetTypeInfo(ast.Type(words[word]))
+
+						if word == 0 {
+							r = reg
+						} else {
+							r = context.NextLocalRegister(ast.VarWithType{"", ast.Type(words[word])})
+						}
+						ops = append(ops, ir.MOV{
+							Src: ir.FuncRetVal{uint(i + word + multiwordoffset), ti},
+							Dst: r,
+						})
+					}
+					multiwordoffset += len(words) - 1
+				}
 			default:
 				panic(fmt.Sprintf("Unsupported let statement assignment type: %v", reflect.TypeOf(v)))
 			}
@@ -184,6 +210,22 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 				ops = append(ops, fc...)
 				// Calling the function already will have left
 				// the value in FuncRetValRegister[0]
+			case ast.EnumValue:
+				// The variant of the enum goes into FR0
+				ops = append(ops, ir.MOV{
+					Src: getRegister(arg, context),
+					Dst: ir.FuncRetVal{0, context.GetReturnTypeInfo(0)},
+				})
+
+				// The parameters go into FRn + i
+				for i, v := range arg.Parameters {
+					ti := context.GetTypeInfo(v.Type())
+
+					ops = append(ops, ir.MOV{
+						Src: getRegister(arg.Parameters[i], context),
+						Dst: ir.FuncRetVal{1 + uint(i), ti},
+					})
+				}
 			default:
 				if len(context.rettypes) != 0 {
 					ops = append(ops, ir.MOV{
@@ -213,7 +255,6 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 					Src: r,
 					Dst: reg,
 				})
-
 			case ast.VarWithType:
 				reg := context.NextLocalRegister(s.Var)
 				val := context.Get(v)
@@ -299,6 +340,7 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 				return nil, err
 			}
 			ops = append(ops, body...)
+
 			// Generate jump table
 			for i := range s.Cases {
 				body, dst, err := evaluateValue(s.Cases[i].Variable, context)
@@ -314,18 +356,50 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 					},
 				})
 			}
-			// FIXME: The AST should verify that match cases are exhaustive, and
-			// this safety JMP should be unnecessary.
 			ops = append(ops, ir.JMP{ir.Label(fmt.Sprintf("%vdone", mname.Inline()))})
+
 			// Generate bodies
 			for i := range s.Cases {
 				ops = append(ops, ir.Label(fmt.Sprintf("%vv%d", mname.Inline(), i)))
+
+				// Store the old values of variables for enum options that get
+				// shadowed, and ensure they don't leak outside of the case
+				oldVals := make(map[ast.VarWithType]ir.Register)
+				for k, v := range context.values {
+					oldVals[k] = v
+				}
+
+				switch ev := s.Cases[i].Variable.(type) {
+				case ast.EnumOption:
+					// If the case was an EnumOption, it means the MatchStmt
+					// variable was an enumerated data type. The index of the
+					// original variable + i is the i'th parameter, so set
+					// the appropriate LocalVariables in the context for
+					// the case.
+					val, ok := s.Condition.(ast.VarWithType)
+					if !ok {
+						panic("Unexpected pattern matching on non-variable")
+					}
+					vreg := context.Get(val)
+					lv, ok := vreg.(ir.LocalValue)
+					if !ok {
+						panic("Expected enumeration to be a local variable")
+					}
+
+					for j := range ev.Parameters {
+						lv.Id += 1
+						lv.Info = context.GetTypeInfo(s.Cases[i].LocalVariables[j].Type())
+						context.SetLocalRegister(s.Cases[i].LocalVariables[j], lv)
+					}
+				}
 				body, err := compileBlock(s.Cases[i].Body, context)
 				if err != nil {
 					return nil, err
 				}
 				ops = append(ops, body...)
 				ops = append(ops, ir.JMP{ir.Label(fmt.Sprintf("%vdone", mname.Inline()))})
+				context.values = oldVals
+
 			}
 			ops = append(ops, ir.Label(fmt.Sprintf("%vdone", mname.Inline())))
 		default:

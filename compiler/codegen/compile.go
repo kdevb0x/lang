@@ -18,7 +18,7 @@ func Compile(w io.Writer, f ir.Func) error {
 	cpu.clearRegisterMapping(f)
 	for i := range f.Body {
 		// For debugging, add a comment with the IR serialization
-		//fmt.Fprintf(w, "\t%s // %s", cpu.ConvertInstruction(i, f.Body), f.Body[i])
+		// fmt.Fprintf(w, "\t%s // %s", cpu.ConvertInstruction(i, f.Body), f.Body[i])
 		fmt.Fprintf(w, "\t%s\n", cpu.ConvertInstruction(i, f.Body))
 	}
 	if len(f.Body) == 0 || f.Body[len(f.Body)-1] != (ir.RET{}) {

@@ -8,12 +8,18 @@ import (
 )
 
 type MatchCase struct {
-	Variable Value
-	Body     BlockStmt
+	LocalVariables []VarWithType
+	Variable       Value
+	Body           BlockStmt
 }
 
 func (i MatchCase) Node() Node {
 	return i
+}
+
+func (i MatchCase) String() string {
+	return fmt.Sprintf("MatchCase{Locals: %v\n\tVariable: %v,\n\tBody: %v}", i.LocalVariables, i.Variable, i.Body)
+
 }
 
 type MatchStmt struct {
@@ -103,6 +109,7 @@ func consumeCase(start int, tokens []token.Token, c *Context, genericMap map[Typ
 				Name: Variable(varname),
 				Typ:  genericMap[t],
 			}
+			l.LocalVariables = append(l.LocalVariables, c.Variables[varname])
 			n += 1
 		}
 		l.Variable = *eo

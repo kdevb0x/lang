@@ -166,18 +166,19 @@ func stripWhitespace(tokens []token.Token) []token.Token {
 func Construct(tokens []token.Token) ([]Node, TypeInformation, error) {
 	var nodes []Node
 	ti := TypeInformation{
-		"int":    TypeInfo{8, true},
-		"uint":   TypeInfo{8, false},
-		"int8":   TypeInfo{1, true},
-		"uint8":  TypeInfo{1, false},
-		"int16":  TypeInfo{2, true},
-		"uint16": TypeInfo{2, false},
-		"int32":  TypeInfo{4, true},
-		"uint32": TypeInfo{4, false},
-		"int64":  TypeInfo{8, true},
-		"uint64": TypeInfo{8, false},
-		"bool":   TypeInfo{1, false},
-		"string": TypeInfo{0, false},
+		"int":     TypeInfo{8, true},
+		"uint":    TypeInfo{8, false},
+		"int8":    TypeInfo{1, true},
+		"uint8":   TypeInfo{1, false},
+		"int16":   TypeInfo{2, true},
+		"uint16":  TypeInfo{2, false},
+		"int32":   TypeInfo{4, true},
+		"uint32":  TypeInfo{4, false},
+		"int64":   TypeInfo{8, true},
+		"uint64":  TypeInfo{8, false},
+		"bool":    TypeInfo{1, false},
+		"string":  TypeInfo{0, false},
+		"sumtype": TypeInfo{8, false},
 	}
 
 	c := NewContext()
@@ -274,7 +275,8 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, error) {
 			nodes = append(nodes, c.Types[typeName])
 			switch concrete := c.Types[typeName].ConcreteType; concrete {
 			case "int", "uint", "int8", "uint8", "int16", "uint16",
-				"int32", "uint32", "int64", "uint64", "bool", "string":
+				"int32", "uint32", "int64", "uint64", "bool", "string",
+				"sumtype":
 				ti[Type(typeName)] = ti[concrete]
 			default:
 				panic("Unhandled concrete type: " + string(c.Types[typeName].ConcreteType))
@@ -296,7 +298,7 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, error) {
 				constructor.ParentType = cur.Name
 				cur.Options = append(cur.Options, constructor)
 			}
-			// FIXME: This type info is completely wrong.
+
 			ti[cur.Name] = TypeInfo{8, false}
 
 			i += n

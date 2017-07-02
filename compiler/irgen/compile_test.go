@@ -32,6 +32,7 @@ func compareOp(a, b ir.Opcode) bool {
 		return a == b
 	}
 }
+
 func TestIRGenEmptyMain(t *testing.T) {
 	ast, ti, err := ast.Parse(sampleprograms.EmptyMain)
 	if err != nil {
@@ -1287,6 +1288,152 @@ func TestIREnumType(t *testing.T) {
 		},
 		ir.JMP{"match0done"},
 		ir.Label("match0done"),
+	}
+	if len(i.Body) != len(expected) {
+		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
+	}
+
+	for j := range expected {
+		if !compareOp(expected[j], i.Body[j]) {
+			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
+		}
+	}
+}
+
+func TestIRGenericEnumType(t *testing.T) {
+	loopNum = 0
+	as, ti, err := ast.Parse(sampleprograms.GenericEnumType)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, enums, err := GenerateIR(as[0], ti, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, err := GenerateIR(as[1], ti, enums)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []ir.Opcode{
+		ir.JLE{ir.ConditionalJump{
+			Label: "if0else",
+			Src:   ir.FuncArg{0, ast.TypeInfo{8, true}},
+			Dst:   ir.IntLiteral(3),
+		},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(0),
+			Dst: ir.FuncRetVal{0, ast.TypeInfo{8, false}},
+		},
+		ir.RET{},
+		ir.JMP{"if0elsedone"},
+		ir.Label("if0else"),
+		ir.Label("if0elsedone"),
+		// Enum type goes into the first word
+		ir.MOV{
+			Src: ir.IntLiteral(1),
+			Dst: ir.FuncRetVal{0, ast.TypeInfo{8, false}},
+		},
+		// The concrete parameter is an int, which goes into the
+		// next word.
+		ir.MOV{
+			Src: ir.IntLiteral(5),
+			Dst: ir.FuncRetVal{1, ast.TypeInfo{8, true}},
+		},
+		ir.RET{},
+	}
+	if len(i.Body) != len(expected) {
+		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
+	}
+
+	for j := range expected {
+		if !compareOp(expected[j], i.Body[j]) {
+			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
+		}
+	}
+	i, _, err = GenerateIR(as[2], ti, enums)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected = []ir.Opcode{
+		ir.CALL{FName: "DoSomething", Args: []ir.Register{
+			ir.IntLiteral(3),
+		},
+		},
+		ir.MOV{
+			Src: ir.FuncRetVal{0, ast.TypeInfo{8, false}},
+			Dst: ir.LocalValue{0, ast.TypeInfo{8, false}},
+		},
+		ir.MOV{
+			Src: ir.FuncRetVal{1, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{1, ast.TypeInfo{8, true}},
+		},
+		ir.JE{ir.ConditionalJump{
+			Label: "match1v0",
+			Src:   ir.LocalValue{0, ast.TypeInfo{8, false}},
+			Dst:   ir.IntLiteral(0),
+		},
+		},
+		ir.JE{ir.ConditionalJump{
+			Label: "match1v1",
+			Src:   ir.LocalValue{0, ast.TypeInfo{8, false}},
+			Dst:   ir.IntLiteral(1),
+		},
+		},
+		ir.JMP{"match1done"},
+		ir.Label("match1v0"),
+		ir.CALL{FName: "printf", Args: []ir.Register{
+			ir.StringLiteral(`I am nothing!\n`),
+		},
+		},
+		ir.JMP{"match1done"},
+		ir.Label("match1v1"),
+		ir.CALL{FName: "printf", Args: []ir.Register{
+			ir.StringLiteral(`%d\n`),
+			ir.LocalValue{1, ast.TypeInfo{8, true}},
+		},
+		},
+		ir.JMP{"match1done"},
+		ir.Label("match1done"),
+		ir.CALL{FName: "DoSomething", Args: []ir.Register{
+			ir.IntLiteral(4),
+		},
+		},
+		ir.MOV{
+			Src: ir.FuncRetVal{0, ast.TypeInfo{8, false}},
+			Dst: ir.LocalValue{2, ast.TypeInfo{8, false}},
+		},
+		ir.MOV{
+			Src: ir.FuncRetVal{1, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{3, ast.TypeInfo{8, true}},
+		},
+		ir.JE{ir.ConditionalJump{
+			Label: "match2v0",
+			Src:   ir.LocalValue{2, ast.TypeInfo{8, false}},
+			Dst:   ir.IntLiteral(0),
+		},
+		},
+		ir.JE{ir.ConditionalJump{
+			Label: "match2v1",
+			Src:   ir.LocalValue{2, ast.TypeInfo{8, false}},
+			Dst:   ir.IntLiteral(1),
+		},
+		},
+		ir.JMP{"match2done"},
+		ir.Label("match2v0"),
+		ir.CALL{FName: "printf", Args: []ir.Register{
+			ir.StringLiteral(`I am nothing!\n`),
+		},
+		},
+		ir.JMP{"match2done"},
+		ir.Label("match2v1"),
+		ir.CALL{FName: "printf", Args: []ir.Register{
+			ir.StringLiteral(`%d\n`),
+			ir.LocalValue{3, ast.TypeInfo{8, true}},
+		},
+		},
+		ir.JMP{"match2done"},
+		ir.Label("match2done"),
 	}
 	if len(i.Body) != len(expected) {
 		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
