@@ -343,9 +343,9 @@ func TestParseFizzBuzz(t *testing.T) {
 									Body: BlockStmt{
 										[]Node{
 											FuncCall{
-												Name: "print",
+												Name: "PrintString",
 												UserArgs: []Value{
-													StringLiteral(`fizzbuzz\n`),
+													StringLiteral(`fizzbuzz`),
 												},
 											},
 										},
@@ -363,9 +363,9 @@ func TestParseFizzBuzz(t *testing.T) {
 												Body: BlockStmt{
 													[]Node{
 														FuncCall{
-															Name: "print",
+															Name: "PrintString",
 															UserArgs: []Value{
-																StringLiteral(`buzz\n`),
+																StringLiteral(`buzz`),
 															},
 														},
 													},
@@ -383,9 +383,9 @@ func TestParseFizzBuzz(t *testing.T) {
 															Body: BlockStmt{
 																[]Node{
 																	FuncCall{
-																		Name: "print",
+																		Name: "PrintString",
 																		UserArgs: []Value{
-																			StringLiteral(`fizz\n`),
+																			StringLiteral(`fizz`),
 																		},
 																	},
 																},
@@ -393,9 +393,8 @@ func TestParseFizzBuzz(t *testing.T) {
 															Else: BlockStmt{
 																[]Node{
 																	FuncCall{
-																		Name: "print",
+																		Name: "PrintInt",
 																		UserArgs: []Value{
-																			StringLiteral(`%d\n`),
 																			VarWithType{"i", "int"},
 																		},
 																	},
@@ -408,6 +407,13 @@ func TestParseFizzBuzz(t *testing.T) {
 										},
 									},
 								},
+								FuncCall{
+									Name: "PrintString",
+									UserArgs: []Value{
+										StringLiteral(`\n`),
+									},
+								},
+
 								AssignmentOperator{
 									Variable: VarWithType{"i", "int"},
 									Value: AdditionOperator{
@@ -462,7 +468,7 @@ func TestHelloWorld(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					FuncCall{
-						Name: "print",
+						Name: "PrintString",
 						UserArgs: []Value{
 							StringLiteral(`Hello, world!\n`),
 						},
@@ -473,7 +479,7 @@ func TestHelloWorld(t *testing.T) {
 	}
 	for i, v := range expected {
 		if !compare(ast[i], v) {
-			t.Errorf("empty function: got %v want %v", ast[i], v)
+			t.Errorf("hello, world: got %v want %v", ast[i], v)
 		}
 	}
 }
@@ -525,9 +531,8 @@ func TestLetStatement(t *testing.T) {
 						Value: IntLiteral(5),
 					},
 					FuncCall{
-						Name: "print",
+						Name: "PrintInt",
 						UserArgs: []Value{
-							StringLiteral(`%d\n`),
 							VarWithType{"n", "int"},
 						},
 					},
@@ -565,20 +570,25 @@ func TestLetStatementShadow(t *testing.T) {
 						Value: IntLiteral(5),
 					},
 					FuncCall{
-						Name: "print",
+						Name: "PrintInt",
 						UserArgs: []Value{
-							StringLiteral(`%d\n`),
 							VarWithType{"n", "int"},
 						},
 					},
+					FuncCall{
+						Name: "PrintString",
+						UserArgs: []Value{
+							StringLiteral(`\n`),
+						},
+					},
+
 					LetStmt{
 						Var:   VarWithType{"n", "string"},
 						Value: StringLiteral("hello"),
 					},
 					FuncCall{
-						Name: "print",
+						Name: "PrintString",
 						UserArgs: []Value{
-							StringLiteral(`%s\n`),
 							VarWithType{"n", "string"},
 						},
 					},
@@ -634,9 +644,8 @@ func TestMutStatement(t *testing.T) {
 						},
 					},
 					FuncCall{
-						Name: "print",
+						Name: "PrintInt",
 						UserArgs: []Value{
-							StringLiteral(`%d\n`),
 							VarWithType{"x", "int"},
 						},
 					},
@@ -684,9 +693,8 @@ func TestTwoProcs(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					FuncCall{
-						Name: "print",
+						Name: "PrintInt",
 						UserArgs: []Value{
-							StringLiteral(`%d`),
 							FuncCall{
 								Name: "foo",
 							},
@@ -720,9 +728,8 @@ func TestOutOfOrder(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					FuncCall{
-						Name: "print",
+						Name: "PrintInt",
 						UserArgs: []Value{
-							StringLiteral(`%d`),
 							FuncCall{
 								Name: "foo",
 							},
@@ -815,9 +822,8 @@ func TestSumToTen(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					FuncCall{
-						Name: "print",
+						Name: "PrintInt",
 						UserArgs: []Value{
-							StringLiteral(`%d\n`),
 							FuncCall{
 								Name: "sum",
 								UserArgs: []Value{
@@ -869,9 +875,8 @@ func TestSimpleFunc(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					FuncCall{
-						Name: "print",
+						Name: "PrintInt",
 						UserArgs: []Value{
-							StringLiteral(`%d`),
 							FuncCall{
 								Name: "foo",
 							},
@@ -969,9 +974,8 @@ func TestSumToTenRecursive(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					FuncCall{
-						Name: "print",
+						Name: "PrintInt",
 						UserArgs: []Value{
-							StringLiteral(`%d\n`),
 							FuncCall{
 								Name: "sum",
 								UserArgs: []Value{
@@ -1056,43 +1060,108 @@ func TestSomeMath(t *testing.T) {
 						},
 					},
 					FuncCall{
-						Name: "print",
+						Name: "PrintString",
 
 						UserArgs: []Value{
-							StringLiteral(`Add: %d\n`),
+							StringLiteral(`Add: `),
+						},
+					},
+					FuncCall{
+						Name: "PrintInt",
+
+						UserArgs: []Value{
 							VarWithType{"add", "int"},
 						},
 					},
 					FuncCall{
-						Name: "print",
+						Name: "PrintString",
 
 						UserArgs: []Value{
-							StringLiteral(`Sub: %d\n`),
+							StringLiteral(`\n`),
+						},
+					},
+					FuncCall{
+						Name: "PrintString",
+
+						UserArgs: []Value{
+							StringLiteral(`Sub: `),
+						},
+					},
+					FuncCall{
+						Name: "PrintInt",
+
+						UserArgs: []Value{
 							VarWithType{"sub", "int"},
 						},
 					},
 					FuncCall{
-						Name: "print",
+						Name: "PrintString",
 
 						UserArgs: []Value{
-							StringLiteral(`Mul: %d\n`),
+							StringLiteral(`\n`),
+						},
+					},
+					FuncCall{
+						Name: "PrintString",
+
+						UserArgs: []Value{
+							StringLiteral(`Mul: `),
+						},
+					},
+					FuncCall{
+						Name: "PrintInt",
+
+						UserArgs: []Value{
 							VarWithType{"mul", "int"},
 						},
 					},
 					FuncCall{
-						Name: "print",
+						Name: "PrintString",
 
 						UserArgs: []Value{
-							StringLiteral(`Div: %d\n`),
+							StringLiteral(`\n`),
+						},
+					},
+					FuncCall{
+						Name: "PrintString",
+
+						UserArgs: []Value{
+							StringLiteral(`Div: `),
+						},
+					},
+					FuncCall{
+						Name: "PrintInt",
+
+						UserArgs: []Value{
 							VarWithType{"div", "int"},
 						},
 					},
 					FuncCall{
-						Name: "print",
+						Name: "PrintString",
 
 						UserArgs: []Value{
-							StringLiteral(`Complex: %d\n`),
+							StringLiteral(`\n`),
+						},
+					},
+					FuncCall{
+						Name: "PrintString",
+
+						UserArgs: []Value{
+							StringLiteral(`Complex: `),
+						},
+					},
+					FuncCall{
+						Name: "PrintInt",
+
+						UserArgs: []Value{
 							VarWithType{"x", "int"},
+						},
+					},
+					FuncCall{
+						Name: "PrintString",
+
+						UserArgs: []Value{
+							StringLiteral(`\n`),
 						},
 					},
 				},
@@ -1141,7 +1210,7 @@ func TestEqualComparisonMath(t *testing.T) {
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name:     "print",
+									Name:     "PrintString",
 									UserArgs: []Value{StringLiteral(`true\n`)},
 								},
 							},
@@ -1149,7 +1218,7 @@ func TestEqualComparisonMath(t *testing.T) {
 						Else: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name:     "print",
+									Name:     "PrintString",
 									UserArgs: []Value{StringLiteral(`false\n`)},
 								},
 							},
@@ -1163,12 +1232,18 @@ func TestEqualComparisonMath(t *testing.T) {
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name: "print",
+									Name: "PrintInt",
 									UserArgs: []Value{
-										StringLiteral(`%d\n`),
 										VarWithType{"a", "int"},
 									},
 								},
+								FuncCall{
+									Name: "PrintString",
+									UserArgs: []Value{
+										StringLiteral(`\n`),
+									},
+								},
+
 								AssignmentOperator{
 									Variable: VarWithType{"a", "int"},
 									Value: AdditionOperator{
@@ -1225,7 +1300,7 @@ func TestNotEqualComparisonMath(t *testing.T) {
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name:     "print",
+									Name:     "PrintString",
 									UserArgs: []Value{StringLiteral(`true\n`)},
 								},
 							},
@@ -1233,7 +1308,7 @@ func TestNotEqualComparisonMath(t *testing.T) {
 						Else: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name:     "print",
+									Name:     "PrintString",
 									UserArgs: []Value{StringLiteral(`false\n`)},
 								},
 							},
@@ -1247,10 +1322,15 @@ func TestNotEqualComparisonMath(t *testing.T) {
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name: "print",
+									Name: "PrintInt",
 									UserArgs: []Value{
-										StringLiteral(`%d\n`),
 										VarWithType{"a", "int"},
+									},
+								},
+								FuncCall{
+									Name: "PrintString",
+									UserArgs: []Value{
+										StringLiteral(`\n`),
 									},
 								},
 								AssignmentOperator{
@@ -1309,7 +1389,7 @@ func TestGreaterComparisonMath(t *testing.T) {
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name:     "print",
+									Name:     "PrintString",
 									UserArgs: []Value{StringLiteral(`true\n`)},
 								},
 							},
@@ -1317,7 +1397,7 @@ func TestGreaterComparisonMath(t *testing.T) {
 						Else: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name:     "print",
+									Name:     "PrintString",
 									UserArgs: []Value{StringLiteral(`false\n`)},
 								},
 							},
@@ -1331,10 +1411,15 @@ func TestGreaterComparisonMath(t *testing.T) {
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name: "print",
+									Name: "PrintInt",
 									UserArgs: []Value{
-										StringLiteral(`%d\n`),
 										VarWithType{"a", "int"},
+									},
+								},
+								FuncCall{
+									Name: "PrintString",
+									UserArgs: []Value{
+										StringLiteral(`\n`),
 									},
 								},
 								AssignmentOperator{
@@ -1393,7 +1478,7 @@ func TestGreaterOrEqualComparisonMath(t *testing.T) {
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name:     "print",
+									Name:     "PrintString",
 									UserArgs: []Value{StringLiteral(`true\n`)},
 								},
 							},
@@ -1401,7 +1486,7 @@ func TestGreaterOrEqualComparisonMath(t *testing.T) {
 						Else: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name:     "print",
+									Name:     "PrintString",
 									UserArgs: []Value{StringLiteral(`false\n`)},
 								},
 							},
@@ -1415,12 +1500,18 @@ func TestGreaterOrEqualComparisonMath(t *testing.T) {
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name: "print",
+									Name: "PrintInt",
 									UserArgs: []Value{
-										StringLiteral(`%d\n`),
 										VarWithType{"a", "int"},
 									},
 								},
+								FuncCall{
+									Name: "PrintString",
+									UserArgs: []Value{
+										StringLiteral(`\n`),
+									},
+								},
+
 								AssignmentOperator{
 									Variable: VarWithType{"a", "int"},
 									Value: SubtractionOperator{
@@ -1477,7 +1568,7 @@ func TestLessThanComparisonMath(t *testing.T) {
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name:     "print",
+									Name:     "PrintString",
 									UserArgs: []Value{StringLiteral(`true\n`)},
 								},
 							},
@@ -1485,7 +1576,7 @@ func TestLessThanComparisonMath(t *testing.T) {
 						Else: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name:     "print",
+									Name:     "PrintString",
 									UserArgs: []Value{StringLiteral(`false\n`)},
 								},
 							},
@@ -1499,10 +1590,15 @@ func TestLessThanComparisonMath(t *testing.T) {
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name: "print",
+									Name: "PrintInt",
 									UserArgs: []Value{
-										StringLiteral(`%d\n`),
 										VarWithType{"a", "int"},
+									},
+								},
+								FuncCall{
+									Name: "PrintString",
+									UserArgs: []Value{
+										StringLiteral(`\n`),
 									},
 								},
 								AssignmentOperator{
@@ -1561,7 +1657,7 @@ func TestLessThanOrEqualComparisonMath(t *testing.T) {
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name:     "print",
+									Name:     "PrintString",
 									UserArgs: []Value{StringLiteral(`true\n`)},
 								},
 							},
@@ -1569,7 +1665,7 @@ func TestLessThanOrEqualComparisonMath(t *testing.T) {
 						Else: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name:     "print",
+									Name:     "PrintString",
 									UserArgs: []Value{StringLiteral(`false\n`)},
 								},
 							},
@@ -1583,10 +1679,15 @@ func TestLessThanOrEqualComparisonMath(t *testing.T) {
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
-									Name: "print",
+									Name: "PrintInt",
 									UserArgs: []Value{
-										StringLiteral(`%d\n`),
 										VarWithType{"a", "int"},
+									},
+								},
+								FuncCall{
+									Name: "PrintString",
+									UserArgs: []Value{
+										StringLiteral(`\n`),
 									},
 								},
 								AssignmentOperator{
@@ -1638,8 +1739,8 @@ func TestUserDefinedType(t *testing.T) {
 						Value: IntLiteral(4),
 					},
 					FuncCall{
-						Name:     "print",
-						UserArgs: []Value{StringLiteral(`%d\n`), VarWithType{"x", "Foo"}},
+						Name:     "PrintInt",
+						UserArgs: []Value{VarWithType{"x", "Foo"}},
 					},
 				},
 			},
@@ -1715,17 +1816,33 @@ func TestTypeInference(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					FuncCall{
-						Name: "print",
+						Name: "PrintInt",
 						UserArgs: []Value{
-							StringLiteral(`%d, %d\n`),
 							FuncCall{
 								Name:     "foo",
 								UserArgs: []Value{IntLiteral(1)},
 							},
+						},
+					},
+					FuncCall{
+						Name: "PrintString",
+						UserArgs: []Value{
+							StringLiteral(`, `),
+						},
+					},
+					FuncCall{
+						Name: "PrintInt",
+						UserArgs: []Value{
 							FuncCall{
 								Name:     "foo",
 								UserArgs: []Value{IntLiteral(3)},
 							},
+						},
+					},
+					FuncCall{
+						Name: "PrintString",
+						UserArgs: []Value{
+							StringLiteral(`\n`),
 						},
 					},
 				},
@@ -1782,7 +1899,7 @@ func TestEnumType(t *testing.T) {
 								Body: BlockStmt{
 									[]Node{
 										FuncCall{
-											Name: "print",
+											Name: "PrintString",
 											UserArgs: []Value{
 												StringLiteral(`I am A!\n`),
 											},
@@ -1795,7 +1912,7 @@ func TestEnumType(t *testing.T) {
 								Body: BlockStmt{
 									[]Node{
 										FuncCall{
-											Name: "print",
+											Name: "PrintString",
 											UserArgs: []Value{
 												StringLiteral(`I am B!\n`),
 											},
@@ -1859,7 +1976,7 @@ func TestEnumTypeInferred(t *testing.T) {
 								Body: BlockStmt{
 									[]Node{
 										FuncCall{
-											Name: "print",
+											Name: "PrintString",
 											UserArgs: []Value{
 												StringLiteral(`I am A!\n`),
 											},
@@ -1872,7 +1989,7 @@ func TestEnumTypeInferred(t *testing.T) {
 								Body: BlockStmt{
 									[]Node{
 										FuncCall{
-											Name: "print",
+											Name: "PrintString",
 											UserArgs: []Value{
 												StringLiteral(`I am B!\n`),
 											},
@@ -1931,7 +2048,7 @@ func TestIfElseMatch(t *testing.T) {
 								Body: BlockStmt{
 									[]Node{
 										FuncCall{
-											Name: "print",
+											Name: "PrintString",
 											UserArgs: []Value{
 												StringLiteral(`x is less than 3\n`),
 											},
@@ -1948,7 +2065,7 @@ func TestIfElseMatch(t *testing.T) {
 								Body: BlockStmt{
 									[]Node{
 										FuncCall{
-											Name: "print",
+											Name: "PrintString",
 											UserArgs: []Value{
 												StringLiteral(`x is greater than 3\n`),
 											},
@@ -1965,7 +2082,7 @@ func TestIfElseMatch(t *testing.T) {
 								Body: BlockStmt{
 									[]Node{
 										FuncCall{
-											Name: "print",
+											Name: "PrintString",
 											UserArgs: []Value{
 												StringLiteral(`x is less than 4\n`),
 											},
@@ -2063,7 +2180,7 @@ func TestGenericEnumType(t *testing.T) {
 								Body: BlockStmt{
 									[]Node{
 										FuncCall{
-											Name: "print",
+											Name: "PrintString",
 											UserArgs: []Value{
 												StringLiteral(`I am nothing!\n`),
 											},
@@ -2079,10 +2196,15 @@ func TestGenericEnumType(t *testing.T) {
 								Body: BlockStmt{
 									[]Node{
 										FuncCall{
-											Name: "print",
+											Name: "PrintInt",
 											UserArgs: []Value{
-												StringLiteral(`%d\n`),
 												VarWithType{"n", "int"},
+											},
+										},
+										FuncCall{
+											Name: "PrintString",
+											UserArgs: []Value{
+												StringLiteral(`\n`),
 											},
 										},
 									},
@@ -2107,7 +2229,7 @@ func TestGenericEnumType(t *testing.T) {
 								Body: BlockStmt{
 									[]Node{
 										FuncCall{
-											Name: "print",
+											Name: "PrintString",
 											UserArgs: []Value{
 												StringLiteral(`I am nothing!\n`),
 											},
@@ -2123,10 +2245,17 @@ func TestGenericEnumType(t *testing.T) {
 								Body: BlockStmt{
 									[]Node{
 										FuncCall{
-											Name: "print",
+
+											Name: "PrintInt",
 											UserArgs: []Value{
-												StringLiteral(`%d\n`),
 												VarWithType{"n", "int"},
+											},
+										},
+										FuncCall{
+
+											Name: "PrintString",
+											UserArgs: []Value{
+												StringLiteral(`\n`),
 											},
 										},
 									},

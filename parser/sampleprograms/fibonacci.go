@@ -5,7 +5,8 @@ const Fibonacci = `proc fib_rec(n uint64, n1 uint64) (uint64) {
 	if n2 >= 200 {
 		return n1
 	}
-	print("%u\n",n2)
+	PrintInt(n2)
+	PrintString("\n")
 	return fib_rec(n1, n2)
 }
 

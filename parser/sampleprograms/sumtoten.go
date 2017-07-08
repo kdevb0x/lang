@@ -13,7 +13,7 @@ const SumToTen = `proc sum(x int) (int) {
 }
 
 proc main() () {
-	print("%d\n", sum(10))
+	PrintInt(sum(10))
 }`
 
 // SumToTenRecursive does the same thing as SumToTen, but is written using
@@ -31,6 +31,6 @@ func partial_sum(partial int, x int) (int) {
 }
 
 proc main() () {
-	print("%d\n", sum(10))
+	PrintInt(sum(10))
 }
 `

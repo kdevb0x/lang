@@ -187,16 +187,13 @@ func (a *amd64Registers) clearRegisterMapping(f ir.Func) {
 	a.r15 = nil
 }
 
-func (a *Amd64) ToPhysical(r ir.Register, returning bool) PhysicalRegister {
+func (a *Amd64) ToPhysical(r ir.Register, altform bool) PhysicalRegister {
 	switch v := r.(type) {
 	case ir.StringLiteral:
 		return PhysicalRegister("$" + string(a.stringLiterals[v]) + "+0(SB)")
 	case ir.IntLiteral:
 		return PhysicalRegister(fmt.Sprintf("$%d", v))
 	case ir.FuncCallArg:
-		if v.Id == 0 {
-			return "BP"
-		}
 		return PhysicalRegister(fmt.Sprintf("%d(SP)", 8*v.Id))
 	case ir.LocalValue:
 		return PhysicalRegister(fmt.Sprintf("%v+%d(FP)", v.String(), (int(v.Id-a.numArgs)*8)+(int(a.numArgs)*8)))
@@ -204,7 +201,7 @@ func (a *Amd64) ToPhysical(r ir.Register, returning bool) PhysicalRegister {
 		if v.Id == 0 {
 			return "AX"
 		}
-		if returning {
+		if altform {
 			// FIXME: return values don't have a name, but if we're returning
 			// a return value on the stack it's relative to FP, so we need to
 			// use something for the name.
@@ -214,16 +211,17 @@ func (a *Amd64) ToPhysical(r ir.Register, returning bool) PhysicalRegister {
 		return PhysicalRegister(fmt.Sprintf("%d(SP)", int(v.Id)*8))
 	case ir.FuncArg:
 		// First check if the arg is already in a register.
-		r, err := a.getPhysicalRegister(v)
-		if err == nil {
-			return r
+		if !altform {
+			r, err := a.getPhysicalRegister(v)
+			if err == nil {
+				return r
+			}
 		}
-
 		// Otherwise, the first arg goes in BP, and the rest are on
 		// the stack.
-		if v.Id == 0 {
+		/*if v.Id == 0 {
 			return "BP"
-		}
+		}*/
 		// FIXME: The prefix of this is supposed to be the variable name,
 		// not the IR register name..
 		return PhysicalRegister(fmt.Sprintf("%v+%d(FP)", v.String(), int(v.Id)*8))
@@ -232,39 +230,21 @@ func (a *Amd64) ToPhysical(r ir.Register, returning bool) PhysicalRegister {
 	}
 }
 
-func isFA0(v ir.Register) bool {
-	if r, ok := v.(ir.FuncArg); ok && r.Id == 0 {
-		return true
-	}
-	return false
-}
-func checkBPUsed(i int, ops []ir.Opcode) bool {
-	// we're likely about to wipe out ir.FuncArg(0).
-	// Check if we care.
-	for j := i + 1; j < len(ops); j++ {
-		for _, v := range ops[j].Registers() {
-			if isFA0(v) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 func (a Amd64) opSuffix(sizeInBytes int) string {
 	switch sizeInBytes {
 	case 1:
-		return "BLSX"
+		return "BQSX"
 	case 2:
-		return "WLSX"
+		return "WQSX"
 	case 4:
-		return "L"
+		return "LQSX"
 	case 0, 8:
 		return "Q"
 	default:
 		panic("Unhandled register size in MOV")
 	}
 }
+
 func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 	op := ops[i]
 	switch o := op.(type) {
@@ -277,17 +257,10 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 		}
 		dst := a.ToPhysical(o.Dst, true)
 		v := ""
-		if dst == "BP" && !isFA0(o.Dst) && checkBPUsed(i, ops) {
-			// Move it to the next free register.
-			fpreserve, err := a.nextPhysicalRegister(a.bp, false)
-			if err != nil {
-				panic(err)
-			}
-			v += fmt.Sprintf("\tMOV%v BP, %v\n\t", a.opSuffix(a.bp.Size()), fpreserve)
-		}
+
 		var src PhysicalRegister
 		switch val := o.Src.(type) {
-		case ir.LocalValue, ir.FuncArg, ir.FuncRetVal:
+		case ir.LocalValue, ir.FuncArg, ir.FuncRetVal, ir.StringLiteral:
 			// First check if the arg is already in a register.
 			r, err := a.getPhysicalRegister(val)
 			if err == nil {
@@ -309,13 +282,23 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 		return v
 	case ir.CALL:
 		var v string
-		if len(o.Args) > 0 && a.bp != nil && checkBPUsed(i-1, ops) {
-			// Move it to the next free register.
-			fpreserve, err := a.nextPhysicalRegister(a.bp, false)
-			if err != nil {
-				panic(err)
+
+		if o.TailCall {
+			// Make sure every FuncArg used is in a physical register,
+			// so that it doesn't get clobbered by a previous argument
+			// also back up LocalValues that may conflict with the FP
+			for _, arg := range o.Args {
+				switch arg.(type) {
+				case ir.FuncArg, ir.LocalValue:
+					src := a.ToPhysical(arg, false)
+					physArg, err := a.nextPhysicalRegister(arg, false)
+					if err != nil {
+						panic(err)
+					}
+					suffix := a.opSuffix(arg.Size())
+					v += fmt.Sprintf("//Preserving FA %v\n\tMOV%v %v, %v\n\t", arg, suffix, src, physArg)
+				}
 			}
-			v += fmt.Sprintf("\tMOVQ BP, %v\n\t", fpreserve)
 		}
 		for i, arg := range o.Args {
 			var fa PhysicalRegister
@@ -327,8 +310,9 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 				fa = a.ToPhysical(ir.FuncCallArg{i, ast.TypeInfo{arg.Size(), arg.Signed()}}, true)
 			}
 			var physArg PhysicalRegister
+			src := a.ToPhysical(arg, false)
 			switch arg.(type) {
-			case ir.LocalValue, ir.FuncArg:
+			case ir.LocalValue, ir.StringLiteral, ir.FuncArg:
 				// First check if the arg is already in a register.
 				r, err := a.getPhysicalRegister(arg)
 				if err == nil {
@@ -340,12 +324,11 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 					panic(err)
 				}
 				suffix := a.opSuffix(arg.Size())
+				v += fmt.Sprintf("\tMOV%v %v, %v\n\t", suffix, src, physArg)
 
-				v += fmt.Sprintf("\tMOV%v %v, %v\n\t", suffix, a.ToPhysical(arg, false), physArg)
 			default:
 				physArg = a.ToPhysical(arg, true)
 			}
-
 			v += fmt.Sprintf("MOVQ %v, %v\n\t", physArg, fa)
 		}
 		if o.TailCall {
@@ -362,11 +345,10 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 			// FIXME: This needs to manually adjust SP if the stack
 			// space reserved for the new symbol isn't the same as
 			// the current function.
-			v += fmt.Sprintf("MOVQ $%v+4(SB), %v\n\t", o.FName, tmp)
+			v += fmt.Sprintf("MOVQ $%v+14(SB), %v\n\t", o.FName, tmp)
 			return v + fmt.Sprintf("JMP %v", tmp)
-		} else {
-			return v + fmt.Sprintf("CALL %v+0(SB)", o.FName)
 		}
+		return v + fmt.Sprintf("CALL %v+0(SB)", o.FName)
 	case ir.RET:
 		return fmt.Sprintf("RET")
 	case ir.ADD:
@@ -450,7 +432,7 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 		}
 
 		v += fmt.Sprintf("MOVQ %v, %v\n\t", a.ToPhysical(o.Right, false), r)
-		v += fmt.Sprintf("DIVQ %v\n\t", r)
+		v += fmt.Sprintf("IDIVQ %v\n\t", r)
 		v += fmt.Sprintf("MOVQ DX, %v", a.ToPhysical(o.Dst, false))
 		if popdx {
 			v += "\n\tPOPQ DX"
@@ -485,7 +467,7 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 		}
 
 		v += fmt.Sprintf("MOVQ %v, %v\n\t", a.ToPhysical(o.Right, false), r)
-		v += fmt.Sprintf("DIVQ %v\n\t", r)
+		v += fmt.Sprintf("IDIVQ %v\n\t", r)
 		v += fmt.Sprintf("MOVQ AX, %v", a.ToPhysical(o.Dst, false))
 		if popdx {
 			v += "\n\tPOPQ DX"

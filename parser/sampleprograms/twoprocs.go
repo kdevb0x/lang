@@ -6,5 +6,5 @@ const TwoProcs = `proc foo() (int) {
 }
 
 proc main() () {
-	print("%d", foo())
+	PrintInt(foo())
 }`

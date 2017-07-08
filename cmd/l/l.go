@@ -56,7 +56,7 @@ func BuildProgram(src io.Reader) error {
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(d)
+	//	defer os.RemoveAll(d)
 
 	f, err := os.Create(d + "/main.s")
 	if err != nil {

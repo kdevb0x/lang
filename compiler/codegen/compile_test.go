@@ -3,7 +3,6 @@ package codegen
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"testing"
@@ -14,74 +13,16 @@ import (
 )
 
 func RunProgram(name, p string) error {
-	d, err := ioutil.TempDir("", "langtest"+name)
+	exe, d, err := BuildProgram(name, p)
+	if d != "" {
+		defer os.RemoveAll(d)
+	}
+
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(d)
-
-	f, err := os.Create(d + "/main.s")
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	prog, ti, err := ast.Parse(p)
-	if err != nil {
-		return err
-	}
-
-	enums := make(irgen.EnumMap)
-	for _, v := range prog {
-		switch v.(type) {
-		case ast.SumTypeDefn:
-			_, opts, err := irgen.GenerateIR(v, ti, enums)
-			if err != nil {
-				return err
-			}
-			for k, v := range opts {
-				enums[k] = v
-			}
-		default:
-			// Handled below
-		}
-
-	}
-
-	for _, v := range prog {
-		switch v.(type) {
-
-		case ast.FuncDecl, ast.ProcDecl:
-			fnc, _, err := irgen.GenerateIR(v, ti, enums)
-			if err != nil {
-				return err
-			}
-			if err := Compile(f, fnc); err != nil {
-				return err
-			}
-		case ast.TypeDefn, ast.SumTypeDefn:
-			// No IR for types, we've already verified them.
-		default:
-			panic("Unhandled AST node type for code generation")
-		}
-	}
-
-	// FIXME: Make this more robust, or at least move it to a helper. It
-	// will only work on Plan 9 right now.
-	cmd := exec.Command("6a", "-o", d+"/main.6", d+"/main.s")
+	cmd := exec.Command(d + "/" + exe)
 	val, err := cmd.Output()
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	cmd = exec.Command("6l", "-o", d+"/main", d+"/main.6")
-	val, err = cmd.Output()
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-
-	// Finally, run the compiled binary!
-	cmd = exec.Command(d + "/main")
-	val, err = cmd.Output()
 	fmt.Println(string(val))
 	return err
 }
@@ -105,15 +46,14 @@ func TestCompileHelloWorld(t *testing.T) {
 	// HelloWorld is simple enough that we can hand compile it. Most other
 	// programs we just compile it, run it and check the output to ensure
 	// that they work.
-	expected := `#pragma lib "libstdio.a"
-#pragma lib "libc.a"
-
-TEXT main(SB), $32
-	DATA .string0<>+0(SB)/8, $"Hello, w"
-	DATA .string0<>+8(SB)/8, $"orld!\n\z\z"
-	GLOBL .string0<>+0(SB), $16
-	MOVQ $.string0<>+0(SB), BP
-	CALL printf+0(SB)
+	expected := `TEXT main(SB), 4+16, $32
+	DATA string0<>+0(SB)/8, $14
+	DATA string0<>+8(SB)/8, $"Hello, w"
+	DATA string0<>+16(SB)/8, $"orld!\n\000\000"
+	GLOBL string0<>+0(SB), 8+16, $24
+		MOVQ $string0<>+0(SB), BX
+	MOVQ BX, 0(SP)
+	CALL PrintString+0(SB)
 	RET
 `
 
@@ -124,86 +64,77 @@ TEXT main(SB), $32
 
 func ExampleCompileEmptyMain() {
 	if err := RunProgram("emptymain", sampleprograms.EmptyMain); err != nil {
-		// fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output:
 }
 
 func ExampleHelloWorld() {
 	if err := RunProgram("helloworld", sampleprograms.HelloWorld); err != nil {
-		//fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: Hello, world!
 }
 
 func ExampleLetStatement() {
 	if err := RunProgram("letstatement", sampleprograms.LetStatement); err != nil {
-		//fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: 5
 }
+
 func ExampleLetStatementShadow() {
 	if err := RunProgram("letstatementshadow", sampleprograms.LetStatementShadow); err != nil {
-		//fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: 5
 	// hello
 }
 
-func ExampleCompileHelloWorld2() {
-	if err := RunProgram("helloworld2", sampleprograms.HelloWorld2); err != nil {
-		//fmt.Println(err.Error())
-	}
-	// Output: Hello, world!
-	//  World??
-	//  Hello, world!
-}
-
 func ExampleCompileTwoProcs() {
 	if err := RunProgram("twoprocs", sampleprograms.TwoProcs); err != nil {
-		//fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: 3
 }
 
 func ExampleOutOfOrder() {
 	if err := RunProgram("outoforder", sampleprograms.OutOfOrder); err != nil {
-		//fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: 3
 }
 
 func ExampleMutAddition() {
 	if err := RunProgram("mutaddition", sampleprograms.MutAddition); err != nil {
-		//fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: 8
 }
-
 func ExampleSimpleFunc() {
 	if err := RunProgram("simplefunc", sampleprograms.SimpleFunc); err != nil {
-		//fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: 3
 }
 
 func ExampleSumToTen() {
 	if err := RunProgram("sumtoten", sampleprograms.SumToTen); err != nil {
-		//fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: 55
 }
 
 func ExampleSumToTenRecursive() {
 	if err := RunProgram("sumtotenrecursive", sampleprograms.SumToTenRecursive); err != nil {
-		//fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: 55
 }
 
 func ExampleFizzBuzz() {
 	if err := RunProgram("fizzbuzz", sampleprograms.Fizzbuzz); err != nil {
-		// fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: 1
 	// 2
@@ -308,7 +239,7 @@ func ExampleFizzBuzz() {
 
 func ExampleSomeMath() {
 	if err := RunProgram("somemath", sampleprograms.SomeMath); err != nil {
-		// fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: Add: 3
 	// Sub: -1
@@ -319,7 +250,7 @@ func ExampleSomeMath() {
 
 func ExampleEqualComparison() {
 	if err := RunProgram("equalcompare", sampleprograms.EqualComparison); err != nil {
-		// fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: true
 	// 3
@@ -327,14 +258,14 @@ func ExampleEqualComparison() {
 
 func ExampleNotEqualComparison() {
 	if err := RunProgram("notequalcompare", sampleprograms.NotEqualComparison); err != nil {
-		// fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: false
 }
 
 func ExampleGreaterComparison() {
 	if err := RunProgram("greatercompare", sampleprograms.GreaterComparison); err != nil {
-		// fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: true
 	// 4
@@ -342,7 +273,7 @@ func ExampleGreaterComparison() {
 
 func ExampleGreaterOrEqualComparison() {
 	if err := RunProgram("greaterorequalcompare", sampleprograms.GreaterOrEqualComparison); err != nil {
-		// fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: true
 	// 4
@@ -351,14 +282,14 @@ func ExampleGreaterOrEqualComparison() {
 
 func ExampleLessThanEqualComparison() {
 	if err := RunProgram("lessthanequalcompare", sampleprograms.LessThanComparison); err != nil {
-		// fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: false
 }
 
 func ExampleLessThanOrEqualComparison() {
 	if err := RunProgram("lessthanorequalcompare", sampleprograms.LessThanOrEqualComparison); err != nil {
-		// fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: true
 	// 1
@@ -389,7 +320,7 @@ func ExampleConcreteUint8() {
 
 func ExampleConcreteInt8() {
 	if err := RunProgram("concreteint8", sampleprograms.ConcreteTypeInt8); err != nil {
-		//fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: -4
 }
@@ -410,14 +341,14 @@ func ExampleConcreteInt16() {
 
 func ExampleConcreteUint32() {
 	if err := RunProgram("concreteuint32", sampleprograms.ConcreteTypeUint32); err != nil {
-		//fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: 4
 }
 
 func ExampleConcreteInt32() {
 	if err := RunProgram("concreteint32", sampleprograms.ConcreteTypeInt32); err != nil {
-		//fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: -4
 }
@@ -438,7 +369,7 @@ func ExampleConcreteInt64() {
 
 func ExampleFibonacci() {
 	if err := RunProgram("fibonacci", sampleprograms.Fibonacci); err != nil {
-		//fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: 2
 	// 3
@@ -454,7 +385,7 @@ func ExampleFibonacci() {
 
 func ExampleEnumType() {
 	if err := RunProgram("enumtype", sampleprograms.EnumType); err != nil {
-		//fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: I am A!
 }

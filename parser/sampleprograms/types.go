@@ -5,7 +5,7 @@ type Foo int
 
 proc main() () {
 	let x Foo = 4
-	print("%d\n", x)
+	PrintInt(x)
 }`
 
 const EnumType = `
@@ -15,9 +15,9 @@ proc main() () {
 	let a Foo = A
 	match a {
 	case A:
-		print("I am A!\n")
+		PrintString("I am A!\n")
 	case B:
-		print("I am B!\n")
+		PrintString("I am B!\n")
 	}
 }`
 
@@ -28,9 +28,9 @@ proc main() () {
 	let a = B
 	match a {
 	case A:
-		print("I am A!\n")
+		PrintString("I am A!\n")
 	case B:
-		print("I am B!\n")
+		PrintString("I am B!\n")
 	}
 }`
 
@@ -48,16 +48,18 @@ proc main() () {
 	let x = DoSomething(3)
 	match x {
 	case Nothing:
-		print("I am nothing!\n")
+		PrintString("I am nothing!\n")
 	case Just n:
-		print("%d\n", n)
+		PrintInt(n)
+		PrintString("\n")
 	}
 	let x = DoSomething(4)
 	match x {
 	case Nothing:
-		print("I am nothing!\n")
+		PrintString("I am nothing!\n")
 	case Just n:
-		print("%d\n", n)
+		PrintInt(n)
+		PrintString("\n")
 	}
 }
 `

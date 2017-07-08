@@ -7,10 +7,20 @@ const SomeMath = `proc main() () {
 	let div int = 6 / 2
 	let x int = 1 + 2 * 3 - 4 / 2
 
-	print("Add: %d\n", add)
-	print("Sub: %d\n", sub)
-	print("Mul: %d\n", mul)
-	print("Div: %d\n", div)
-	print("Complex: %d\n", x)
+	PrintString("Add: ")
+	PrintInt(add)
+	PrintString("\n")
+	PrintString("Sub: ")
+	PrintInt(sub)
+	PrintString("\n")
+	PrintString("Mul: ")
+	PrintInt(mul)
+	PrintString("\n")
+	PrintString("Div: ")
+	PrintInt(div)
+	PrintString("\n")
+	PrintString("Complex: ")
+	PrintInt(x)
+	PrintString("\n")
 }
 `

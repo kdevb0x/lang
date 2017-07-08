@@ -13,5 +13,8 @@ func foo(x int) (int) {
 }
 
 proc main() () {
-	print("%d, %d\n", foo(1), foo(3))
+	PrintInt(foo(1))
+	PrintString(", ")
+	PrintInt(foo(3))
+	PrintString("\n")
 }`

@@ -4,14 +4,15 @@ package sampleprograms
 // compiler is working.
 const LetStatement = `proc main() () {
 	let n int = 5
-	print("%d\n", n)
+	PrintInt(n)
 }`
 
 // LetStatementShadow creates a let statement, and shadows it with
 // another let statement.
 const LetStatementShadow = `proc main() () {
 	let n int = 5
-	print("%d\n", n)
+	PrintInt(n)
+	PrintString("\n")
 	let n string = "hello"
-	print("%s\n", n)
+	PrintString(n)
 }`

@@ -66,7 +66,7 @@ func TestIRGenHelloWorld(t *testing.T) {
 	}
 
 	expected := []ir.Opcode{
-		ir.CALL{FName: "printf", Args: []ir.Register{ir.StringLiteral(`Hello, world!\n`)}},
+		ir.CALL{FName: "PrintString", Args: []ir.Register{ir.StringLiteral(`Hello, world!\n`)}},
 	}
 	if len(i.Body) != len(expected) {
 		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
@@ -96,8 +96,7 @@ func TestIRGenLetStatement(t *testing.T) {
 			Src: ir.IntLiteral(5),
 			Dst: ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
-		ir.CALL{FName: "printf", Args: []ir.Register{
-			ir.StringLiteral(`%d\n`),
+		ir.CALL{FName: "PrintInt", Args: []ir.Register{
 			ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
 		},
@@ -131,17 +130,19 @@ func TestIRGenLetStatementShadow(t *testing.T) {
 			Src: ir.IntLiteral(5),
 			Dst: ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
-		ir.CALL{FName: "printf", Args: []ir.Register{
-			ir.StringLiteral(`%d\n`),
+		ir.CALL{FName: "PrintInt", Args: []ir.Register{
 			ir.LocalValue{0, ast.TypeInfo{8, true}},
+		},
+		},
+		ir.CALL{FName: "PrintString", Args: []ir.Register{
+			ir.StringLiteral(`\n`),
 		},
 		},
 		ir.MOV{
 			Src: ir.StringLiteral("hello"),
 			Dst: ir.LocalValue{1, ast.TypeInfo{0, false}},
 		},
-		ir.CALL{FName: "printf", Args: []ir.Register{
-			ir.StringLiteral(`%s\n`),
+		ir.CALL{FName: "PrintString", Args: []ir.Register{
 			ir.LocalValue{1, ast.TypeInfo{0, false}},
 		},
 		},
@@ -233,9 +234,8 @@ func TestIRGenTwoProcs(t *testing.T) {
 			Src: ir.FuncRetVal{0, ast.TypeInfo{8, true}},
 			Dst: ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
-		ir.CALL{FName: "printf",
+		ir.CALL{FName: "PrintInt",
 			Args: []ir.Register{
-				ir.StringLiteral(`%d`),
 				ir.LocalValue{0, ast.TypeInfo{8, true}},
 			},
 		},
@@ -270,8 +270,7 @@ func TestIRGenOutOfOrder(t *testing.T) {
 			Src: ir.FuncRetVal{0, ast.TypeInfo{8, true}},
 			Dst: ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
-		ir.CALL{FName: "printf", Args: []ir.Register{
-			ir.StringLiteral(`%d`),
+		ir.CALL{FName: "PrintInt", Args: []ir.Register{
 			ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
 		},
@@ -361,8 +360,7 @@ func TestIRGenMutAddition(t *testing.T) {
 			Src: ir.LocalValue{3, ast.TypeInfo{8, true}},
 			Dst: ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
-		ir.CALL{FName: "printf", Args: []ir.Register{
-			ir.StringLiteral(`%d\n`),
+		ir.CALL{FName: "PrintInt", Args: []ir.Register{
 			ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
 		},
@@ -421,8 +419,7 @@ func TestIRGenSimpleFunc(t *testing.T) {
 			Src: ir.FuncRetVal{0, ast.TypeInfo{8, true}},
 			Dst: ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
-		ir.CALL{FName: "printf", Args: []ir.Register{
-			ir.StringLiteral("%d"),
+		ir.CALL{FName: "PrintInt", Args: []ir.Register{
 			ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
 		},
@@ -521,8 +518,7 @@ func TestIRGenSumToTen(t *testing.T) {
 			Src: ir.FuncRetVal{0, ast.TypeInfo{8, true}},
 			Dst: ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
-		ir.CALL{FName: "printf", Args: []ir.Register{
-			ir.StringLiteral(`%d\n`),
+		ir.CALL{FName: "PrintInt", Args: []ir.Register{
 			ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
 		},
@@ -641,8 +637,7 @@ func TestIRGenSumToTenRecursive(t *testing.T) {
 	expected = []ir.Opcode{
 		ir.CALL{FName: "sum", Args: []ir.Register{ir.IntLiteral(10)}},
 		ir.MOV{Src: ir.FuncRetVal{0, ast.TypeInfo{8, true}}, Dst: ir.LocalValue{0, ast.TypeInfo{8, true}}},
-		ir.CALL{FName: "printf", Args: []ir.Register{
-			ir.StringLiteral(`%d\n`),
+		ir.CALL{FName: "PrintInt", Args: []ir.Register{
 			ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
 		},
@@ -679,23 +674,24 @@ func TestIRGenFizzBuzz(t *testing.T) {
 		ir.JE{ir.ConditionalJump{Label: "loop2end", Src: ir.LocalValue{0, ast.TypeInfo{1, false}}, Dst: ir.IntLiteral(1)}},
 		ir.MOD{Left: ir.LocalValue{1, ast.TypeInfo{8, true}}, Right: ir.IntLiteral(15), Dst: ir.LocalValue{2, ast.TypeInfo{8, true}}},
 		ir.JNE{ir.ConditionalJump{Label: "if3else", Src: ir.LocalValue{2, ast.TypeInfo{8, true}}, Dst: ir.IntLiteral(0)}},
-		ir.CALL{FName: "printf", Args: []ir.Register{ir.StringLiteral(`fizzbuzz\n`)}},
+		ir.CALL{FName: "PrintString", Args: []ir.Register{ir.StringLiteral(`fizzbuzz`)}},
 		ir.JMP{"if3elsedone"},
 		ir.Label("if3else"),
 		ir.MOD{Left: ir.LocalValue{1, ast.TypeInfo{8, true}}, Right: ir.IntLiteral(5), Dst: ir.LocalValue{3, ast.TypeInfo{8, true}}},
 		ir.JNE{ir.ConditionalJump{Label: "if4else", Src: ir.LocalValue{3, ast.TypeInfo{8, true}}, Dst: ir.IntLiteral(0)}},
-		ir.CALL{FName: "printf", Args: []ir.Register{ir.StringLiteral(`buzz\n`)}},
+		ir.CALL{FName: "PrintString", Args: []ir.Register{ir.StringLiteral(`buzz`)}},
 		ir.JMP{"if4elsedone"},
 		ir.Label("if4else"),
 		ir.MOD{Left: ir.LocalValue{1, ast.TypeInfo{8, true}}, Right: ir.IntLiteral(3), Dst: ir.LocalValue{4, ast.TypeInfo{8, true}}},
 		ir.JNE{ir.ConditionalJump{Label: "if5else", Src: ir.LocalValue{4, ast.TypeInfo{8, true}}, Dst: ir.IntLiteral(0)}},
-		ir.CALL{FName: "printf", Args: []ir.Register{ir.StringLiteral(`fizz\n`)}},
+		ir.CALL{FName: "PrintString", Args: []ir.Register{ir.StringLiteral(`fizz`)}},
 		ir.JMP{"if5elsedone"},
 		ir.Label("if5else"),
-		ir.CALL{FName: "printf", Args: []ir.Register{ir.StringLiteral(`%d\n`), ir.LocalValue{1, ast.TypeInfo{8, true}}}},
+		ir.CALL{FName: "PrintInt", Args: []ir.Register{ir.LocalValue{1, ast.TypeInfo{8, true}}}},
 		ir.Label("if5elsedone"),
 		ir.Label("if4elsedone"),
 		ir.Label("if3elsedone"),
+		ir.CALL{FName: "PrintString", Args: []ir.Register{ir.StringLiteral(`\n`)}},
 		ir.ADD{Src: ir.LocalValue{1, ast.TypeInfo{8, true}}, Dst: ir.LocalValue{5, ast.TypeInfo{8, true}}},
 		ir.ADD{Src: ir.IntLiteral(1), Dst: ir.LocalValue{5, ast.TypeInfo{8, true}}},
 		ir.MOV{Src: ir.LocalValue{5, ast.TypeInfo{8, true}}, Dst: ir.LocalValue{1, ast.TypeInfo{8, true}}},
@@ -802,29 +798,68 @@ func TestIRGenSomeMathStatement(t *testing.T) {
 			Src: ir.LocalValue{9, ast.TypeInfo{8, true}},
 			Dst: ir.LocalValue{8, ast.TypeInfo{8, true}},
 		},
-		ir.CALL{FName: "printf", Args: []ir.Register{
-			ir.StringLiteral(`Add: %d\n`),
+		ir.CALL{FName: "PrintString", Args: []ir.Register{
+			ir.StringLiteral(`Add: `),
+		},
+		},
+		ir.CALL{FName: "PrintInt", Args: []ir.Register{
 			ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
 		},
-		ir.CALL{FName: "printf", Args: []ir.Register{
-			ir.StringLiteral(`Sub: %d\n`),
+		ir.CALL{FName: "PrintString", Args: []ir.Register{
+			ir.StringLiteral(`\n`),
+		},
+		},
+
+		ir.CALL{FName: "PrintString", Args: []ir.Register{
+			ir.StringLiteral(`Sub: `),
+		},
+		},
+		ir.CALL{FName: "PrintInt", Args: []ir.Register{
 			ir.LocalValue{2, ast.TypeInfo{8, true}},
 		},
 		},
-		ir.CALL{FName: "printf", Args: []ir.Register{
-			ir.StringLiteral(`Mul: %d\n`),
+		ir.CALL{FName: "PrintString", Args: []ir.Register{
+			ir.StringLiteral(`\n`),
+		},
+		},
+
+		ir.CALL{FName: "PrintString", Args: []ir.Register{
+			ir.StringLiteral(`Mul: `),
+		},
+		},
+		ir.CALL{FName: "PrintInt", Args: []ir.Register{
 			ir.LocalValue{4, ast.TypeInfo{8, true}},
 		},
 		},
-		ir.CALL{FName: "printf", Args: []ir.Register{
-			ir.StringLiteral(`Div: %d\n`),
+		ir.CALL{FName: "PrintString", Args: []ir.Register{
+			ir.StringLiteral(`\n`),
+		},
+		},
+
+		ir.CALL{FName: "PrintString", Args: []ir.Register{
+			ir.StringLiteral(`Div: `),
+		},
+		},
+		ir.CALL{FName: "PrintInt", Args: []ir.Register{
 			ir.LocalValue{6, ast.TypeInfo{8, true}},
 		},
 		},
-		ir.CALL{FName: "printf", Args: []ir.Register{
-			ir.StringLiteral(`Complex: %d\n`),
+		ir.CALL{FName: "PrintString", Args: []ir.Register{
+			ir.StringLiteral(`\n`),
+		},
+		},
+
+		ir.CALL{FName: "PrintString", Args: []ir.Register{
+			ir.StringLiteral(`Complex: `),
+		},
+		},
+		ir.CALL{FName: "PrintInt", Args: []ir.Register{
 			ir.LocalValue{8, ast.TypeInfo{8, true}},
+		},
+		},
+		ir.CALL{FName: "PrintString", Args: []ir.Register{
+			ir.StringLiteral(`\n`),
 		},
 		},
 	}
@@ -857,8 +892,7 @@ func TestIRGenUserType(t *testing.T) {
 			Src: ir.IntLiteral(4),
 			Dst: ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
-		ir.CALL{FName: "printf", Args: []ir.Register{
-			ir.StringLiteral(`%d\n`),
+		ir.CALL{FName: "PrintInt", Args: []ir.Register{
 			ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
 		},
@@ -892,8 +926,7 @@ func TestIRGenConcreteTypeUint8(t *testing.T) {
 			Src: ir.IntLiteral(4),
 			Dst: ir.LocalValue{0, ast.TypeInfo{1, false}},
 		},
-		ir.CALL{FName: "printf", Args: []ir.Register{
-			ir.StringLiteral(`%d\n`),
+		ir.CALL{FName: "PrintInt", Args: []ir.Register{
 			ir.LocalValue{0, ast.TypeInfo{1, false}},
 		},
 		},
@@ -927,8 +960,7 @@ func TestIRGenConcreteTypeInt8(t *testing.T) {
 			Src: ir.IntLiteral(-4),
 			Dst: ir.LocalValue{0, ast.TypeInfo{1, true}},
 		},
-		ir.CALL{FName: "printf", Args: []ir.Register{
-			ir.StringLiteral(`%d\n`),
+		ir.CALL{FName: "PrintInt", Args: []ir.Register{
 			ir.LocalValue{0, ast.TypeInfo{1, true}},
 		},
 		},
@@ -962,8 +994,7 @@ func TestIRGenConcreteTypeUint16(t *testing.T) {
 			Src: ir.IntLiteral(4),
 			Dst: ir.LocalValue{0, ast.TypeInfo{2, false}},
 		},
-		ir.CALL{FName: "printf", Args: []ir.Register{
-			ir.StringLiteral(`%d\n`),
+		ir.CALL{FName: "PrintInt", Args: []ir.Register{
 			ir.LocalValue{0, ast.TypeInfo{2, false}},
 		},
 		},
@@ -997,8 +1028,7 @@ func TestIRGenConcreteTypeInt16(t *testing.T) {
 			Src: ir.IntLiteral(-4),
 			Dst: ir.LocalValue{0, ast.TypeInfo{2, true}},
 		},
-		ir.CALL{FName: "printf", Args: []ir.Register{
-			ir.StringLiteral(`%d\n`),
+		ir.CALL{FName: "PrintInt", Args: []ir.Register{
 			ir.LocalValue{0, ast.TypeInfo{2, true}},
 		},
 		},
@@ -1032,8 +1062,7 @@ func TestIRGenConcreteTypeUint32(t *testing.T) {
 			Src: ir.IntLiteral(4),
 			Dst: ir.LocalValue{0, ast.TypeInfo{4, false}},
 		},
-		ir.CALL{FName: "printf", Args: []ir.Register{
-			ir.StringLiteral(`%d\n`),
+		ir.CALL{FName: "PrintInt", Args: []ir.Register{
 			ir.LocalValue{0, ast.TypeInfo{4, false}},
 		},
 		},
@@ -1067,8 +1096,7 @@ func TestIRGenConcreteTypeInt32(t *testing.T) {
 			Src: ir.IntLiteral(-4),
 			Dst: ir.LocalValue{0, ast.TypeInfo{4, true}},
 		},
-		ir.CALL{FName: "printf", Args: []ir.Register{
-			ir.StringLiteral(`%d\n`),
+		ir.CALL{FName: "PrintInt", Args: []ir.Register{
 			ir.LocalValue{0, ast.TypeInfo{4, true}},
 		},
 		},
@@ -1102,8 +1130,7 @@ func TestIRGenConcreteTypeUint64(t *testing.T) {
 			Src: ir.IntLiteral(4),
 			Dst: ir.LocalValue{0, ast.TypeInfo{8, false}},
 		},
-		ir.CALL{FName: "printf", Args: []ir.Register{
-			ir.StringLiteral(`%d\n`),
+		ir.CALL{FName: "PrintInt", Args: []ir.Register{
 			ir.LocalValue{0, ast.TypeInfo{8, false}},
 		},
 		},
@@ -1137,8 +1164,7 @@ func TestIRGenConcreteTypeInt64(t *testing.T) {
 			Src: ir.IntLiteral(-4),
 			Dst: ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
-		ir.CALL{FName: "printf", Args: []ir.Register{
-			ir.StringLiteral(`%d\n`),
+		ir.CALL{FName: "PrintInt", Args: []ir.Register{
 			ir.LocalValue{0, ast.TypeInfo{8, true}},
 		},
 		},
@@ -1191,10 +1217,15 @@ func TestIRGenFibonacci(t *testing.T) {
 		ir.Label("if0else"),
 		ir.Label("if0elsedone"),
 		ir.CALL{
-			FName: "printf",
+			FName: "PrintInt",
 			Args: []ir.Register{
-				ir.StringLiteral(`%u\n`),
 				ir.LocalValue{0, ast.TypeInfo{8, false}},
+			},
+		},
+		ir.CALL{
+			FName: "PrintString",
+			Args: []ir.Register{
+				ir.StringLiteral(`\n`),
 			},
 		},
 		ir.CALL{
@@ -1272,7 +1303,7 @@ func TestIREnumType(t *testing.T) {
 		ir.JMP{"match0done"},
 		ir.Label("match0v0"),
 		ir.CALL{
-			FName: "printf",
+			FName: "PrintString",
 			Args: []ir.Register{
 				ir.StringLiteral(`I am A!\n`),
 			},
@@ -1281,7 +1312,7 @@ func TestIREnumType(t *testing.T) {
 
 		ir.Label("match0v1"),
 		ir.CALL{
-			FName: "printf",
+			FName: "PrintString",
 			Args: []ir.Register{
 				ir.StringLiteral(`I am B!\n`),
 			},
@@ -1382,17 +1413,21 @@ func TestIRGenericEnumType(t *testing.T) {
 		},
 		ir.JMP{"match1done"},
 		ir.Label("match1v0"),
-		ir.CALL{FName: "printf", Args: []ir.Register{
+		ir.CALL{FName: "PrintString", Args: []ir.Register{
 			ir.StringLiteral(`I am nothing!\n`),
 		},
 		},
 		ir.JMP{"match1done"},
 		ir.Label("match1v1"),
-		ir.CALL{FName: "printf", Args: []ir.Register{
-			ir.StringLiteral(`%d\n`),
+		ir.CALL{FName: "PrintInt", Args: []ir.Register{
 			ir.LocalValue{1, ast.TypeInfo{8, true}},
 		},
 		},
+		ir.CALL{FName: "PrintString", Args: []ir.Register{
+			ir.StringLiteral(`\n`),
+		},
+		},
+
 		ir.JMP{"match1done"},
 		ir.Label("match1done"),
 		ir.CALL{FName: "DoSomething", Args: []ir.Register{
@@ -1421,15 +1456,18 @@ func TestIRGenericEnumType(t *testing.T) {
 		},
 		ir.JMP{"match2done"},
 		ir.Label("match2v0"),
-		ir.CALL{FName: "printf", Args: []ir.Register{
+		ir.CALL{FName: "PrintString", Args: []ir.Register{
 			ir.StringLiteral(`I am nothing!\n`),
 		},
 		},
 		ir.JMP{"match2done"},
 		ir.Label("match2v1"),
-		ir.CALL{FName: "printf", Args: []ir.Register{
-			ir.StringLiteral(`%d\n`),
+		ir.CALL{FName: "PrintInt", Args: []ir.Register{
 			ir.LocalValue{3, ast.TypeInfo{8, true}},
+		},
+		},
+		ir.CALL{FName: "PrintString", Args: []ir.Register{
+			ir.StringLiteral(`\n`),
 		},
 		},
 		ir.JMP{"match2done"},

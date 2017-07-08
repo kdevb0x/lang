@@ -22,6 +22,21 @@ func NewContext() Context {
 	return Context{
 		Variables: make(map[string]VarWithType),
 		Functions: map[string]Callable{
+			// FIXME: These should be replaced by a
+			// multiple dispatch Print function and/or
+			// moved to a standard library, not build in.
+			"PrintString": FuncDecl{
+				Name: "PrintString",
+				Args: []VarWithType{
+					{"", "string"},
+				},
+			},
+			"PrintInt": FuncDecl{
+				Name: "PrintInt",
+				Args: []VarWithType{
+					{"", "int"},
+				},
+			},
 			"print": FuncDecl{Name: "print"},
 		},
 		Mutables: make(map[string]VarWithType),

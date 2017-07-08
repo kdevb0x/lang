@@ -6,5 +6,5 @@ const SimpleFunc = `func foo() (int) {
 }
 
 proc main() () {
-	print("%d", foo())
+	PrintInt(foo())
 }`

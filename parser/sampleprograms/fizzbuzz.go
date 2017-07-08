@@ -7,14 +7,15 @@ const Fizzbuzz = `proc main() () {
 	mut i int = 1
 	while terminate != true {
 		if i % 15 == 0 {
-			print("fizzbuzz\n")
+			PrintString("fizzbuzz")
 		} else if i % 5 == 0 {
-			print("buzz\n")
+			PrintString("buzz")
 		} else if i % 3 == 0 {
-			print("fizz\n")
+			PrintString("fizz")
 		} else {
-			print("%d\n", i)
+			PrintInt(i)
 		}
+		PrintString("\n")
 
 		i = i + 1
 		if i >= 100 {
