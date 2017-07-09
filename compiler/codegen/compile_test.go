@@ -3,8 +3,10 @@ package codegen
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 
 	"github.com/driusan/lang/compiler/irgen"
@@ -13,15 +15,16 @@ import (
 )
 
 func RunProgram(name, p string) error {
-	exe, d, err := BuildProgram(name, p)
-	if d != "" {
-		defer os.RemoveAll(d)
-	}
-
+	dir, err := ioutil.TempDir("", "langtest"+name)
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command(d + "/" + exe)
+	defer os.RemoveAll(dir)
+	exe, err := BuildProgram(dir, strings.NewReader(p))
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command(dir + "/" + exe)
 	val, err := cmd.Output()
 	fmt.Println(string(val))
 	return err
