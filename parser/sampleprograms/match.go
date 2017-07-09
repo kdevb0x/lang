@@ -42,3 +42,22 @@ func foo(x Maybe int) (int) {
 proc main() () {
 	PrintInt(foo(Just 5))
 }`
+
+// Same as above, but print "x".
+//
+// (There was a bug where func calls didn't work if the string param was a single character long.)
+const MatchParam2 = `data Maybe x = Nothing | Just x
+
+func foo(x Maybe int) (int) {
+	PrintString("x")
+	match x {
+	case Just n:
+		return n
+	case Nothing:
+		return 0
+	}
+}
+
+proc main() () {
+	PrintInt(foo(Just 5))
+}`

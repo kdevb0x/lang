@@ -82,7 +82,7 @@ func Tokenize(r io.RuneReader) ([]Token, error) {
 			}
 		case StringContext:
 			if c == '"' {
-				if l := len(currentToken); l > 1 && currentToken[l-1] != '\\' {
+				if l := len(currentToken); l >= 1 && currentToken[l-1] != '\\' {
 					tokens = append(tokens, String(currentToken))
 					tokens = append(tokens, Char(`"`))
 					currentToken = ""

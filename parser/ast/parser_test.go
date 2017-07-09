@@ -2373,3 +2373,103 @@ func TestMatchParam(t *testing.T) {
 	}
 
 }
+
+func TestMatchParam2(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.MatchParam2))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Node{
+		SumTypeDefn{
+			"Maybe",
+			[]EnumOption{
+				EnumOption{"Nothing", nil, "Maybe"},
+				EnumOption{"Just", []Type{"x"}, "Maybe"},
+			},
+			nil,
+		},
+		FuncDecl{
+			Name: "foo",
+			Args: []VarWithType{{"x", "Maybe int"}},
+			Return: []VarWithType{
+				{
+					"",
+					"int",
+				},
+			},
+			Body: BlockStmt{
+				[]Node{
+					FuncCall{
+						Name: "PrintString",
+						UserArgs: []Value{
+							StringLiteral(`x`),
+						},
+					},
+					MatchStmt{
+						Condition: VarWithType{"x", "Maybe int"},
+						Cases: []MatchCase{
+							MatchCase{
+								LocalVariables: []VarWithType{
+									VarWithType{"n", "int"},
+								},
+								Variable: EnumOption{"Just", []Type{"x"}, "Maybe"},
+								Body: BlockStmt{
+									[]Node{
+										ReturnStmt{VarWithType{"n", "int"}},
+									},
+								},
+							},
+							MatchCase{
+								Variable: EnumOption{"Nothing", nil, "Maybe"},
+								Body: BlockStmt{
+									[]Node{
+										ReturnStmt{IntLiteral(0)},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					FuncCall{
+						Name: "PrintInt",
+						UserArgs: []Value{
+							FuncCall{
+								Name: "foo",
+
+								UserArgs: []Value{
+									EnumValue{
+										Constructor: EnumOption{"Just", []Type{"x"}, "Maybe"},
+										Parameters:  []Value{IntLiteral(5)},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if len(expected) != len(ast) {
+		t.Fatalf("Unexpected AST: got %v want %v", ast, expected)
+	}
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("enum test (%d): got %v want %v", i, ast[i], v)
+		}
+	}
+
+}

@@ -17,7 +17,7 @@ func (k Keyword) IsValid() bool {
 	switch k {
 	case "proc", "while", "mut", "let", "func",
 		"if", "else", "else if", "return",
-		"type", "match":
+		"type", "match", "data", "case":
 		return true
 	}
 	return false
@@ -46,7 +46,8 @@ func (o Operator) IsValid() bool {
 	switch o {
 	case "+", "-", "*", "/", "%", // math
 		"<=", "<", "==", ">", ">=", "!=", // comparison
-		"=": // assignment
+		"=", // assignment
+		"|": // other
 		return true
 	}
 	return false

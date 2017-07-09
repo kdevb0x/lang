@@ -1153,7 +1153,7 @@ func skipBlock(start int, tokens []token.Token, c *Context) (int, error) {
 	blockLevel := 1
 	for i++; blockLevel > 0; i++ {
 		if i >= len(tokens) {
-			return 0, fmt.Errorf("Missing closing bracket for block")
+			return 0, fmt.Errorf("Missing closing bracket for block (1): %v >= %v", i, len(tokens))
 		}
 		switch tokens[i] {
 		case token.Char("{"):
@@ -1163,7 +1163,7 @@ func skipBlock(start int, tokens []token.Token, c *Context) (int, error) {
 		}
 	}
 	if blockLevel > 0 {
-		return 0, fmt.Errorf("Missing closing bracket for block")
+		return 0, fmt.Errorf("Missing closing bracket for block (2)")
 	}
 	return i - 1 - start, nil
 }

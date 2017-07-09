@@ -428,3 +428,10 @@ func ExampleMatchParam() {
 	}
 	// Output: 5
 }
+
+func ExampleMatchParam2() {
+	if err := RunProgram("matchparam2", sampleprograms.MatchParam2); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: x5
+}
