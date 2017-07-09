@@ -12,7 +12,7 @@ loop:
 
 	exits = `TEXT exits(SB), 20, $0
 	MOVQ retcode+0(FP), DI
-	MOVQ $1, AX
+	MOVQ $60, AX
 	SYSCALL
 	RET // Unreached
 `
@@ -24,7 +24,7 @@ TEXT PrintString(SB), 20, $0
 	MOVQ $1, DI // fd
 	LEAQ 8(R8), SI // buf
 	MOVQ 0(R8), DX // nbytes
-	MOVQ $4, AX // write syscall
+	MOVQ $1, AX // write syscall
 	SYSCALL
 	RET
 `

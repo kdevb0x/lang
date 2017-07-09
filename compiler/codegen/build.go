@@ -10,8 +10,6 @@ import (
 	"github.com/driusan/lang/compiler/irgen"
 	"github.com/driusan/lang/parser/ast"
 	"github.com/driusan/lang/parser/token"
-
-	_ "github.com/driusan/noruntime/runtime"
 )
 
 // Builds a program. Directory d is used as the workspace, to build in,
