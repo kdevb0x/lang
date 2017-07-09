@@ -302,21 +302,21 @@ func ExampleLessThanOrEqualComparison() {
 
 func ExampleUserDefinedType() {
 	if err := RunProgram("usertype", sampleprograms.UserDefinedType); err != nil {
-		//fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: 4
 }
 
 func ExampleTypeInference() {
 	if err := RunProgram("typeinference", sampleprograms.TypeInference); err != nil {
-		//fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: 0, 4
 }
 
 func ExampleConcreteUint8() {
 	if err := RunProgram("concreteuint8", sampleprograms.ConcreteTypeUint8); err != nil {
-		//fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: 4
 }
@@ -330,14 +330,14 @@ func ExampleConcreteInt8() {
 
 func ExampleConcreteUint16() {
 	if err := RunProgram("concreteuint16", sampleprograms.ConcreteTypeUint16); err != nil {
-		//fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: 4
 }
 
 func ExampleConcreteInt16() {
 	if err := RunProgram("concreteint16", sampleprograms.ConcreteTypeInt16); err != nil {
-		//fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: -4
 }
@@ -358,14 +358,14 @@ func ExampleConcreteInt32() {
 
 func ExampleConcreteUint64() {
 	if err := RunProgram("concreteuint64", sampleprograms.ConcreteTypeUint64); err != nil {
-		//fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: 4
 }
 
 func ExampleConcreteInt64() {
 	if err := RunProgram("concreteint64", sampleprograms.ConcreteTypeInt64); err != nil {
-		//fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: -4
 }
@@ -395,29 +395,36 @@ func ExampleEnumType() {
 
 func ExampleEnumTypeInferred() {
 	if err := RunProgram("enumtypeinferred", sampleprograms.EnumTypeInferred); err != nil {
-		//fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: I am B!
 }
 
 func ExampleSimpleMatch() {
 	if err := RunProgram("simplematch", sampleprograms.SimpleMatch); err != nil {
-		//fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: I am 3
 }
 
 func ExampleIfElseMatch() {
 	if err := RunProgram("ifelsematch", sampleprograms.IfElseMatch); err != nil {
-		//fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: x is less than 4
 }
 
 func ExampleGenericEnumType() {
 	if err := RunProgram("genericenumtype", sampleprograms.GenericEnumType); err != nil {
-		//fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 	// Output: 5
 	// I am nothing!
+}
+
+func ExampleMatchParam() {
+	if err := RunProgram("matchparam", sampleprograms.MatchParam); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: 5
 }

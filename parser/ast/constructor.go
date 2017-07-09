@@ -2,7 +2,7 @@ package ast
 
 import (
 	"fmt"
-	//	"os"
+	// "os"
 	"reflect"
 	"strings"
 
@@ -199,8 +199,8 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, error) {
 	c := NewContext()
 
 	tokens = stripWhitespace(tokens)
+	// For debugging only.
 	/*
-		// For debugging only.
 		for i := 0; i < len(tokens); i++ {
 			fmt.Fprintf(os.Stderr, "%d: '%v'\n", i, tokens[i].String())
 		}
@@ -702,7 +702,8 @@ func consumeStmt(start int, tokens []token.Token, c *Context) (int, Node, error)
 		case "mut":
 			return consumeMutStmt(start, tokens, c)
 		case "return":
-			return consumeValue(start+1, tokens, c)
+			n, nd, err := consumeValue(start+1, tokens, c)
+			return n + 1, ReturnStmt{Val: nd}, err
 		case "while":
 			return consumeWhileLoop(start, tokens, c)
 			/*
@@ -1014,6 +1015,22 @@ func consumeArgs(start int, tokens []token.Token, c *Context) (int, []VarWithTyp
 			if parsingNames {
 				names = append(names, Variable(t.String()))
 				parsingNames = false
+			} else {
+				n, tk, err := consumeType(i, tokens, *c)
+				if err != nil {
+					return 0, nil, err
+				}
+				i += n - 1
+
+				for _, n := range names {
+					args = append(args, VarWithType{
+						Name: n,
+						Typ:  tk,
+					})
+				}
+
+				names = nil
+				parsingNames = true
 			}
 		case token.Type:
 			if parsingNames {

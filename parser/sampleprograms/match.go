@@ -27,3 +27,18 @@ const IfElseMatch = `proc main() () {
 
 }
 `
+
+const MatchParam = `data Maybe x = Nothing | Just x
+
+func foo(x Maybe int) (int) {
+	match x {
+	case Just n:
+		return n
+	case Nothing:
+		return 0
+	}
+}
+
+proc main() () {
+	PrintInt(foo(Just 5))
+}`

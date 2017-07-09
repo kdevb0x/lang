@@ -64,6 +64,16 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]ir.Opc
 	var argRegs []ir.Register
 	for _, arg := range fc.UserArgs {
 		switch a := arg.(type) {
+		case ast.EnumValue:
+			argRegs = append(argRegs, getRegister(a, context))
+			for _, v := range a.Parameters {
+				arg, r, err := evaluateValue(v, context)
+				if err != nil {
+					return nil, err
+				}
+				ops = append(ops, arg...)
+				argRegs = append(argRegs, r)
+			}
 		case ast.StringLiteral, ast.IntLiteral, ast.BoolLiteral:
 			argRegs = append(argRegs, getRegister(a, context))
 		case ast.VarWithType:
@@ -89,11 +99,11 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]ir.Opc
 			argRegs = append(argRegs, reg)
 		case ast.AdditionOperator, ast.SubtractionOperator, ast.MulOperator, ast.DivOperator, ast.ModOperator:
 			arg, r, err := evaluateValue(a, context)
+
 			if err != nil {
 				return nil, err
 			}
 			ops = append(ops, arg...)
-
 			argRegs = append(argRegs, r)
 		default:
 			panic(fmt.Sprintf("Unhandled argument type in FuncCall %v", reflect.TypeOf(a)))
@@ -381,16 +391,24 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 						panic("Unexpected pattern matching on non-variable")
 					}
 					vreg := context.Get(val)
-					lv, ok := vreg.(ir.LocalValue)
-					if !ok {
-						panic("Expected enumeration to be a local variable")
+					switch lv := vreg.(type) {
+					case ir.FuncArg:
+						for j := range ev.Parameters {
+							lv.Id += 1
+							lv.Info = context.GetTypeInfo(s.Cases[i].LocalVariables[j].Type())
+							context.SetLocalRegister(s.Cases[i].LocalVariables[j], lv)
+						}
+
+					case ir.LocalValue:
+						for j := range ev.Parameters {
+							lv.Id += 1
+							lv.Info = context.GetTypeInfo(s.Cases[i].LocalVariables[j].Type())
+							context.SetLocalRegister(s.Cases[i].LocalVariables[j], lv)
+						}
+					default:
+						panic(fmt.Sprintf("Expected enumeration to be a local variable or function argument: got %v", reflect.TypeOf(vreg)))
 					}
 
-					for j := range ev.Parameters {
-						lv.Id += 1
-						lv.Info = context.GetTypeInfo(s.Cases[i].LocalVariables[j].Type())
-						context.SetLocalRegister(s.Cases[i].LocalVariables[j], lv)
-					}
 				}
 				body, err := compileBlock(s.Cases[i].Body, context)
 				if err != nil {

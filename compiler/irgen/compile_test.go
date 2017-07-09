@@ -1483,3 +1483,86 @@ func TestIRGenericEnumType(t *testing.T) {
 		}
 	}
 }
+
+func TestIRMatchParam(t *testing.T) {
+	loopNum = 0
+	as, ti, err := ast.Parse(sampleprograms.MatchParam)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, enums, err := GenerateIR(as[0], ti, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, err := GenerateIR(as[1], ti, enums)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []ir.Opcode{
+		ir.JE{ir.ConditionalJump{
+			Label: "match0v0",
+			Src:   ir.FuncArg{0, ast.TypeInfo{0, false}},
+			Dst:   ir.IntLiteral(1),
+		},
+		},
+		ir.JE{ir.ConditionalJump{
+			Label: "match0v1",
+			Src:   ir.FuncArg{0, ast.TypeInfo{0, false}},
+			Dst:   ir.IntLiteral(0),
+		},
+		},
+		ir.JMP{"match0done"},
+		ir.Label("match0v0"),
+		ir.MOV{
+			Src: ir.FuncArg{1, ast.TypeInfo{8, true}},
+			Dst: ir.FuncRetVal{0, ast.TypeInfo{8, true}},
+		},
+		ir.RET{},
+		ir.JMP{"match0done"},
+		ir.Label("match0v1"),
+		ir.MOV{
+			Src: ir.IntLiteral(0),
+			Dst: ir.FuncRetVal{0, ast.TypeInfo{8, true}},
+		},
+		ir.RET{},
+		ir.JMP{"match0done"},
+		ir.Label("match0done"),
+	}
+	if len(i.Body) != len(expected) {
+		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
+	}
+
+	for j := range expected {
+		if !compareOp(expected[j], i.Body[j]) {
+			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
+		}
+	}
+	i, _, err = GenerateIR(as[2], ti, enums)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected = []ir.Opcode{
+		ir.CALL{FName: "foo", Args: []ir.Register{
+			ir.IntLiteral(1),
+			ir.IntLiteral(5),
+		},
+		},
+		ir.MOV{
+			Src: ir.FuncRetVal{0, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{0, ast.TypeInfo{8, true}},
+		},
+		ir.CALL{FName: "PrintInt", Args: []ir.Register{
+			ir.LocalValue{0, ast.TypeInfo{8, true}},
+		},
+		},
+	}
+	if len(i.Body) != len(expected) {
+		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
+	}
+
+	for j := range expected {
+		if !compareOp(expected[j], i.Body[j]) {
+			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
+		}
+	}
+}
