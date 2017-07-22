@@ -37,7 +37,7 @@ func addToken(cur []Token, val string) []Token {
 	return append(cur, Unknown(val))
 }
 
-func Tokenize(r io.RuneReader) ([]Token, error) {
+func Tokenize(r io.RuneScanner) ([]Token, error) {
 	var currentToken string
 	var tokens []Token
 	var currentContext context = DefaultContext
@@ -67,6 +67,31 @@ func Tokenize(r io.RuneReader) ([]Token, error) {
 			fallthrough
 		case DefaultContext:
 			switch c {
+			case '<', '=', '>', '|', '!',
+				'+', '-', '*', '/', '%':
+				peekedToken, _, err := r.ReadRune()
+				if err != nil {
+					panic(err)
+				}
+				if err := r.UnreadRune(); err != nil {
+					panic(err)
+				}
+				if Operator(currentToken + string(c) + string(peekedToken)).IsValid() {
+					currentToken += string(c)
+					continue
+				} else if Operator(currentToken + string(c)).IsValid() {
+					tokens = addToken(tokens, currentToken+string(c))
+					currentToken = ""
+					currentContext = DefaultContext
+					continue
+				}
+				if currentToken != "" {
+					tokens = addToken(tokens, currentToken)
+				}
+				tokens = append(tokens, Operator(string(c)))
+				currentToken = ""
+				currentContext = DefaultContext
+				continue
 			case '(', ')', '{', '}', '"', ',', ':':
 				if currentToken != "" {
 					tokens = addToken(tokens, currentToken)

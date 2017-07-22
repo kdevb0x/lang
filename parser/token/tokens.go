@@ -54,6 +54,7 @@ func (o Operator) IsValid() bool {
 }
 func (t Operator) String() string {
 	return string(t)
+	//return "Operator(" +string(t) + ")"
 }
 
 type Char string
@@ -64,6 +65,7 @@ func (c Char) IsValid() bool {
 
 func (t Char) String() string {
 	return string(t)
+	// return "Char(" + string(t) + ")"
 }
 
 type String string

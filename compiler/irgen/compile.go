@@ -154,7 +154,12 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 			}
 			ops = append(ops, fc...)
 		case ast.LetStmt:
+			ov, oldval := context.values[s.Var]
 			reg := context.NextLocalRegister(s.Var)
+			if oldval {
+				context.values[s.Var] = ov
+			}
+
 			switch v := s.Value.(type) {
 			case ast.IntLiteral, ast.StringLiteral, ast.BoolLiteral:
 				ops = append(ops, ir.MOV{
@@ -210,6 +215,10 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 			default:
 				panic(fmt.Sprintf("Unsupported let statement assignment type: %v", reflect.TypeOf(v)))
 			}
+			if oldval {
+				context.values[s.Var] = reg
+			}
+
 		case ast.ReturnStmt:
 			switch arg := s.Val.(type) {
 			case ast.FuncCall:

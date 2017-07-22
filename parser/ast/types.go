@@ -182,6 +182,9 @@ type AssignmentOperator struct {
 	Value    Value
 }
 
+func (ao AssignmentOperator) String() string {
+	return fmt.Sprintf("AssignmentOperator{%v = %v}", ao.Variable, ao.Value)
+}
 func (ao AssignmentOperator) Node() Node {
 	return ao
 }
@@ -243,7 +246,10 @@ func (o MulOperator) String() string {
 }
 
 func (o MulOperator) Type() Type {
-	return o.Left.Type()
+	if lt := o.Left.Type(); lt != "" {
+		return lt
+	}
+	return o.Right.Type()
 }
 
 type DivOperator struct {

@@ -2473,3 +2473,185 @@ func TestMatchParam2(t *testing.T) {
 	}
 
 }
+
+func TestSimpleAlgorithm(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.SimpleAlgorithm))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Node{
+		FuncDecl{
+			Name: "loop",
+			Args: []VarWithType{{"high", "int"}},
+			Return: []VarWithType{
+				{
+					"",
+					"int",
+				},
+			},
+			/*
+			   package sampleprograms
+
+			   `func loop(high int) (int) {
+			   	mut total = 0
+			   	mut i = 0
+			   	let high = high * 2
+			   	i = 1
+			   	while i < high {
+			   		if i % 2 == 0 {
+			   			total = total +  i*2
+			   		}
+			   		i = i + 1
+			   	}
+			   	return total
+			   }
+			*/
+			Body: BlockStmt{
+				[]Node{
+
+					MutStmt{
+						Var:          VarWithType{Name: "total", Typ: "int"},
+						InitialValue: IntLiteral(0),
+					},
+					MutStmt{
+						Var:          VarWithType{Name: "i", Typ: "int"},
+						InitialValue: IntLiteral(0),
+					},
+					LetStmt{
+						Var: VarWithType{"high", "int"},
+						Value: MulOperator{
+							Left:  VarWithType{"high", "int"},
+							Right: IntLiteral(2),
+						},
+					},
+
+					AssignmentOperator{
+						Variable: VarWithType{"i", "int"},
+						Value:    IntLiteral(1),
+					},
+					WhileLoop{
+						Condition: LessThanComparison{
+							Left:  VarWithType{"i", "int"},
+							Right: VarWithType{"high", "int"},
+						},
+						Body: BlockStmt{
+							[]Node{
+								IfStmt{
+									Condition: EqualityComparison{
+										Left: ModOperator{
+											Left:  VarWithType{Variable("i"), "int"},
+											Right: IntLiteral(2),
+										},
+										Right: IntLiteral(0),
+									},
+									Body: BlockStmt{
+										[]Node{
+											AssignmentOperator{
+												Variable: VarWithType{"total", "int"},
+												Value: AdditionOperator{
+													Left: VarWithType{Variable("total"), "int"},
+													Right: MulOperator{
+														Left:  VarWithType{Variable("i"), "int"},
+														Right: IntLiteral(2),
+													},
+												},
+											},
+										},
+									},
+								},
+
+								AssignmentOperator{
+									Variable: VarWithType{"i", "int"},
+									Value: AdditionOperator{
+										Left:  VarWithType{"i", "int"},
+										Right: IntLiteral(1),
+									},
+								},
+							},
+						},
+					},
+					ReturnStmt{VarWithType{"total", "int"}},
+				},
+			},
+		},
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					FuncCall{
+						Name: "PrintInt",
+						UserArgs: []Value{
+							FuncCall{
+								Name:     "loop",
+								UserArgs: []Value{IntLiteral(10)},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if len(expected) != len(ast) {
+		t.Fatalf("Unexpected AST: got %v want %v", ast, expected)
+	}
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("enum test (%d): got %v want %v", i, ast[i], v)
+		}
+	}
+}
+
+func TestConcreteTypeInt64(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.ConcreteTypeInt64))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Node{
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+			/*
+				`proc main() () {
+					let x int64 = -4
+					PrintInt(x)
+				}`
+			*/
+			Body: BlockStmt{
+				[]Node{
+					LetStmt{
+						Var:   VarWithType{"x", "int64"},
+						Value: IntLiteral(-4),
+					},
+					FuncCall{
+						Name: "PrintInt",
+						UserArgs: []Value{
+							VarWithType{Variable("x"), "int64"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if len(expected) != len(ast) {
+		t.Fatalf("Unexpected AST: got %v want %v", ast, expected)
+	}
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("enum test (%d): got %v want %v", i, ast[i], v)
+		}
+	}
+}

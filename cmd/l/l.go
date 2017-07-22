@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -12,9 +13,16 @@ import (
 	"github.com/driusan/lang/compiler/codegen"
 )
 
+var debug bool
+
 func main() {
+	flag.BoolVar(&debug, "debug", false, "do not delete temporary files and print extra information to stderr")
+	flag.Parse()
 	// For now, jut assume the command is building a program in the
 	// current directory.
+	if debug {
+		log.Println("Reading files in current directory")
+	}
 	files, err := ioutil.ReadDir(".")
 	if err != nil {
 		log.Fatal(err)
@@ -26,6 +34,10 @@ func main() {
 		if filepath.Ext(f.Name()) != ".l" {
 			continue
 		}
+		if debug {
+			log.Println("Using", f.Name())
+		}
+
 		fi, err := os.Open(f.Name())
 		if err != nil {
 			log.Println(err)
@@ -53,8 +65,12 @@ func buildAndCopyProgram(src io.Reader) error {
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(d)
-
+	if debug {
+		log.Println("Using temporary directory", d, "(WARNING: will not automatically delete in debug mode)")
+	}
+	if !debug {
+		defer os.RemoveAll(d)
+	}
 	exe, err := codegen.BuildProgram(d, src)
 	if err != nil {
 		return err

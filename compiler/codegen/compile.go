@@ -106,5 +106,5 @@ func printDataLiteral(w io.Writer, str string) PhysicalRegister {
 func reserveStackSize(f ir.Func) uint {
 	// FIXME: This should be MIN(0, (numArgs-1)*8) + (8*NumLocalVariables)
 	// but ir.Func doesn't know NumVariables
-	return 32
+	return 40
 }

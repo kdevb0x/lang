@@ -226,6 +226,17 @@ func TestConsumeValue(t *testing.T) {
 			},
 			7,
 		},
+		{
+			"1 + 2*3",
+			AdditionOperator{
+				Left: IntLiteral(1),
+				Right: MulOperator{
+					Left:  IntLiteral(2),
+					Right: IntLiteral(3),
+				},
+			},
+			5,
+		},
 	}
 
 	for i, tc := range cases {

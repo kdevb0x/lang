@@ -860,6 +860,9 @@ argLoop:
 func consumeLetStmt(start int, tokens []token.Token, c *Context) (int, Node, error) {
 	l := LetStmt{}
 
+	defer func() {
+		c.Variables[l.Var.Name.String()] = l.Var
+	}()
 	if tokens[start] != token.Keyword("let") {
 		return 0, nil, fmt.Errorf("Invalid let statement")
 	}
@@ -871,22 +874,18 @@ func consumeLetStmt(start int, tokens []token.Token, c *Context) (int, Node, err
 				if _, ok := c.Mutables[t.String()]; ok {
 					return 0, nil, fmt.Errorf("Can not shadow mutable variable \"%v\".", t.String())
 				}
-				c.Variables[t.String()] = l.Var
 			} else if l.Var.Typ == "" {
 				l.Var.Typ = Type(t.String())
 				if !c.ValidType(l.Var.Typ) {
 					return 0, nil, fmt.Errorf("Invalid type: %v", t.String())
 				}
 
-				c.Variables[string(l.Var.Name)] = l.Var
 			} else {
 				return 0, nil, fmt.Errorf("Invalid name for let statement")
 			}
 		case token.Type:
 			if l.Var.Typ == "" {
 				l.Var.Typ = Type(t.String())
-				c.Variables[string(l.Var.Name)] = l.Var
-
 			} else {
 				return 0, nil, fmt.Errorf("Unexpected type in let statement")
 
@@ -899,7 +898,6 @@ func consumeLetStmt(start int, tokens []token.Token, c *Context) (int, Node, err
 				}
 				if l.Var.Type() == "" {
 					l.Var.Typ = v.Type()
-					c.Variables[string(l.Var.Name)] = l.Var
 				}
 
 				if IsLiteral(v) {

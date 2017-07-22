@@ -1,6 +1,7 @@
 package irgen
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/driusan/lang/compiler/ir"
@@ -31,6 +32,19 @@ func compareOp(a, b ir.Opcode) bool {
 	default:
 		return a == b
 	}
+}
+
+func compareIR(i, expected []ir.Opcode) error {
+	if len(i) != len(expected) {
+		return fmt.Errorf("Unexpected body: got %v want %v\n", i, expected)
+	}
+
+	for j := range expected {
+		if !compareOp(expected[j], i[j]) {
+			return fmt.Errorf("Unexpected value for opcode %d: got %v want %v", j, i[j], expected[j])
+		}
+	}
+	return nil
 }
 
 func TestIRGenEmptyMain(t *testing.T) {
@@ -144,39 +158,6 @@ func TestIRGenLetStatementShadow(t *testing.T) {
 		},
 		ir.CALL{FName: "PrintString", Args: []ir.Register{
 			ir.LocalValue{1, ast.TypeInfo{0, false}},
-		},
-		},
-	}
-	if len(i.Body) != len(expected) {
-		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
-	}
-
-	for j := range expected {
-		if !compareOp(expected[j], i.Body[j]) {
-			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
-		}
-	}
-}
-
-func TestIRGenHelloWorld2(t *testing.T) {
-	ast, ti, err := ast.Parse(sampleprograms.HelloWorld2)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	i, _, err := GenerateIR(ast[0], ti, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if i.Name != "main" {
-		t.Errorf("Unexpected name: got %v want %v", i.Name, "main")
-	}
-	expected := []ir.Opcode{
-		ir.CALL{FName: "printf", Args: []ir.Register{
-			ir.StringLiteral(`%s %s\n %s`),
-			ir.StringLiteral(`Hello, world!\n`),
-			ir.StringLiteral(`World??`),
-			ir.StringLiteral(`Hello, world!\n`),
 		},
 		},
 	}
@@ -1565,4 +1546,95 @@ func TestIRMatchParam(t *testing.T) {
 			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
 		}
 	}
+}
+
+func TestIRSimpleAlgorithm(t *testing.T) {
+	loopNum = 0
+	as, ti, err := ast.Parse(sampleprograms.SimpleAlgorithm)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, err := GenerateIR(as[0], ti, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []ir.Opcode{
+		ir.MOV{
+			Src: ir.IntLiteral(0),
+			Dst: ir.LocalValue{0, ast.TypeInfo{8, true}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(0),
+			Dst: ir.LocalValue{1, ast.TypeInfo{8, true}},
+		},
+		ir.MUL{
+			Left:  ir.FuncArg{0, ast.TypeInfo{8, true}},
+			Right: ir.IntLiteral(2),
+			Dst:   ir.LocalValue{3, ast.TypeInfo{8, true}},
+		},
+		ir.MOV{
+			Src: ir.LocalValue{3, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{2, ast.TypeInfo{8, true}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(1),
+			Dst: ir.LocalValue{1, ast.TypeInfo{8, true}},
+		},
+		ir.Label("loop0cond"),
+		ir.JGE{
+			ir.ConditionalJump{Label: ir.Label("loop0end"), Src: ir.LocalValue{1, ast.TypeInfo{8, true}}, Dst: ir.LocalValue{2, ast.TypeInfo{8, true}}},
+		},
+		ir.MOD{Left: ir.LocalValue{1, ast.TypeInfo{8, true}}, Right: ir.IntLiteral(2), Dst: ir.LocalValue{4, ast.TypeInfo{8, true}}},
+		ir.JNE{
+			ir.ConditionalJump{Label: ir.Label("if1else"), Src: ir.LocalValue{4, ast.TypeInfo{8, true}}, Dst: ir.IntLiteral(0)},
+		},
+		ir.ADD{Src: ir.LocalValue{0, ast.TypeInfo{8, true}}, Dst: ir.LocalValue{5, ast.TypeInfo{8, true}}},
+		ir.MUL{
+			Left:  ir.LocalValue{1, ast.TypeInfo{8, true}},
+			Right: ir.IntLiteral(2),
+			Dst:   ir.LocalValue{6, ast.TypeInfo{8, true}},
+		},
+		ir.ADD{Src: ir.LocalValue{6, ast.TypeInfo{8, true}}, Dst: ir.LocalValue{5, ast.TypeInfo{8, true}}},
+		ir.MOV{Src: ir.LocalValue{5, ast.TypeInfo{8, true}}, Dst: ir.LocalValue{0, ast.TypeInfo{8, true}}},
+		ir.JMP{"if1elsedone"},
+		ir.Label("if1else"),
+		ir.Label("if1elsedone"),
+		ir.ADD{Src: ir.LocalValue{1, ast.TypeInfo{8, true}}, Dst: ir.LocalValue{7, ast.TypeInfo{8, true}}},
+		ir.ADD{Src: ir.IntLiteral(1), Dst: ir.LocalValue{7, ast.TypeInfo{8, true}}},
+		ir.MOV{Src: ir.LocalValue{7, ast.TypeInfo{8, true}}, Dst: ir.LocalValue{1, ast.TypeInfo{8, true}}},
+		ir.JMP{"loop0cond"},
+		ir.Label("loop0end"),
+		ir.MOV{Src: ir.LocalValue{0, ast.TypeInfo{8, true}}, Dst: ir.FuncRetVal{0, ast.TypeInfo{8, true}}},
+		ir.RET{},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	i, _, err = GenerateIR(as[1], ti, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected = []ir.Opcode{
+		ir.CALL{FName: "loop", Args: []ir.Register{
+			ir.IntLiteral(10),
+		},
+		},
+		ir.MOV{
+			Src: ir.FuncRetVal{0, ast.TypeInfo{8, true}},
+			Dst: ir.LocalValue{0, ast.TypeInfo{8, true}},
+		},
+		ir.CALL{FName: "PrintInt", Args: []ir.Register{
+			ir.LocalValue{0, ast.TypeInfo{8, true}},
+		},
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatal(err)
+	}
+
 }

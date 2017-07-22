@@ -473,3 +473,46 @@ func TestMatchParam2(t *testing.T) {
 	}
 
 }
+
+func TestNoWhitespace(t *testing.T) {
+	tokens, err := Tokenize(strings.NewReader(`1+2*3`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Token{
+		Unknown("1"),
+		Operator("+"),
+		Unknown("2"),
+		Operator("*"),
+		Unknown("3"),
+	}
+
+	// We ensure that both there are no tokens that
+	// were parsed that shouldn't have been, and no tokens
+	// that weren't parsed by ranging through both what
+	// we got and what we expected separately.
+	for i, tok := range tokens {
+		if i >= len(expected) {
+			t.Errorf("Not enough tokens parsed")
+			break
+		}
+		if !tok.IsValid() {
+			t.Errorf("Invalid token %v", tok)
+		}
+		if tokens[i] != expected[i] {
+			t.Errorf(`Unexpected token %d: got "%v" want "%v"`, i, tokens[i], expected[i])
+		}
+	}
+	for i, tok := range expected {
+		if i >= len(tokens) {
+			t.Errorf("Missing %d tokens", (i - len(tokens) + 1))
+			break
+		}
+		if !tok.IsValid() {
+			t.Errorf("Invalid token %v", tok)
+		}
+		if tokens[i] != expected[i] {
+			t.Errorf(`Unexpected token %d: got "%v" want "%v"`, i, tokens[i], expected[i])
+		}
+	}
+}

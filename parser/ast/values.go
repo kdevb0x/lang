@@ -349,6 +349,21 @@ func consumeValue(start int, tokens []token.Token, c *Context) (int, Value, erro
 				return 3, StringLiteral(tokens[i+1].String()), nil
 			}
 			return 0, nil, fmt.Errorf("Invalid character at %v", tokens[i])
+		case token.Operator:
+			if t == token.Operator("-") {
+				n, inverse, err := consumeValue(i+1, tokens, c)
+				if err != nil {
+					return 0, nil, err
+				}
+
+				switch i := inverse.(type) {
+				case IntLiteral:
+					return n + 1, i * -1, nil
+				default:
+					return n + 1, MulOperator{IntLiteral(-1), inverse}, nil
+				}
+			}
+			return 0, nil, fmt.Errorf("Invalid operator while expecting value: %v", tokens[i])
 		default:
 			return 0, nil, fmt.Errorf("Invalid value: %v", tokens[i])
 		}

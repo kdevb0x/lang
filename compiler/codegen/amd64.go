@@ -196,7 +196,7 @@ func (a *Amd64) ToPhysical(r ir.Register, altform bool) PhysicalRegister {
 	case ir.FuncCallArg:
 		return PhysicalRegister(fmt.Sprintf("%d(SP)", 8*v.Id))
 	case ir.LocalValue:
-		return PhysicalRegister(fmt.Sprintf("%v+%d(FP)", v.String(), (int(v.Id-a.numArgs)*8)+(int(a.numArgs)*8)))
+		return PhysicalRegister(fmt.Sprintf("%v+%d(FP)", v.String(), (int(v.Id)*8)+(int(a.numArgs)*8)))
 	case ir.FuncRetVal:
 		if v.Id == 0 {
 			return "AX"

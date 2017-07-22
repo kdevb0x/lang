@@ -30,7 +30,7 @@ func (c variableLayout) GetReturnTypeInfo(v uint) ast.TypeInfo {
 // Reserves the next available register for varname
 func (c *variableLayout) NextLocalRegister(varname ast.VarWithType) ir.Register {
 	if varname.Type() == "" {
-		panic("No type for variable.")
+		panic("No type for variable " + varname.Name + ".")
 	}
 	ti := c.typeinfo
 	typ := varname.Type()
