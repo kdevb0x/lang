@@ -73,7 +73,7 @@ func consumeMatchStmt(start int, tokens []token.Token, c *Context) (int, MatchSt
 				panic("Expected parameterized enumerated option")
 			}
 			for i, v := range concretes[1:] {
-				concreteMap[td.Parameters[i]] = Type(v)
+				concreteMap[td.Parameters[i]] = TypeLiteral(v)
 			}
 		}
 
@@ -84,8 +84,9 @@ func consumeMatchStmt(start int, tokens []token.Token, c *Context) (int, MatchSt
 		l.Cases = append(l.Cases, cs)
 		i += n
 		if tokens[i] == token.Char("}") {
-			if c.Types[string(l.Condition.Type())].ConcreteType == "sumtype" {
-				if err := checkExhaustiveness(l.Condition.Type(), l.Cases, c); err != nil {
+			ct := c.Types[l.Condition.Type()].ConcreteType
+			if ct != nil && c.Types[l.Condition.Type()].ConcreteType.Type() == "sumtype" {
+				if err := checkExhaustiveness(l.Condition, l.Cases, c); err != nil {
 					return 0, MatchStmt{}, err
 				}
 			}
@@ -142,7 +143,7 @@ func consumeCase(start int, tokens []token.Token, c *Context, genericMap map[Typ
 func checkExhaustiveness(t Type, mc []MatchCase, c *Context) error {
 	allcases := make(map[string]bool)
 	for _, eo := range c.EnumOptions {
-		if eo.Type() == t {
+		if eo.Type() == t.Type() {
 			allcases[eo.Constructor] = false
 		}
 	}
@@ -154,7 +155,7 @@ func checkExhaustiveness(t Type, mc []MatchCase, c *Context) error {
 	}
 	for c, v := range allcases {
 		if v == false {
-			return fmt.Errorf(`Inexhaustive match for enum type "%v": Missing case "%v".`, t, c)
+			return fmt.Errorf(`Inexhaustive match for enum type "%v": Missing case "%v".`, t.Type(), c)
 		}
 	}
 	return nil

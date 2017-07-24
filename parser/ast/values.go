@@ -20,6 +20,8 @@ func isInfixOperator(pos int, tokens []token.Token) bool {
 			"<=", "<", "==", ">", ">=", "!=", "=":
 			return true
 		}
+	case token.Char:
+		return t == "["
 	}
 	return false
 }
@@ -334,6 +336,25 @@ func consumeValue(start int, tokens []token.Token, c *Context) (int, Value, erro
 
 					finalPos := i + 2 - start + n
 					return finalPos, createOperatorNode(tokens[i+1], partial, right), nil
+				case token.Char("["):
+					n, index, err := consumeValue(i+2, tokens, c)
+					if err != nil {
+						return 0, nil, err
+					}
+					if tokens[i+2+n] != token.Char("]") {
+						return 0, nil, fmt.Errorf("Invalid index")
+					}
+					idx, ok := index.(IntLiteral)
+					if !ok {
+						return 0, nil, fmt.Errorf("Only literal indexes are currently supported :(")
+					}
+					base, ok := partial.(VarWithType)
+					if !ok {
+						return 0, nil, fmt.Errorf("Can only index on variables")
+					}
+					av := ArrayValue{base, idx}
+
+					return i + 3 - start + n, av, nil
 				default:
 					panic(fmt.Sprintf("Unhandled infix operator %v at %v", tokens[i].String(), i))
 				}
@@ -342,13 +363,35 @@ func consumeValue(start int, tokens []token.Token, c *Context) (int, Value, erro
 		case token.Whitespace:
 			continue
 		case token.Char:
-			if tokens[i] == token.Char(`"`) {
+			switch tokens[i] {
+			case token.Char(`"`):
 				if tokens[i+2] != token.Char(`"`) {
 					return 0, nil, fmt.Errorf("Invalid string at %v", tokens[i])
 				}
 				return 3, StringLiteral(tokens[i+1].String()), nil
+			case token.Char(`{`):
+				tn, v, err := consumeCommaSeparatedValues(i+1, tokens, c)
+				al := ArrayLiteral(v)
+				at := al.Type()
+				if _, ok := c.Types[at]; !ok {
+					typdef := ArrayType{
+						Base: TypeLiteral(v[0].Type()),
+						Size: IntLiteral(len(v)),
+					}
+
+					c.Types[at] = TypeDefn{
+						Name:         TypeLiteral(at),
+						ConcreteType: typdef,
+					}
+					//fmt.Printf("%v", al)
+					//panic("Missing type info for: %v" + al.Type())
+				}
+				return tn + 2, al, err
+			case token.Char(`[`):
+				return 0, nil, fmt.Errorf("Indexing not yet implemented")
+			default:
+				return 0, nil, fmt.Errorf("Invalid character at %v", tokens[i])
 			}
-			return 0, nil, fmt.Errorf("Invalid character at %v", tokens[i])
 		case token.Operator:
 			if t == token.Operator("-") {
 				n, inverse, err := consumeValue(i+1, tokens, c)
@@ -369,4 +412,34 @@ func consumeValue(start int, tokens []token.Token, c *Context) (int, Value, erro
 		}
 	}
 	return 0, nil, fmt.Errorf("No value")
+}
+
+func consumeCommaSeparatedValues(start int, tokens []token.Token, c *Context) (int, []Value, error) {
+	var v []Value
+	for i := start; i < len(tokens); i++ {
+		switch tokens[i] {
+		case token.Char("}"):
+			return i - start, v, nil
+		case token.Char(","):
+			n, val, err := consumeValue(i+1, tokens, c)
+			if err != nil {
+				return 0, nil, err
+			}
+			v = append(v, val)
+			i += n
+		default:
+			if i == start {
+				n, val, err := consumeValue(i, tokens, c)
+				if err != nil {
+					return 0, nil, err
+				}
+				v = append(v, val)
+				i += n - 1
+			} else {
+				return 0, nil, fmt.Errorf("Unexpected token %v", tokens[i])
+			}
+		}
+
+	}
+	return len(tokens) - start, v, nil
 }

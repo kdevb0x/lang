@@ -16,7 +16,7 @@ type variableLayout struct {
 	enumvalues EnumMap
 }
 
-func (c variableLayout) GetTypeInfo(t ast.Type) ast.TypeInfo {
+func (c variableLayout) GetTypeInfo(t string) ast.TypeInfo {
 	ti, ok := c.typeinfo[t]
 	if !ok {
 		panic("Could not get type info for " + string(t))
@@ -34,7 +34,7 @@ func (c *variableLayout) NextLocalRegister(varname ast.VarWithType) ir.Register 
 	}
 	ti := c.typeinfo
 	typ := varname.Type()
-	firstType := ast.Type(strings.Fields(string(typ))[0])
+	firstType := strings.Fields(string(typ))[0]
 
 	if varname.Name == "" {
 		c.tempVars++

@@ -5,7 +5,10 @@ import (
 )
 
 // FIXME: This should be eliminated
-type Type string
+type Type interface {
+	Node
+	Type() string
+}
 
 type TypeDef interface {
 	TypeDefn() TypeDef
@@ -24,8 +27,8 @@ func (eo EnumOption) Node() Node {
 func (eo EnumOption) Value() interface{} {
 	return eo.Constructor
 }
-func (eo EnumOption) Type() Type {
-	return eo.ParentType
+func (eo EnumOption) Type() string {
+	return eo.ParentType.Type()
 }
 
 func (eo EnumOption) String() string {
@@ -44,7 +47,7 @@ func (ev EnumValue) Value() interface{} {
 func (ev EnumValue) Node() Node {
 	return ev
 }
-func (ev EnumValue) Type() Type {
+func (ev EnumValue) Type() string {
 	return ev.Constructor.Type()
 }
 
@@ -57,8 +60,11 @@ type VarWithType struct {
 	Typ  Type
 }
 
-func (vt VarWithType) Type() Type {
-	return vt.Typ
+func (vt VarWithType) Type() string {
+	if vt.Typ == nil {
+		return ""
+	}
+	return vt.Typ.Type()
 }
 func (vt VarWithType) Node() Node {
 	return vt
@@ -118,7 +124,7 @@ func (t SumTypeDefn) TypeDefn() TypeDef {
 	return t
 }
 
-func (m MutStmt) Type() Type {
+func (m MutStmt) Type() string {
 	return m.Var.Type()
 }
 
@@ -131,7 +137,7 @@ func (s LetStmt) Node() Node {
 	return s
 }
 
-func (l LetStmt) Type() Type {
+func (l LetStmt) Type() string {
 	return l.Var.Type()
 }
 
@@ -172,9 +178,8 @@ type BoolValue interface {
 }
 
 type Value interface {
-	Node
+	Type
 	Value() interface{}
-	Type() Type
 }
 
 type AssignmentOperator struct {
@@ -205,7 +210,7 @@ func (ao AdditionOperator) String() string {
 	return fmt.Sprintf("(%v + %v)", ao.Left, ao.Right)
 }
 
-func (ao AdditionOperator) Type() Type {
+func (ao AdditionOperator) Type() string {
 	return ao.Left.Type()
 }
 
@@ -225,7 +230,7 @@ func (o SubtractionOperator) String() string {
 	return fmt.Sprintf("(%v - %v)", o.Left, o.Right)
 }
 
-func (o SubtractionOperator) Type() Type {
+func (o SubtractionOperator) Type() string {
 	return o.Left.Type()
 }
 
@@ -245,7 +250,7 @@ func (o MulOperator) String() string {
 	return fmt.Sprintf("(%v * %v)", o.Left, o.Right)
 }
 
-func (o MulOperator) Type() Type {
+func (o MulOperator) Type() string {
 	if lt := o.Left.Type(); lt != "" {
 		return lt
 	}
@@ -267,7 +272,7 @@ func (o DivOperator) String() string {
 	return fmt.Sprintf("(%v / %v)", o.Left, o.Right)
 }
 
-func (o DivOperator) Type() Type {
+func (o DivOperator) Type() string {
 	return o.Left.Type()
 }
 
@@ -287,7 +292,7 @@ func (m ModOperator) String() string {
 	return fmt.Sprintf("ModOperator{%v mod %v}", m.Left, m.Right)
 }
 
-func (m ModOperator) Type() Type {
+func (m ModOperator) Type() string {
 	return m.Left.Type()
 }
 
@@ -300,4 +305,14 @@ func (v Variable) String() string {
 
 func (v Variable) Node() Node {
 	return v
+}
+
+type TypeLiteral string
+
+func (tl TypeLiteral) Type() string {
+	return string(tl)
+}
+
+func (tl TypeLiteral) Node() Node {
+	return tl
 }

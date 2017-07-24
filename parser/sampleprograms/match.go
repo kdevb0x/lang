@@ -48,7 +48,7 @@ proc main() () {
 // (There was a bug where func calls didn't work if the string param was a single character long.)
 const MatchParam2 = `data Maybe x = Nothing | Just x
 
-func foo(x Maybe int) (int) {
+proc foo(x Maybe int) (int) {
 	PrintString("x")
 	match x {
 	case Just n:

@@ -30,7 +30,7 @@ func (pd ProcDecl) GetArgs() []VarWithType {
 	return pd.Args
 }
 
-func (pd ProcDecl) Type() Type {
+func (pd ProcDecl) Type() string {
 	return pd.Return.Type()
 }
 

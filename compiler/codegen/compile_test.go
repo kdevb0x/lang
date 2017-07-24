@@ -442,3 +442,19 @@ func ExampleSimpleAlgorithm() {
 	}
 	// Output: 180
 }
+
+func ExampleSimpleArray() {
+	if err := RunProgram("simplearray", sampleprograms.SimpleArray); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: 4
+}
+
+func ExampleMutationArray() {
+	if err := RunProgram("arraymutation", sampleprograms.ArrayMutation); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: 4
+	// 2
+	// 3
+}

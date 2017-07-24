@@ -25,7 +25,7 @@ func TestConsumeSumTypeList(t *testing.T) {
 		},
 		{"Just a | B",
 			[]EnumOption{
-				{Constructor: "Just", Parameters: []Type{"a"}},
+				{Constructor: "Just", Parameters: []Type{TypeLiteral("a")}},
 				{Constructor: "B"},
 			},
 			4,

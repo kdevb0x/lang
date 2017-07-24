@@ -6,7 +6,7 @@ import (
 
 func IsLiteral(v Value) bool {
 	switch v.(type) {
-	case IntLiteral, BoolLiteral, StringLiteral:
+	case IntLiteral, BoolLiteral, StringLiteral, ArrayLiteral:
 		return true
 	default:
 		return false
@@ -16,12 +16,12 @@ func IsLiteral(v Value) bool {
 func IsCompatibleType(t TypeDefn, v Value) error {
 	switch t2 := v.(type) {
 	case BoolLiteral:
-		if t.ConcreteType == "bool" {
+		if t.ConcreteType == TypeLiteral("bool") {
 			return nil
 		}
 		return fmt.Errorf("Can not assign bool to %v", t.Name)
 	case IntLiteral:
-		switch t.ConcreteType {
+		switch t.ConcreteType.Type() {
 		case "int":
 			return nil
 		case "uint8":
@@ -71,10 +71,18 @@ func IsCompatibleType(t TypeDefn, v Value) error {
 			return fmt.Errorf("Can not assign int to %v", t.Name)
 		}
 	case StringLiteral:
-		if t.ConcreteType == "string" {
+		if t.ConcreteType == TypeLiteral("string") {
 			return nil
 		}
 		return fmt.Errorf("Can not assign string to %v", t.Name)
+	case ArrayLiteral:
+		if t.ConcreteType == nil {
+			return fmt.Errorf("%v does not have a concrete type", t)
+		}
+		if t.ConcreteType.Type() == v.Type() {
+			return nil
+		}
+		return fmt.Errorf("Can not assign %v to %v", v.Type(), t.Name)
 	default:
 		panic("Unhandled literal type in IsCompatibleType")
 	}
@@ -94,7 +102,7 @@ func (s StringLiteral) String() string {
 	return fmt.Sprintf("StringLiteral(%v)", string(s))
 }
 
-func (s StringLiteral) Type() Type {
+func (s StringLiteral) Type() string {
 	return "string"
 }
 
@@ -112,7 +120,7 @@ func (i IntLiteral) String() string {
 	return fmt.Sprintf("IntLiteral(%d)", i)
 }
 
-func (i IntLiteral) Type() Type {
+func (i IntLiteral) Type() string {
 	return "int"
 }
 
@@ -121,6 +129,7 @@ type BoolLiteral bool
 func (v BoolLiteral) BoolValue() bool {
 	return bool(v)
 }
+
 func (v BoolLiteral) Value() interface{} {
 	return v
 }
@@ -136,6 +145,6 @@ func (b BoolLiteral) String() string {
 	return "BoolLiteral(false)"
 }
 
-func (b BoolLiteral) Type() Type {
+func (b BoolLiteral) Type() string {
 	return "bool"
 }

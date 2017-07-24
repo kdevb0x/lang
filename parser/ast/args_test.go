@@ -13,12 +13,12 @@ func TestConsumeArgs(t *testing.T) {
 		ExpectedN int
 	}{
 		{"()", nil, 2},
-		{"(n int)", []VarWithType{{Name: "n", Typ: "int"}}, 4},
+		{"(n int)", []VarWithType{{Name: "n", Typ: TypeLiteral("int")}}, 4},
 		{
 			"(partial int, x int)",
 			[]VarWithType{
-				{Name: "partial", Typ: "int"},
-				{Name: "x", Typ: "int"},
+				{Name: "partial", Typ: TypeLiteral("int")},
+				{Name: "x", Typ: TypeLiteral("int")},
 			},
 			7,
 		},

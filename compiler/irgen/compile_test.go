@@ -1638,3 +1638,111 @@ func TestIRSimpleAlgorithm(t *testing.T) {
 	}
 
 }
+
+func TestIRSimpleArray(t *testing.T) {
+	loopNum = 0
+	as, ti, err := ast.Parse(sampleprograms.SimpleArray)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, err := GenerateIR(as[0], ti, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []ir.Opcode{
+		ir.MOV{
+			Src: ir.IntLiteral(1),
+			Dst: ir.LocalValue{0, ast.TypeInfo{8, true}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(2),
+			Dst: ir.LocalValue{1, ast.TypeInfo{8, true}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(3),
+			Dst: ir.LocalValue{2, ast.TypeInfo{8, true}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(4),
+			Dst: ir.LocalValue{3, ast.TypeInfo{8, true}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(5),
+			Dst: ir.LocalValue{4, ast.TypeInfo{8, true}},
+		},
+		ir.CALL{
+			FName: "PrintInt",
+			Args: []ir.Register{
+				ir.LocalValue{3, ast.TypeInfo{8, true}},
+			},
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestIRArrayMutation(t *testing.T) {
+	loopNum = 0
+	as, ti, err := ast.Parse(sampleprograms.ArrayMutation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, err := GenerateIR(as[0], ti, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []ir.Opcode{
+		ir.MOV{
+			Src: ir.IntLiteral(1),
+			Dst: ir.LocalValue{0, ast.TypeInfo{8, true}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(2),
+			Dst: ir.LocalValue{1, ast.TypeInfo{8, true}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(3),
+			Dst: ir.LocalValue{2, ast.TypeInfo{8, true}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(4),
+			Dst: ir.LocalValue{3, ast.TypeInfo{8, true}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(5),
+			Dst: ir.LocalValue{4, ast.TypeInfo{8, true}},
+		},
+		ir.CALL{
+			FName: "PrintInt",
+			Args: []ir.Register{
+				ir.LocalValue{3, ast.TypeInfo{8, true}},
+			},
+		},
+		ir.CALL{FName: "PrintString", Args: []ir.Register{ir.StringLiteral(`\n`)}},
+		ir.MOV{
+			Src: ir.IntLiteral(2),
+			Dst: ir.LocalValue{3, ast.TypeInfo{8, true}},
+		},
+		ir.CALL{
+			FName: "PrintInt",
+			Args: []ir.Register{
+				ir.LocalValue{3, ast.TypeInfo{8, true}},
+			},
+		},
+		ir.CALL{FName: "PrintString", Args: []ir.Register{ir.StringLiteral(`\n`)}},
+		ir.CALL{
+			FName: "PrintInt",
+			Args: []ir.Register{
+				ir.LocalValue{2, ast.TypeInfo{8, true}},
+			},
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+}

@@ -5,14 +5,14 @@ import (
 )
 
 type Callable interface {
+	Type
 	GetArgs() []VarWithType
-	Type() Type
 	ReturnTuple() Tuple
 }
 
 type Tuple []VarWithType
 
-func (t Tuple) Type() Type {
+func (t Tuple) Type() string {
 	if len(t) == 0 {
 		return "(none)"
 	}
@@ -42,7 +42,7 @@ func (fd FuncDecl) String() string {
 	return fmt.Sprintf("FuncDecl{\n\tName: %v,\n\tArgs: %v,\n\tReturn: %v,\n\tBody: %v}", fd.Name, fd.Args, fd.Return, fd.Body)
 }
 
-func (fd FuncDecl) Type() Type {
+func (fd FuncDecl) Type() string {
 	return fd.Return.Type()
 }
 

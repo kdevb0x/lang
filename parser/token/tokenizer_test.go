@@ -362,7 +362,7 @@ func TestMatchParam2(t *testing.T) {
 		Whitespace(" "),
 		Unknown("x"),
 		Whitespace("\n\n"),
-		Keyword("func"),
+		Keyword("proc"),
 		Whitespace(" "),
 		Unknown("foo"),
 		Char("("),
@@ -473,7 +473,6 @@ func TestMatchParam2(t *testing.T) {
 	}
 
 }
-
 func TestNoWhitespace(t *testing.T) {
 	tokens, err := Tokenize(strings.NewReader(`1+2*3`))
 	if err != nil {
@@ -534,4 +533,92 @@ func TestSingleCharInput(t *testing.T) {
 			t.Errorf("Unexpected token: got %v want %v", tk[i], expected[i])
 		}
 	}
+}
+
+func TestSimpleArray(t *testing.T) {
+	tokens, err := Tokenize(strings.NewReader(sampleprograms.SimpleArray))
+	expected := []Token{
+		Keyword("proc"),
+		Whitespace(" "),
+		Unknown("main"),
+		Char("("),
+		Char(")"),
+		Whitespace(" "),
+		Char("("),
+		Char(")"),
+		Whitespace(" "),
+		Char("{"),
+		Whitespace("\n\t"),
+		Keyword("let"),
+		Whitespace(" "),
+		Unknown("n"),
+		Whitespace(" "),
+		Char("["),
+		Unknown("5"),
+		Char("]"),
+		Type("int"),
+		Whitespace(" "),
+		Operator("="),
+		Whitespace(" "),
+		Char("{"),
+		Whitespace(" "),
+		Unknown("1"),
+		Char(","),
+		Whitespace(" "),
+		Unknown("2"),
+		Char(","),
+		Whitespace(" "),
+		Unknown("3"),
+		Char(","),
+		Whitespace(" "),
+		Unknown("4"),
+		Char(","),
+		Whitespace(" "),
+		Unknown("5"),
+		Whitespace(" "),
+		Char("}"),
+		Whitespace("\n\t"),
+		Unknown("PrintInt"),
+		Char("("),
+		Unknown("n"),
+		Char("["),
+		Unknown("3"),
+		Char("]"),
+		Char(")"),
+		Whitespace("\n"),
+		Char("}"),
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// We ensure that both there are no tokens that
+	// were parsed that shouldn't have been, and no tokens
+	// that weren't parsed by ranging through both what
+	// we got and what we expected separately.
+	for i, tok := range tokens {
+		if i >= len(expected) {
+			t.Errorf("Not enough tokens parsed")
+			break
+		}
+		if !tok.IsValid() {
+			t.Errorf("Invalid token %v", tok)
+		}
+		if tokens[i] != expected[i] {
+			t.Errorf(`Unexpected token %d: got "%v" want "%v"`, i, tokens[i], expected[i])
+		}
+	}
+	for i, tok := range expected {
+		if i >= len(tokens) {
+			t.Errorf("Missing %d tokens", (i - len(tokens) + 1))
+			break
+		}
+		if !tok.IsValid() {
+			t.Errorf("Invalid token %v", tok)
+		}
+		if tokens[i] != expected[i] {
+			t.Errorf(`Unexpected token %d: got "%v" want "%v"`, i, tokens[i], expected[i])
+		}
+	}
+
 }

@@ -36,7 +36,7 @@ func GenerateIR(node ast.Node, typeInfo ast.TypeInformation, enums EnumMap) (ir.
 			words := strings.Fields(string(rv.Type()))
 			for _, typePiece := range words {
 
-				context.rettypes = append(context.rettypes, context.GetTypeInfo(ast.Type(typePiece)))
+				context.rettypes = append(context.rettypes, context.GetTypeInfo(typePiece))
 			}
 		}
 		body, err := compileBlock(n.Body, context)
@@ -76,6 +76,24 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]ir.Opc
 			}
 		case ast.StringLiteral, ast.IntLiteral, ast.BoolLiteral:
 			argRegs = append(argRegs, getRegister(a, context))
+		case ast.ArrayValue:
+			base := getRegister(a.Base, context)
+			reg, ok := base.(ir.LocalValue)
+			if !ok {
+				panic("Could not load base of array value")
+			}
+			offset, ok := a.Index.(ast.IntLiteral)
+			if !ok {
+				panic("Only literal offsets are currently supported")
+			}
+			reg.Id += uint(offset)
+			at, ok := a.Base.Typ.(ast.ArrayType)
+			if !ok {
+				panic("Array value must have an ArrayType as the base type")
+			}
+
+			reg.Info = context.GetTypeInfo(at.Base.Type())
+			argRegs = append(argRegs, reg)
 		case ast.VarWithType:
 			argRegs = append(argRegs, context.Get(a))
 		case ast.FuncCall:
@@ -89,7 +107,7 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]ir.Opc
 			ops = append(ops, fc...)
 
 			ti := context.typeinfo[a.Returns[0].Type()]
-			reg := context.NextLocalRegister(ast.VarWithType{"", a.Returns[0].Type()})
+			reg := context.NextLocalRegister(ast.VarWithType{"", ast.TypeLiteral(a.Returns[0].Type())})
 			ops = append(ops,
 				ir.MOV{
 					Src: ir.FuncRetVal{0, ti},
@@ -198,12 +216,12 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 					words := strings.Fields(string(v.Type()))
 					for word := range words {
 						var r ir.Register
-						ti := context.GetTypeInfo(ast.Type(words[word]))
+						ti := context.GetTypeInfo(words[word])
 
 						if word == 0 {
 							r = reg
 						} else {
-							r = context.NextLocalRegister(ast.VarWithType{"", ast.Type(words[word])})
+							r = context.NextLocalRegister(ast.VarWithType{"", ast.TypeLiteral(words[word])})
 						}
 						ops = append(ops, ir.MOV{
 							Src: ir.FuncRetVal{uint(i + word + multiwordoffset), ti},
@@ -211,6 +229,43 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 						})
 					}
 					multiwordoffset += len(words) - 1
+				}
+			case ast.ArrayLiteral:
+				regs := make([]ir.Register, len(v))
+				// First generate the LocalValue registers to ensure they're consecutive if there's a variable
+				// or some other expression in one of the literal pieces.
+				for i := range regs {
+					entryVar := ast.VarWithType{ast.Variable(fmt.Sprintf("%s[%d]", s.Var.Name, i)), ast.TypeLiteral(v[i].Type())}
+					if i == 0 {
+						// Convert the type information for the first LocalValue allocated to match
+						// foo[0], not the (useless) defaults that foo generated, rather than allocating
+						// a new register.
+						tr, ok := reg.(ir.LocalValue)
+						if !ok {
+							panic("Register for array is not a LocalValue")
+						}
+						tr.Info = context.GetTypeInfo(v[i].Type())
+						regs[i] = tr
+						context.values[entryVar] = regs[i]
+						context.tempVars--
+						continue
+					}
+					// Allocate a new LocalValue for foo[1...n]
+					regs[i] = context.NextLocalRegister(entryVar)
+				}
+
+				// Then evaluate the values and put them in the appropriate registers
+				for i, r := range regs {
+					body, val, err := evaluateValue(v[i], context)
+					if err != nil {
+						return nil, err
+					}
+					ops = append(ops, body...)
+
+					ops = append(ops, ir.MOV{
+						Src: val,
+						Dst: r,
+					})
 				}
 			default:
 				panic(fmt.Sprintf("Unsupported let statement assignment type: %v", reflect.TypeOf(v)))
@@ -255,16 +310,15 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 			}
 			ops = append(ops, ir.RET{})
 		case ast.MutStmt:
+			reg := context.NextLocalRegister(s.Var)
 			switch v := s.InitialValue.(type) {
 			case ast.IntLiteral, ast.BoolLiteral, ast.StringLiteral:
-				reg := context.NextLocalRegister(s.Var)
 				ops = append(ops, ir.MOV{
 					Src: getRegister(s.InitialValue, context),
 					Dst: reg,
 				})
 
 			case ast.AdditionOperator, ast.SubtractionOperator, ast.MulOperator, ast.DivOperator, ast.ModOperator:
-				reg := context.NextLocalRegister(s.Var)
 				body, r, err := evaluateValue(s.InitialValue, context)
 				if err != nil {
 					return nil, err
@@ -275,12 +329,48 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 					Dst: reg,
 				})
 			case ast.VarWithType:
-				reg := context.NextLocalRegister(s.Var)
 				val := context.Get(v)
 				ops = append(ops, ir.MOV{
 					Src: val,
 					Dst: reg,
 				})
+			case ast.ArrayLiteral:
+				regs := make([]ir.Register, len(v))
+				// First generate the LocalValue registers to ensure they're consecutive if there's a variable
+				// or some other expression in one of the literal pieces.
+				for i := range regs {
+					entryVar := ast.VarWithType{ast.Variable(fmt.Sprintf("%s[%d]", s.Var.Name, i)), ast.TypeLiteral(v[i].Type())}
+					if i == 0 {
+						// Convert the type information for the first LocalValue allocated to match
+						// foo[0], not the (useless) defaults that foo generated, rather than allocating
+						// a new register.
+						tr, ok := reg.(ir.LocalValue)
+						if !ok {
+							panic("Register for array is not a LocalValue")
+						}
+						tr.Info = context.GetTypeInfo(v[i].Type())
+						regs[i] = tr
+						context.values[entryVar] = regs[i]
+						context.tempVars--
+						continue
+					}
+					// Allocate a new LocalValue for foo[1...n]
+					regs[i] = context.NextLocalRegister(entryVar)
+				}
+
+				// Then evaluate the values and put them in the appropriate registers
+				for i, r := range regs {
+					body, val, err := evaluateValue(v[i], context)
+					if err != nil {
+						return nil, err
+					}
+					ops = append(ops, body...)
+
+					ops = append(ops, ir.MOV{
+						Src: val,
+						Dst: r,
+					})
+				}
 			default:
 				panic(fmt.Sprintf("Unhandled type for MutStmt assignment %v", reflect.TypeOf(s.InitialValue)))
 			}
@@ -575,7 +665,7 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]ir.Opcode, ir.Regi
 	var ops []ir.Opcode
 	switch s := val.(type) {
 	case ast.AdditionOperator:
-		a := context.NextLocalRegister(ast.VarWithType{"", "int"})
+		a := context.NextLocalRegister(ast.VarWithType{"", ast.TypeLiteral("int")})
 		switch v := s.Left.(type) {
 		case ast.VarWithType:
 			lv := a.(ir.LocalValue)
@@ -624,7 +714,7 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]ir.Opcode, ir.Regi
 		})
 		return ops, a, nil
 	case ast.SubtractionOperator:
-		a := context.NextLocalRegister(ast.VarWithType{"", "int"})
+		a := context.NextLocalRegister(ast.VarWithType{"", ast.TypeLiteral("int")})
 		switch v := s.Left.(type) {
 		case ast.VarWithType:
 			lv := a.(ir.LocalValue)
@@ -684,7 +774,7 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]ir.Opcode, ir.Regi
 		}
 
 		// FIXME: This shouldn't hard code int.
-		a := context.NextLocalRegister(ast.VarWithType{"", "int"})
+		a := context.NextLocalRegister(ast.VarWithType{"", ast.TypeLiteral("int")})
 		ops = append(ops, bodyb...)
 		ops = append(ops, ir.MOD{
 			Left:  ra,
@@ -694,7 +784,7 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]ir.Opcode, ir.Regi
 		return ops, a, nil
 	case ast.MulOperator:
 		// FIXME: This shouldn't hard code int.
-		a := context.NextLocalRegister(ast.VarWithType{"", "int"})
+		a := context.NextLocalRegister(ast.VarWithType{"", ast.TypeLiteral("int")})
 		var l, r ir.Register
 		switch s.Left.(type) {
 		case ast.IntLiteral, ast.VarWithType:
@@ -722,7 +812,7 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]ir.Opcode, ir.Regi
 		return ops, a, nil
 	case ast.DivOperator:
 		// FIXME: This shouldn't hardcode int
-		a := context.NextLocalRegister(ast.VarWithType{"", "int"})
+		a := context.NextLocalRegister(ast.VarWithType{"", ast.TypeLiteral("int")})
 		var l, r ir.Register
 		switch s.Left.(type) {
 		case ast.IntLiteral, ast.VarWithType:
@@ -757,7 +847,7 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]ir.Opcode, ir.Regi
 		cname := ir.Label(fmt.Sprintf("comparison%d", loopNum))
 		loopNum++
 
-		a := context.NextLocalRegister(ast.VarWithType{"", "int"})
+		a := context.NextLocalRegister(ast.VarWithType{"", ast.TypeLiteral("int")})
 		bv, ok := s.(ast.BoolValue)
 		if !ok {
 			panic("Comparison operator doesn't implement BoolValue")

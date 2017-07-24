@@ -19,7 +19,7 @@ func (ec EqualityComparison) Value() interface{} {
 func (n EqualityComparison) Node() Node {
 	return n
 }
-func (c EqualityComparison) Type() Type {
+func (c EqualityComparison) Type() string {
 	return "bool"
 }
 
@@ -47,7 +47,7 @@ func (n NotEqualsComparison) String() string {
 	return fmt.Sprintf("NotEqualsComparison{%v == %v}", n.Left, n.Right)
 }
 
-func (c NotEqualsComparison) Type() Type {
+func (c NotEqualsComparison) Type() string {
 	return "bool"
 }
 
@@ -69,7 +69,7 @@ func (n GreaterComparison) Value() interface{} {
 	return n.BoolValue()
 }
 
-func (c GreaterComparison) Type() Type {
+func (c GreaterComparison) Type() string {
 	return "bool"
 }
 
@@ -83,7 +83,7 @@ func (gc GreaterOrEqualComparison) BoolValue() bool {
 	return true //gc.Left >= gc.Right
 }
 
-func (c GreaterOrEqualComparison) Type() Type {
+func (c GreaterOrEqualComparison) Type() string {
 	return "bool"
 }
 
@@ -113,7 +113,7 @@ func (gc LessThanOrEqualComparison) BoolValue() bool {
 	return true //gc.Left >= gc.Right
 }
 
-func (c LessThanOrEqualComparison) Type() Type {
+func (c LessThanOrEqualComparison) Type() string {
 	return "bool"
 }
 
@@ -135,6 +135,6 @@ func (gc LessThanComparison) BoolValue() bool {
 	return true //gc.Left >= gc.Right
 }
 
-func (c LessThanComparison) Type() Type {
+func (c LessThanComparison) Type() string {
 	return "bool"
 }

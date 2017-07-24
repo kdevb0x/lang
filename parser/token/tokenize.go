@@ -95,7 +95,7 @@ func Tokenize(r io.RuneScanner) ([]Token, error) {
 				currentToken = ""
 				currentContext = DefaultContext
 				continue
-			case '(', ')', '{', '}', '"', ',', ':':
+			case '(', ')', '{', '}', '"', ',', ':', '[', ']':
 				if currentToken != "" {
 					tokens = addToken(tokens, currentToken)
 				}

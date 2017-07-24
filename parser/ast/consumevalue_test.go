@@ -237,13 +237,19 @@ func TestConsumeValue(t *testing.T) {
 			},
 			5,
 		},
+		{
+			"{ 1, 2 }",
+			ArrayLiteral{IntLiteral(1), IntLiteral(2)},
+			5,
+		},
 	}
 
 	for i, tc := range cases {
 		tokens, err := token.Tokenize(strings.NewReader(tc.Code))
 		tokens = stripWhitespace(tokens)
 
-		n, value, err := consumeValue(0, tokens, &Context{})
+		c := NewContext()
+		n, value, err := consumeValue(0, tokens, &c)
 		if err != nil {
 			t.Fatal(err)
 		}
