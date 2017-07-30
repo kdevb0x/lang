@@ -71,10 +71,13 @@ func Tokenize(r io.RuneScanner) ([]Token, error) {
 				'+', '-', '*', '/', '%':
 				peekedToken, _, err := r.ReadRune()
 				if err != nil {
-					panic(err)
-				}
-				if err := r.UnreadRune(); err != nil {
-					panic(err)
+					if err != io.EOF {
+						panic(err)
+					}
+				} else {
+					if err := r.UnreadRune(); err != nil {
+						panic(err)
+					}
 				}
 				if Operator(currentToken + string(c) + string(peekedToken)).IsValid() {
 					currentToken += string(c)

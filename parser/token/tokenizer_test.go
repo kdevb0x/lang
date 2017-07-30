@@ -516,3 +516,22 @@ func TestNoWhitespace(t *testing.T) {
 		}
 	}
 }
+
+func TestSingleCharInput(t *testing.T) {
+	tk, err := Tokenize(strings.NewReader("%"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Token{
+		Operator("%"),
+	}
+
+	if len(tk) != 1 {
+		t.Fatal("Unexpected number of tokens. Got: %v", tk)
+	}
+	for i, tok := range expected {
+		if tok != tk[i] {
+			t.Errorf("Unexpected token: got %v want %v", tk[i], expected[i])
+		}
+	}
+}
