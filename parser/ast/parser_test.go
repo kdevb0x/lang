@@ -345,7 +345,7 @@ func TestParseFizzBuzz(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -367,7 +367,7 @@ func TestParseFizzBuzz(t *testing.T) {
 					},
 					WhileLoop{
 						Condition: NotEqualsComparison{
-							Left:  VarWithType{"terminate", TypeLiteral("bool")},
+							Left:  VarWithType{"terminate", TypeLiteral("bool"), false},
 							Right: BoolLiteral(true),
 						},
 						Body: BlockStmt{
@@ -375,7 +375,7 @@ func TestParseFizzBuzz(t *testing.T) {
 								IfStmt{
 									Condition: EqualityComparison{
 										Left: ModOperator{
-											Left:  VarWithType{Variable("i"), TypeLiteral("int")},
+											Left:  VarWithType{Variable("i"), TypeLiteral("int"), false},
 											Right: IntLiteral(15),
 										},
 										Right: IntLiteral(0),
@@ -395,7 +395,7 @@ func TestParseFizzBuzz(t *testing.T) {
 											IfStmt{
 												Condition: EqualityComparison{
 													Left: ModOperator{
-														Left:  VarWithType{Variable("i"), TypeLiteral("int")},
+														Left:  VarWithType{Variable("i"), TypeLiteral("int"), false},
 														Right: IntLiteral(5),
 													},
 													Right: IntLiteral(0),
@@ -415,7 +415,7 @@ func TestParseFizzBuzz(t *testing.T) {
 														IfStmt{
 															Condition: EqualityComparison{
 																Left: ModOperator{
-																	Left:  VarWithType{"i", TypeLiteral("int")},
+																	Left:  VarWithType{"i", TypeLiteral("int"), false},
 																	Right: IntLiteral(3),
 																},
 																Right: IntLiteral(0),
@@ -435,7 +435,7 @@ func TestParseFizzBuzz(t *testing.T) {
 																	FuncCall{
 																		Name: "PrintInt",
 																		UserArgs: []Value{
-																			VarWithType{"i", TypeLiteral("int")},
+																			VarWithType{"i", TypeLiteral("int"), false},
 																		},
 																	},
 																},
@@ -455,21 +455,21 @@ func TestParseFizzBuzz(t *testing.T) {
 								},
 
 								AssignmentOperator{
-									Variable: VarWithType{"i", TypeLiteral("int")},
+									Variable: VarWithType{"i", TypeLiteral("int"), false},
 									Value: AdditionOperator{
-										Left:  VarWithType{"i", TypeLiteral("int")},
+										Left:  VarWithType{"i", TypeLiteral("int"), false},
 										Right: IntLiteral(1),
 									},
 								},
 								IfStmt{
 									Condition: GreaterOrEqualComparison{
-										Left:  VarWithType{"i", TypeLiteral("int")},
+										Left:  VarWithType{"i", TypeLiteral("int"), false},
 										Right: IntLiteral(100),
 									},
 									Body: BlockStmt{
 										[]Node{
 											AssignmentOperator{
-												Variable: VarWithType{"terminate", TypeLiteral("bool")},
+												Variable: VarWithType{"terminate", TypeLiteral("bool"), false},
 												Value:    BoolLiteral(true),
 											},
 										},
@@ -496,7 +496,7 @@ func TestHelloWorld(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -529,7 +529,7 @@ func TestEmptyMain(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -554,7 +554,7 @@ func TestLetStatement(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -567,13 +567,13 @@ func TestLetStatement(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					LetStmt{
-						Var:   VarWithType{"n", TypeLiteral("int")},
+						Var:   VarWithType{"n", TypeLiteral("int"), false},
 						Value: IntLiteral(5),
 					},
 					FuncCall{
 						Name: "PrintInt",
 						UserArgs: []Value{
-							VarWithType{"n", TypeLiteral("int")},
+							VarWithType{"n", TypeLiteral("int"), false},
 						},
 					},
 				},
@@ -594,7 +594,7 @@ func TestLetStatementShadow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -607,13 +607,13 @@ func TestLetStatementShadow(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					LetStmt{
-						Var:   VarWithType{"n", TypeLiteral("int")},
+						Var:   VarWithType{"n", TypeLiteral("int"), false},
 						Value: IntLiteral(5),
 					},
 					FuncCall{
 						Name: "PrintInt",
 						UserArgs: []Value{
-							VarWithType{"n", TypeLiteral("int")},
+							VarWithType{"n", TypeLiteral("int"), false},
 						},
 					},
 					FuncCall{
@@ -624,13 +624,13 @@ func TestLetStatementShadow(t *testing.T) {
 					},
 
 					LetStmt{
-						Var:   VarWithType{"n", TypeLiteral("string")},
+						Var:   VarWithType{"n", TypeLiteral("string"), false},
 						Value: StringLiteral("hello"),
 					},
 					FuncCall{
 						Name: "PrintString",
 						UserArgs: []Value{
-							VarWithType{"n", TypeLiteral("string")},
+							VarWithType{"n", TypeLiteral("string"), false},
 						},
 					},
 				},
@@ -651,7 +651,7 @@ func TestMutStatement(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -664,22 +664,22 @@ func TestMutStatement(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					MutStmt{
-						Var:          VarWithType{"x", TypeLiteral("int")},
+						Var:          VarWithType{"x", TypeLiteral("int"), false},
 						InitialValue: IntLiteral(3),
 					},
 					MutStmt{
-						Var: VarWithType{"y", TypeLiteral("int")},
+						Var: VarWithType{"y", TypeLiteral("int"), false},
 						InitialValue: AdditionOperator{
-							Left:  VarWithType{"x", TypeLiteral("int")},
+							Left:  VarWithType{"x", TypeLiteral("int"), false},
 							Right: IntLiteral(1),
 						},
 					},
 					AssignmentOperator{
-						Variable: VarWithType{"x", TypeLiteral("int")},
+						Variable: VarWithType{"x", TypeLiteral("int"), false},
 						Value: AdditionOperator{
-							Left: VarWithType{"x", TypeLiteral("int")},
+							Left: VarWithType{"x", TypeLiteral("int"), false},
 							Right: AdditionOperator{
-								Left:  VarWithType{"y", TypeLiteral("int")},
+								Left:  VarWithType{"y", TypeLiteral("int"), false},
 								Right: IntLiteral(1),
 							},
 						},
@@ -687,7 +687,7 @@ func TestMutStatement(t *testing.T) {
 					FuncCall{
 						Name: "PrintInt",
 						UserArgs: []Value{
-							VarWithType{"x", TypeLiteral("int")},
+							VarWithType{"x", TypeLiteral("int"), false},
 						},
 					},
 				},
@@ -708,7 +708,7 @@ func TestTwoProcs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -717,7 +717,7 @@ func TestTwoProcs(t *testing.T) {
 			Name: "foo",
 			Args: nil,
 			Return: []VarWithType{
-				VarWithType{Name: "", Typ: TypeLiteral("int")},
+				VarWithType{"", TypeLiteral("int"), false},
 			},
 			Body: BlockStmt{
 				[]Node{
@@ -758,7 +758,7 @@ func TestOutOfOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -808,7 +808,7 @@ func TestSumToTen(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -824,38 +824,38 @@ func TestSumToTen(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					MutStmt{
-						Var:          VarWithType{Name: "val", Typ: TypeLiteral("int")},
-						InitialValue: VarWithType{"x", TypeLiteral("int")},
+						Var:          VarWithType{"val", TypeLiteral("int"), false},
+						InitialValue: VarWithType{"x", TypeLiteral("int"), false},
 					},
 					MutStmt{
-						Var:          VarWithType{Name: "sum", Typ: TypeLiteral("int")},
+						Var:          VarWithType{"sum", TypeLiteral("int"), false},
 						InitialValue: IntLiteral(0),
 					},
 					WhileLoop{
 						Condition: GreaterComparison{
-							Left:  VarWithType{"val", TypeLiteral("int")},
+							Left:  VarWithType{"val", TypeLiteral("int"), false},
 							Right: IntLiteral(0),
 						},
 						Body: BlockStmt{
 							[]Node{
 								AssignmentOperator{
-									Variable: VarWithType{"sum", TypeLiteral("int")},
+									Variable: VarWithType{"sum", TypeLiteral("int"), false},
 									Value: AdditionOperator{
-										Left:  VarWithType{"sum", TypeLiteral("int")},
-										Right: VarWithType{"val", TypeLiteral("int")},
+										Left:  VarWithType{"sum", TypeLiteral("int"), false},
+										Right: VarWithType{"val", TypeLiteral("int"), false},
 									},
 								},
 								AssignmentOperator{
-									Variable: VarWithType{"val", TypeLiteral("int")},
+									Variable: VarWithType{"val", TypeLiteral("int"), false},
 									Value: SubtractionOperator{
-										Left:  VarWithType{"val", TypeLiteral("int")},
+										Left:  VarWithType{"val", TypeLiteral("int"), false},
 										Right: IntLiteral(1),
 									},
 								},
 							},
 						},
 					},
-					ReturnStmt{VarWithType{"sum", TypeLiteral("int")}},
+					ReturnStmt{VarWithType{"sum", TypeLiteral("int"), false}},
 				},
 			},
 		},
@@ -892,7 +892,7 @@ func TestSimpleFunc(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -942,7 +942,7 @@ func TestSumToTenRecursive(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -963,7 +963,7 @@ func TestSumToTenRecursive(t *testing.T) {
 							Name: "partial_sum",
 							UserArgs: []Value{
 								IntLiteral(0),
-								VarWithType{"x", TypeLiteral("int")},
+								VarWithType{"x", TypeLiteral("int"), false},
 							},
 						},
 					},
@@ -973,8 +973,8 @@ func TestSumToTenRecursive(t *testing.T) {
 		FuncDecl{
 			Name: "partial_sum",
 			Args: []VarWithType{
-				{Name: "partial", Typ: TypeLiteral("int")},
-				{Name: "x", Typ: TypeLiteral("int")},
+				{"partial", TypeLiteral("int"), false},
+				{"x", TypeLiteral("int"), false},
 			},
 			Return: []VarWithType{
 				{Typ: TypeLiteral("int")},
@@ -983,13 +983,13 @@ func TestSumToTenRecursive(t *testing.T) {
 				[]Node{
 					IfStmt{
 						Condition: EqualityComparison{
-							Left:  VarWithType{"x", TypeLiteral("int")},
+							Left:  VarWithType{"x", TypeLiteral("int"), false},
 							Right: IntLiteral(0),
 						},
 						Body: BlockStmt{
 							[]Node{
 								ReturnStmt{
-									Val: VarWithType{"partial", TypeLiteral("int")},
+									Val: VarWithType{"partial", TypeLiteral("int"), false},
 								},
 							},
 						},
@@ -999,11 +999,11 @@ func TestSumToTenRecursive(t *testing.T) {
 							Name: "partial_sum",
 							UserArgs: []Value{
 								AdditionOperator{
-									Left:  VarWithType{"partial", TypeLiteral("int")},
-									Right: VarWithType{"x", TypeLiteral("int")},
+									Left:  VarWithType{"partial", TypeLiteral("int"), false},
+									Right: VarWithType{"x", TypeLiteral("int"), false},
 								},
 								SubtractionOperator{
-									Left:  VarWithType{"x", TypeLiteral("int")},
+									Left:  VarWithType{"x", TypeLiteral("int"), false},
 									Right: IntLiteral(1),
 								},
 							},
@@ -1046,7 +1046,7 @@ func TestSomeMath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1113,7 +1113,7 @@ func TestSomeMath(t *testing.T) {
 						Name: "PrintInt",
 
 						UserArgs: []Value{
-							VarWithType{"add", TypeLiteral("int")},
+							VarWithType{"add", TypeLiteral("int"), false},
 						},
 					},
 					FuncCall{
@@ -1134,7 +1134,7 @@ func TestSomeMath(t *testing.T) {
 						Name: "PrintInt",
 
 						UserArgs: []Value{
-							VarWithType{"sub", TypeLiteral("int")},
+							VarWithType{"sub", TypeLiteral("int"), false},
 						},
 					},
 					FuncCall{
@@ -1155,7 +1155,7 @@ func TestSomeMath(t *testing.T) {
 						Name: "PrintInt",
 
 						UserArgs: []Value{
-							VarWithType{"mul", TypeLiteral("int")},
+							VarWithType{"mul", TypeLiteral("int"), false},
 						},
 					},
 					FuncCall{
@@ -1176,7 +1176,7 @@ func TestSomeMath(t *testing.T) {
 						Name: "PrintInt",
 
 						UserArgs: []Value{
-							VarWithType{"div", TypeLiteral("int")},
+							VarWithType{"div", TypeLiteral("int"), false},
 						},
 					},
 					FuncCall{
@@ -1197,7 +1197,7 @@ func TestSomeMath(t *testing.T) {
 						Name: "PrintInt",
 
 						UserArgs: []Value{
-							VarWithType{"x", TypeLiteral("int")},
+							VarWithType{"x", TypeLiteral("int"), false},
 						},
 					},
 					FuncCall{
@@ -1225,7 +1225,7 @@ func TestEqualComparisonMath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1238,17 +1238,17 @@ func TestEqualComparisonMath(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					MutStmt{
-						Var:          VarWithType{"a", TypeLiteral("int")},
+						Var:          VarWithType{"a", TypeLiteral("int"), false},
 						InitialValue: IntLiteral(3),
 					},
 					LetStmt{
-						Var:   VarWithType{"b", TypeLiteral("int")},
+						Var:   VarWithType{"b", TypeLiteral("int"), false},
 						Value: IntLiteral(3),
 					},
 					IfStmt{
 						Condition: EqualityComparison{
-							Left:  VarWithType{"a", TypeLiteral("int")},
-							Right: VarWithType{"b", TypeLiteral("int")},
+							Left:  VarWithType{"a", TypeLiteral("int"), false},
+							Right: VarWithType{"b", TypeLiteral("int"), false},
 						},
 						Body: BlockStmt{
 							[]Node{
@@ -1269,15 +1269,15 @@ func TestEqualComparisonMath(t *testing.T) {
 					},
 					WhileLoop{
 						Condition: EqualityComparison{
-							Left:  VarWithType{"a", TypeLiteral("int")},
-							Right: VarWithType{"b", TypeLiteral("int")},
+							Left:  VarWithType{"a", TypeLiteral("int"), false},
+							Right: VarWithType{"b", TypeLiteral("int"), false},
 						},
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
 									Name: "PrintInt",
 									UserArgs: []Value{
-										VarWithType{"a", TypeLiteral("int")},
+										VarWithType{"a", TypeLiteral("int"), false},
 									},
 								},
 								FuncCall{
@@ -1288,9 +1288,9 @@ func TestEqualComparisonMath(t *testing.T) {
 								},
 
 								AssignmentOperator{
-									Variable: VarWithType{"a", TypeLiteral("int")},
+									Variable: VarWithType{"a", TypeLiteral("int"), false},
 									Value: AdditionOperator{
-										Left:  VarWithType{"a", TypeLiteral("int")},
+										Left:  VarWithType{"a", TypeLiteral("int"), false},
 										Right: IntLiteral(1),
 									},
 								},
@@ -1315,7 +1315,7 @@ func TestNotEqualComparisonMath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1328,17 +1328,17 @@ func TestNotEqualComparisonMath(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					MutStmt{
-						Var:          VarWithType{"a", TypeLiteral("int")},
+						Var:          VarWithType{"a", TypeLiteral("int"), false},
 						InitialValue: IntLiteral(3),
 					},
 					LetStmt{
-						Var:   VarWithType{"b", TypeLiteral("int")},
+						Var:   VarWithType{"b", TypeLiteral("int"), false},
 						Value: IntLiteral(3),
 					},
 					IfStmt{
 						Condition: NotEqualsComparison{
-							Left:  VarWithType{"a", TypeLiteral("int")},
-							Right: VarWithType{"b", TypeLiteral("int")},
+							Left:  VarWithType{"a", TypeLiteral("int"), false},
+							Right: VarWithType{"b", TypeLiteral("int"), false},
 						},
 						Body: BlockStmt{
 							[]Node{
@@ -1359,15 +1359,15 @@ func TestNotEqualComparisonMath(t *testing.T) {
 					},
 					WhileLoop{
 						Condition: NotEqualsComparison{
-							Left:  VarWithType{"a", TypeLiteral("int")},
-							Right: VarWithType{"b", TypeLiteral("int")},
+							Left:  VarWithType{"a", TypeLiteral("int"), false},
+							Right: VarWithType{"b", TypeLiteral("int"), false},
 						},
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
 									Name: "PrintInt",
 									UserArgs: []Value{
-										VarWithType{"a", TypeLiteral("int")},
+										VarWithType{"a", TypeLiteral("int"), false},
 									},
 								},
 								FuncCall{
@@ -1377,9 +1377,9 @@ func TestNotEqualComparisonMath(t *testing.T) {
 									},
 								},
 								AssignmentOperator{
-									Variable: VarWithType{"a", TypeLiteral("int")},
+									Variable: VarWithType{"a", TypeLiteral("int"), false},
 									Value: AdditionOperator{
-										Left:  VarWithType{"a", TypeLiteral("int")},
+										Left:  VarWithType{"a", TypeLiteral("int"), false},
 										Right: IntLiteral(1),
 									},
 								},
@@ -1404,7 +1404,7 @@ func TestGreaterComparisonMath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1417,17 +1417,17 @@ func TestGreaterComparisonMath(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					MutStmt{
-						Var:          VarWithType{"a", TypeLiteral("int")},
+						Var:          VarWithType{"a", TypeLiteral("int"), false},
 						InitialValue: IntLiteral(4),
 					},
 					LetStmt{
-						Var:   VarWithType{"b", TypeLiteral("int")},
+						Var:   VarWithType{"b", TypeLiteral("int"), false},
 						Value: IntLiteral(3),
 					},
 					IfStmt{
 						Condition: GreaterComparison{
-							Left:  VarWithType{"a", TypeLiteral("int")},
-							Right: VarWithType{"b", TypeLiteral("int")},
+							Left:  VarWithType{"a", TypeLiteral("int"), false},
+							Right: VarWithType{"b", TypeLiteral("int"), false},
 						},
 						Body: BlockStmt{
 							[]Node{
@@ -1448,15 +1448,15 @@ func TestGreaterComparisonMath(t *testing.T) {
 					},
 					WhileLoop{
 						Condition: GreaterComparison{
-							Left:  VarWithType{"a", TypeLiteral("int")},
-							Right: VarWithType{"b", TypeLiteral("int")},
+							Left:  VarWithType{"a", TypeLiteral("int"), false},
+							Right: VarWithType{"b", TypeLiteral("int"), false},
 						},
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
 									Name: "PrintInt",
 									UserArgs: []Value{
-										VarWithType{"a", TypeLiteral("int")},
+										VarWithType{"a", TypeLiteral("int"), false},
 									},
 								},
 								FuncCall{
@@ -1466,9 +1466,9 @@ func TestGreaterComparisonMath(t *testing.T) {
 									},
 								},
 								AssignmentOperator{
-									Variable: VarWithType{"a", TypeLiteral("int")},
+									Variable: VarWithType{"a", TypeLiteral("int"), false},
 									Value: SubtractionOperator{
-										Left:  VarWithType{"a", TypeLiteral("int")},
+										Left:  VarWithType{"a", TypeLiteral("int"), false},
 										Right: IntLiteral(1),
 									},
 								},
@@ -1493,7 +1493,7 @@ func TestGreaterOrEqualComparisonMath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1506,17 +1506,17 @@ func TestGreaterOrEqualComparisonMath(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					MutStmt{
-						Var:          VarWithType{"a", TypeLiteral("int")},
+						Var:          VarWithType{"a", TypeLiteral("int"), false},
 						InitialValue: IntLiteral(4),
 					},
 					LetStmt{
-						Var:   VarWithType{"b", TypeLiteral("int")},
+						Var:   VarWithType{"b", TypeLiteral("int"), false},
 						Value: IntLiteral(3),
 					},
 					IfStmt{
 						Condition: GreaterOrEqualComparison{
-							Left:  VarWithType{"a", TypeLiteral("int")},
-							Right: VarWithType{"b", TypeLiteral("int")},
+							Left:  VarWithType{"a", TypeLiteral("int"), false},
+							Right: VarWithType{"b", TypeLiteral("int"), false},
 						},
 						Body: BlockStmt{
 							[]Node{
@@ -1537,15 +1537,15 @@ func TestGreaterOrEqualComparisonMath(t *testing.T) {
 					},
 					WhileLoop{
 						Condition: GreaterOrEqualComparison{
-							Left:  VarWithType{"a", TypeLiteral("int")},
-							Right: VarWithType{"b", TypeLiteral("int")},
+							Left:  VarWithType{"a", TypeLiteral("int"), false},
+							Right: VarWithType{"b", TypeLiteral("int"), false},
 						},
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
 									Name: "PrintInt",
 									UserArgs: []Value{
-										VarWithType{"a", TypeLiteral("int")},
+										VarWithType{"a", TypeLiteral("int"), false},
 									},
 								},
 								FuncCall{
@@ -1556,9 +1556,9 @@ func TestGreaterOrEqualComparisonMath(t *testing.T) {
 								},
 
 								AssignmentOperator{
-									Variable: VarWithType{"a", TypeLiteral("int")},
+									Variable: VarWithType{"a", TypeLiteral("int"), false},
 									Value: SubtractionOperator{
-										Left:  VarWithType{"a", TypeLiteral("int")},
+										Left:  VarWithType{"a", TypeLiteral("int"), false},
 										Right: IntLiteral(1),
 									},
 								},
@@ -1583,7 +1583,7 @@ func TestLessThanComparisonMath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1596,17 +1596,17 @@ func TestLessThanComparisonMath(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					MutStmt{
-						Var:          VarWithType{"a", TypeLiteral("int")},
+						Var:          VarWithType{"a", TypeLiteral("int"), false},
 						InitialValue: IntLiteral(4),
 					},
 					LetStmt{
-						Var:   VarWithType{"b", TypeLiteral("int")},
+						Var:   VarWithType{"b", TypeLiteral("int"), false},
 						Value: IntLiteral(3),
 					},
 					IfStmt{
 						Condition: LessThanComparison{
-							Left:  VarWithType{"a", TypeLiteral("int")},
-							Right: VarWithType{"b", TypeLiteral("int")},
+							Left:  VarWithType{"a", TypeLiteral("int"), false},
+							Right: VarWithType{"b", TypeLiteral("int"), false},
 						},
 						Body: BlockStmt{
 							[]Node{
@@ -1627,15 +1627,15 @@ func TestLessThanComparisonMath(t *testing.T) {
 					},
 					WhileLoop{
 						Condition: LessThanComparison{
-							Left:  VarWithType{"a", TypeLiteral("int")},
-							Right: VarWithType{"b", TypeLiteral("int")},
+							Left:  VarWithType{"a", TypeLiteral("int"), false},
+							Right: VarWithType{"b", TypeLiteral("int"), false},
 						},
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
 									Name: "PrintInt",
 									UserArgs: []Value{
-										VarWithType{"a", TypeLiteral("int")},
+										VarWithType{"a", TypeLiteral("int"), false},
 									},
 								},
 								FuncCall{
@@ -1645,9 +1645,9 @@ func TestLessThanComparisonMath(t *testing.T) {
 									},
 								},
 								AssignmentOperator{
-									Variable: VarWithType{"a", TypeLiteral("int")},
+									Variable: VarWithType{"a", TypeLiteral("int"), false},
 									Value: AdditionOperator{
-										Left:  VarWithType{"a", TypeLiteral("int")},
+										Left:  VarWithType{"a", TypeLiteral("int"), false},
 										Right: IntLiteral(1),
 									},
 								},
@@ -1672,7 +1672,7 @@ func TestLessThanOrEqualComparisonMath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1685,17 +1685,17 @@ func TestLessThanOrEqualComparisonMath(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					MutStmt{
-						Var:          VarWithType{"a", TypeLiteral("int")},
+						Var:          VarWithType{"a", TypeLiteral("int"), false},
 						InitialValue: IntLiteral(1),
 					},
 					LetStmt{
-						Var:   VarWithType{"b", TypeLiteral("int")},
+						Var:   VarWithType{"b", TypeLiteral("int"), false},
 						Value: IntLiteral(3),
 					},
 					IfStmt{
 						Condition: LessThanOrEqualComparison{
-							Left:  VarWithType{"a", TypeLiteral("int")},
-							Right: VarWithType{"b", TypeLiteral("int")},
+							Left:  VarWithType{"a", TypeLiteral("int"), false},
+							Right: VarWithType{"b", TypeLiteral("int"), false},
 						},
 						Body: BlockStmt{
 							[]Node{
@@ -1716,15 +1716,15 @@ func TestLessThanOrEqualComparisonMath(t *testing.T) {
 					},
 					WhileLoop{
 						Condition: LessThanOrEqualComparison{
-							Left:  VarWithType{"a", TypeLiteral("int")},
-							Right: VarWithType{"b", TypeLiteral("int")},
+							Left:  VarWithType{"a", TypeLiteral("int"), false},
+							Right: VarWithType{"b", TypeLiteral("int"), false},
 						},
 						Body: BlockStmt{
 							[]Node{
 								FuncCall{
 									Name: "PrintInt",
 									UserArgs: []Value{
-										VarWithType{"a", TypeLiteral("int")},
+										VarWithType{"a", TypeLiteral("int"), false},
 									},
 								},
 								FuncCall{
@@ -1734,9 +1734,9 @@ func TestLessThanOrEqualComparisonMath(t *testing.T) {
 									},
 								},
 								AssignmentOperator{
-									Variable: VarWithType{"a", TypeLiteral("int")},
+									Variable: VarWithType{"a", TypeLiteral("int"), false},
 									Value: AdditionOperator{
-										Left:  VarWithType{"a", TypeLiteral("int")},
+										Left:  VarWithType{"a", TypeLiteral("int"), false},
 										Right: IntLiteral(1),
 									},
 								},
@@ -1761,7 +1761,7 @@ func TestUserDefinedType(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1778,12 +1778,12 @@ func TestUserDefinedType(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					LetStmt{
-						Var:   VarWithType{"x", TypeLiteral("Foo")},
+						Var:   VarWithType{"x", TypeLiteral("Foo"), false},
 						Value: IntLiteral(4),
 					},
 					FuncCall{
 						Name:     "PrintInt",
-						UserArgs: []Value{VarWithType{"x", TypeLiteral("Foo")}},
+						UserArgs: []Value{VarWithType{"x", TypeLiteral("Foo"), false}},
 					},
 				},
 			},
@@ -1806,44 +1806,44 @@ func TestTypeInference(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
 	expected := []Node{
 		FuncDecl{
 			Name:   "foo",
-			Args:   []VarWithType{{"x", TypeLiteral("int")}},
-			Return: []VarWithType{{"", TypeLiteral("int")}},
+			Args:   []VarWithType{{"x", TypeLiteral("int"), false}},
+			Return: []VarWithType{{"", TypeLiteral("int"), false}},
 
 			Body: BlockStmt{
 				[]Node{
 					MutStmt{
-						Var:          VarWithType{"a", TypeLiteral("int")},
-						InitialValue: VarWithType{"x", TypeLiteral("int")},
+						Var:          VarWithType{"a", TypeLiteral("int"), false},
+						InitialValue: VarWithType{"x", TypeLiteral("int"), false},
 					},
 					AssignmentOperator{
-						Variable: VarWithType{"a", TypeLiteral("int")},
+						Variable: VarWithType{"a", TypeLiteral("int"), false},
 						Value: AdditionOperator{
-							Left:  VarWithType{"a", TypeLiteral("int")},
+							Left:  VarWithType{"a", TypeLiteral("int"), false},
 							Right: IntLiteral(1),
 						},
 					},
 					LetStmt{
-						Var: VarWithType{"x", TypeLiteral("int")},
+						Var: VarWithType{"x", TypeLiteral("int"), false},
 						Value: AdditionOperator{
-							Left:  VarWithType{"a", TypeLiteral("int")},
+							Left:  VarWithType{"a", TypeLiteral("int"), false},
 							Right: IntLiteral(1),
 						},
 					},
 					IfStmt{
 						Condition: GreaterComparison{
-							Left:  VarWithType{"x", TypeLiteral("int")},
+							Left:  VarWithType{"x", TypeLiteral("int"), false},
 							Right: IntLiteral(3),
 						},
 						Body: BlockStmt{
 							[]Node{
-								ReturnStmt{VarWithType{"a", TypeLiteral("int")}},
+								ReturnStmt{VarWithType{"a", TypeLiteral("int"), false}},
 							},
 						},
 					},
@@ -1909,7 +1909,7 @@ func TestEnumType(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1931,11 +1931,11 @@ func TestEnumType(t *testing.T) {
 				[]Node{
 
 					LetStmt{
-						Var:   VarWithType{"a", TypeLiteral("Foo")},
+						Var:   VarWithType{"a", TypeLiteral("Foo"), false},
 						Value: EnumValue{Constructor: EnumOption{"A", nil, TypeLiteral("Foo")}},
 					},
 					MatchStmt{
-						Condition: VarWithType{"a", TypeLiteral("Foo")},
+						Condition: VarWithType{"a", TypeLiteral("Foo"), false},
 						Cases: []MatchCase{
 							MatchCase{
 								Variable: EnumOption{"A", nil, TypeLiteral("Foo")},
@@ -1986,7 +1986,7 @@ func TestEnumTypeInferred(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2008,11 +2008,11 @@ func TestEnumTypeInferred(t *testing.T) {
 				[]Node{
 
 					LetStmt{
-						Var:   VarWithType{"a", TypeLiteral("Foo")},
+						Var:   VarWithType{"a", TypeLiteral("Foo"), false},
 						Value: EnumValue{Constructor: EnumOption{"B", nil, TypeLiteral("Foo")}},
 					},
 					MatchStmt{
-						Condition: VarWithType{"a", TypeLiteral("Foo")},
+						Condition: VarWithType{"a", TypeLiteral("Foo"), false},
 						Cases: []MatchCase{
 							MatchCase{
 								Variable: EnumOption{"A", nil, TypeLiteral("Foo")},
@@ -2063,7 +2063,7 @@ func TestIfElseMatch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2077,7 +2077,7 @@ func TestIfElseMatch(t *testing.T) {
 				[]Node{
 
 					LetStmt{
-						Var:   VarWithType{"x", TypeLiteral("int")},
+						Var:   VarWithType{"x", TypeLiteral("int"), false},
 						Value: IntLiteral(3),
 					},
 					MatchStmt{
@@ -2085,7 +2085,7 @@ func TestIfElseMatch(t *testing.T) {
 						Cases: []MatchCase{
 							MatchCase{
 								Variable: LessThanComparison{
-									Left:  VarWithType{"x", TypeLiteral("int")},
+									Left:  VarWithType{"x", TypeLiteral("int"), false},
 									Right: IntLiteral(3),
 								},
 								Body: BlockStmt{
@@ -2101,7 +2101,7 @@ func TestIfElseMatch(t *testing.T) {
 							},
 							MatchCase{
 								Variable: GreaterComparison{
-									Left:  VarWithType{"x", TypeLiteral("int")},
+									Left:  VarWithType{"x", TypeLiteral("int"), false},
 									Right: IntLiteral(3),
 								},
 
@@ -2118,7 +2118,7 @@ func TestIfElseMatch(t *testing.T) {
 							},
 							MatchCase{
 								Variable: LessThanComparison{
-									Left:  VarWithType{"x", TypeLiteral("int")},
+									Left:  VarWithType{"x", TypeLiteral("int"), false},
 									Right: IntLiteral(4),
 								},
 
@@ -2155,7 +2155,7 @@ func TestGenericEnumType(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2170,18 +2170,19 @@ func TestGenericEnumType(t *testing.T) {
 		},
 		FuncDecl{
 			Name: "DoSomething",
-			Args: []VarWithType{{"x", TypeLiteral("int")}},
+			Args: []VarWithType{{"x", TypeLiteral("int"), false}},
 			Return: []VarWithType{
 				{
 					"",
 					TypeLiteral("Maybe int"),
+					false,
 				},
 			},
 			Body: BlockStmt{
 				[]Node{
 					IfStmt{
 						Condition: GreaterComparison{
-							Left:  VarWithType{"x", TypeLiteral("int")},
+							Left:  VarWithType{"x", TypeLiteral("int"), false},
 							Right: IntLiteral(3),
 						},
 						Body: BlockStmt{
@@ -2207,7 +2208,7 @@ func TestGenericEnumType(t *testing.T) {
 				[]Node{
 
 					LetStmt{
-						Var: VarWithType{"x", TypeLiteral("Maybe int")},
+						Var: VarWithType{"x", TypeLiteral("Maybe int"), false},
 						Value: FuncCall{
 							Name: "DoSomething",
 							UserArgs: []Value{
@@ -2216,7 +2217,7 @@ func TestGenericEnumType(t *testing.T) {
 						},
 					},
 					MatchStmt{
-						Condition: VarWithType{"x", TypeLiteral("Maybe int")},
+						Condition: VarWithType{"x", TypeLiteral("Maybe int"), false},
 						Cases: []MatchCase{
 							MatchCase{
 								Variable: EnumOption{"Nothing", nil, TypeLiteral("Maybe")},
@@ -2233,7 +2234,7 @@ func TestGenericEnumType(t *testing.T) {
 							},
 							MatchCase{
 								LocalVariables: []VarWithType{
-									VarWithType{"n", TypeLiteral("int")},
+									VarWithType{"n", TypeLiteral("int"), false},
 								},
 								Variable: EnumOption{"Just", []Type{TypeLiteral("a")}, TypeLiteral("Maybe")},
 								Body: BlockStmt{
@@ -2241,7 +2242,7 @@ func TestGenericEnumType(t *testing.T) {
 										FuncCall{
 											Name: "PrintInt",
 											UserArgs: []Value{
-												VarWithType{"n", TypeLiteral("int")},
+												VarWithType{"n", TypeLiteral("int"), false},
 											},
 										},
 										FuncCall{
@@ -2256,7 +2257,7 @@ func TestGenericEnumType(t *testing.T) {
 						},
 					},
 					LetStmt{
-						Var: VarWithType{"x", TypeLiteral("Maybe int")},
+						Var: VarWithType{"x", TypeLiteral("Maybe int"), false},
 						Value: FuncCall{
 							Name: "DoSomething",
 							UserArgs: []Value{
@@ -2265,7 +2266,7 @@ func TestGenericEnumType(t *testing.T) {
 						},
 					},
 					MatchStmt{
-						Condition: VarWithType{"x", TypeLiteral("Maybe int")},
+						Condition: VarWithType{"x", TypeLiteral("Maybe int"), false},
 						Cases: []MatchCase{
 							MatchCase{
 								Variable: EnumOption{"Nothing", nil, TypeLiteral("Maybe")},
@@ -2282,7 +2283,7 @@ func TestGenericEnumType(t *testing.T) {
 							},
 							MatchCase{
 								LocalVariables: []VarWithType{
-									VarWithType{"n", TypeLiteral("int")},
+									VarWithType{"n", TypeLiteral("int"), false},
 								},
 								Variable: EnumOption{"Just", []Type{TypeLiteral("a")}, TypeLiteral("Maybe")},
 								Body: BlockStmt{
@@ -2291,7 +2292,7 @@ func TestGenericEnumType(t *testing.T) {
 
 											Name: "PrintInt",
 											UserArgs: []Value{
-												VarWithType{"n", TypeLiteral("int")},
+												VarWithType{"n", TypeLiteral("int"), false},
 											},
 										},
 										FuncCall{
@@ -2327,7 +2328,7 @@ func TestMatchParam(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2342,26 +2343,27 @@ func TestMatchParam(t *testing.T) {
 		},
 		FuncDecl{
 			Name: "foo",
-			Args: []VarWithType{{"x", TypeLiteral("Maybe int")}},
+			Args: []VarWithType{{"x", TypeLiteral("Maybe int"), false}},
 			Return: []VarWithType{
 				{
 					"",
 					TypeLiteral("int"),
+					false,
 				},
 			},
 			Body: BlockStmt{
 				[]Node{
 					MatchStmt{
-						Condition: VarWithType{"x", TypeLiteral("Maybe int")},
+						Condition: VarWithType{"x", TypeLiteral("Maybe int"), false},
 						Cases: []MatchCase{
 							MatchCase{
 								LocalVariables: []VarWithType{
-									VarWithType{"n", TypeLiteral("int")},
+									VarWithType{"n", TypeLiteral("int"), false},
 								},
 								Variable: EnumOption{"Just", []Type{TypeLiteral("x")}, TypeLiteral("Maybe")},
 								Body: BlockStmt{
 									[]Node{
-										ReturnStmt{VarWithType{"n", TypeLiteral("int")}},
+										ReturnStmt{VarWithType{"n", TypeLiteral("int"), false}},
 									},
 								},
 							},
@@ -2422,7 +2424,7 @@ func TestMatchParam2(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2437,11 +2439,12 @@ func TestMatchParam2(t *testing.T) {
 		},
 		ProcDecl{
 			Name: "foo",
-			Args: []VarWithType{{"x", TypeLiteral("Maybe int")}},
+			Args: []VarWithType{{"x", TypeLiteral("Maybe int"), false}},
 			Return: []VarWithType{
 				{
 					"",
 					TypeLiteral("int"),
+					false,
 				},
 			},
 			Body: BlockStmt{
@@ -2453,16 +2456,16 @@ func TestMatchParam2(t *testing.T) {
 						},
 					},
 					MatchStmt{
-						Condition: VarWithType{"x", TypeLiteral("Maybe int")},
+						Condition: VarWithType{"x", TypeLiteral("Maybe int"), false},
 						Cases: []MatchCase{
 							MatchCase{
 								LocalVariables: []VarWithType{
-									VarWithType{"n", TypeLiteral("int")},
+									VarWithType{"n", TypeLiteral("int"), false},
 								},
 								Variable: EnumOption{"Just", []Type{TypeLiteral("x")}, TypeLiteral("Maybe")},
 								Body: BlockStmt{
 									[]Node{
-										ReturnStmt{VarWithType{"n", TypeLiteral("int")}},
+										ReturnStmt{VarWithType{"n", TypeLiteral("int"), false}},
 									},
 								},
 							},
@@ -2522,54 +2525,55 @@ func TestSimpleAlgorithm(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
 	expected := []Node{
 		FuncDecl{
 			Name: "loop",
-			Args: []VarWithType{{"high", TypeLiteral("int")}},
+			Args: []VarWithType{{"high", TypeLiteral("int"), false}},
 			Return: []VarWithType{
 				{
 					"",
 					TypeLiteral("int"),
+					false,
 				},
 			},
 			Body: BlockStmt{
 				[]Node{
 
 					MutStmt{
-						Var:          VarWithType{Name: "total", Typ: TypeLiteral("int")},
+						Var:          VarWithType{"total", TypeLiteral("int"), false},
 						InitialValue: IntLiteral(0),
 					},
 					MutStmt{
-						Var:          VarWithType{Name: "i", Typ: TypeLiteral("int")},
+						Var:          VarWithType{"i", TypeLiteral("int"), false},
 						InitialValue: IntLiteral(0),
 					},
 					LetStmt{
-						Var: VarWithType{"high", TypeLiteral("int")},
+						Var: VarWithType{"high", TypeLiteral("int"), false},
 						Value: MulOperator{
-							Left:  VarWithType{"high", TypeLiteral("int")},
+							Left:  VarWithType{"high", TypeLiteral("int"), false},
 							Right: IntLiteral(2),
 						},
 					},
 
 					AssignmentOperator{
-						Variable: VarWithType{"i", TypeLiteral("int")},
+						Variable: VarWithType{"i", TypeLiteral("int"), false},
 						Value:    IntLiteral(1),
 					},
 					WhileLoop{
 						Condition: LessThanComparison{
-							Left:  VarWithType{"i", TypeLiteral("int")},
-							Right: VarWithType{"high", TypeLiteral("int")},
+							Left:  VarWithType{"i", TypeLiteral("int"), false},
+							Right: VarWithType{"high", TypeLiteral("int"), false},
 						},
 						Body: BlockStmt{
 							[]Node{
 								IfStmt{
 									Condition: EqualityComparison{
 										Left: ModOperator{
-											Left:  VarWithType{Variable("i"), TypeLiteral("int")},
+											Left:  VarWithType{Variable("i"), TypeLiteral("int"), false},
 											Right: IntLiteral(2),
 										},
 										Right: IntLiteral(0),
@@ -2577,11 +2581,11 @@ func TestSimpleAlgorithm(t *testing.T) {
 									Body: BlockStmt{
 										[]Node{
 											AssignmentOperator{
-												Variable: VarWithType{"total", TypeLiteral("int")},
+												Variable: VarWithType{"total", TypeLiteral("int"), false},
 												Value: AdditionOperator{
-													Left: VarWithType{Variable("total"), TypeLiteral("int")},
+													Left: VarWithType{Variable("total"), TypeLiteral("int"), false},
 													Right: MulOperator{
-														Left:  VarWithType{Variable("i"), TypeLiteral("int")},
+														Left:  VarWithType{Variable("i"), TypeLiteral("int"), false},
 														Right: IntLiteral(2),
 													},
 												},
@@ -2591,16 +2595,16 @@ func TestSimpleAlgorithm(t *testing.T) {
 								},
 
 								AssignmentOperator{
-									Variable: VarWithType{"i", TypeLiteral("int")},
+									Variable: VarWithType{"i", TypeLiteral("int"), false},
 									Value: AdditionOperator{
-										Left:  VarWithType{"i", TypeLiteral("int")},
+										Left:  VarWithType{"i", TypeLiteral("int"), false},
 										Right: IntLiteral(1),
 									},
 								},
 							},
 						},
 					},
-					ReturnStmt{VarWithType{"total", TypeLiteral("int")}},
+					ReturnStmt{VarWithType{"total", TypeLiteral("int"), false}},
 				},
 			},
 		},
@@ -2640,7 +2644,7 @@ func TestConcreteTypeInt64(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2652,13 +2656,13 @@ func TestConcreteTypeInt64(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					LetStmt{
-						Var:   VarWithType{"x", TypeLiteral("int64")},
+						Var:   VarWithType{"x", TypeLiteral("int64"), false},
 						Value: IntLiteral(-4),
 					},
 					FuncCall{
 						Name: "PrintInt",
 						UserArgs: []Value{
-							VarWithType{Variable("x"), TypeLiteral("int64")},
+							VarWithType{Variable("x"), TypeLiteral("int64"), false},
 						},
 					},
 				},
@@ -2680,7 +2684,7 @@ func TestSimpleArray(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2698,6 +2702,7 @@ func TestSimpleArray(t *testing.T) {
 								Base: TypeLiteral("int"),
 								Size: IntLiteral(5),
 							},
+							false,
 						},
 						Value: ArrayLiteral{
 							IntLiteral(1),
@@ -2716,6 +2721,7 @@ func TestSimpleArray(t *testing.T) {
 										Base: TypeLiteral("int"),
 										Size: IntLiteral(5),
 									},
+									false,
 								},
 								Index: IntLiteral(3),
 							},
@@ -2739,7 +2745,7 @@ func TestSimpleArrayInference(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2757,6 +2763,7 @@ func TestSimpleArrayInference(t *testing.T) {
 								Base: TypeLiteral("int"),
 								Size: IntLiteral(5),
 							},
+							false,
 						},
 						Value: ArrayLiteral{
 							IntLiteral(1),
@@ -2775,6 +2782,7 @@ func TestSimpleArrayInference(t *testing.T) {
 										Base: TypeLiteral("int"),
 										Size: IntLiteral(5),
 									},
+									false,
 								},
 								Index: IntLiteral(3),
 							},
@@ -2798,7 +2806,7 @@ func TestArrayMutation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ast, _, err := Construct(tokens)
+	ast, _, _, err := Construct(tokens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2816,6 +2824,7 @@ func TestArrayMutation(t *testing.T) {
 								Base: TypeLiteral("int"),
 								Size: IntLiteral(5),
 							},
+							false,
 						},
 						InitialValue: ArrayLiteral{
 							IntLiteral(1),
@@ -2834,6 +2843,7 @@ func TestArrayMutation(t *testing.T) {
 										Base: TypeLiteral("int"),
 										Size: IntLiteral(5),
 									},
+									false,
 								},
 								Index: IntLiteral(3),
 							},
@@ -2846,7 +2856,7 @@ func TestArrayMutation(t *testing.T) {
 						},
 					},
 					AssignmentOperator{
-						Variable: VarWithType{"n[3]", TypeLiteral("int")},
+						Variable: VarWithType{"n[3]", TypeLiteral("int"), false},
 						Value:    IntLiteral(2),
 					},
 					FuncCall{
@@ -2858,6 +2868,7 @@ func TestArrayMutation(t *testing.T) {
 										Base: TypeLiteral("int"),
 										Size: IntLiteral(5),
 									},
+									false,
 								},
 								Index: IntLiteral(3),
 							},
@@ -2878,9 +2889,109 @@ func TestArrayMutation(t *testing.T) {
 										Base: TypeLiteral("int"),
 										Size: IntLiteral(5),
 									},
+									false,
 								},
 								Index: IntLiteral(2),
 							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("let statement (%d): got %v want %v", i, ast[i], v)
+		}
+	}
+
+}
+
+func TestReferenceVariable(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.ReferenceVariable))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Node{
+		ProcDecl{
+			Name: "changer",
+			Args: []VarWithType{
+				VarWithType{"x", TypeLiteral("int"), true},
+				VarWithType{"y", TypeLiteral("int"), false},
+			},
+			Return: []VarWithType{
+				VarWithType{Name: "", Typ: TypeLiteral("int")},
+			},
+			Body: BlockStmt{
+				[]Node{
+					AssignmentOperator{
+						Variable: VarWithType{"x", TypeLiteral("int"), true},
+						Value:    IntLiteral(4),
+					},
+					ReturnStmt{
+						AdditionOperator{
+							Left:  VarWithType{"x", TypeLiteral("int"), true},
+							Right: VarWithType{"y", TypeLiteral("int"), false},
+						},
+					},
+				},
+			},
+		},
+
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					MutStmt{
+						Var:          VarWithType{"var", TypeLiteral("int"), false},
+						InitialValue: IntLiteral(3),
+					},
+					FuncCall{
+						Name: "PrintInt",
+						UserArgs: []Value{
+							VarWithType{"var", TypeLiteral("int"), false},
+						},
+					},
+					FuncCall{
+						Name: "PrintString",
+						UserArgs: []Value{
+							StringLiteral(`\n`),
+						},
+					},
+					LetStmt{
+						Var: VarWithType{"sum", TypeLiteral("int"), false},
+						Value: FuncCall{
+							Name: "changer",
+							UserArgs: []Value{
+								VarWithType{"var", TypeLiteral("int"), false},
+								IntLiteral(3),
+							},
+						},
+					},
+					FuncCall{
+						Name: "PrintInt",
+						UserArgs: []Value{
+							VarWithType{"var", TypeLiteral("int"), false},
+						},
+					},
+					FuncCall{
+						Name: "PrintString",
+						UserArgs: []Value{
+							StringLiteral(`\n`),
+						},
+					},
+					FuncCall{
+						Name: "PrintInt",
+						UserArgs: []Value{
+							VarWithType{"sum", TypeLiteral("int"), false},
 						},
 					},
 				},

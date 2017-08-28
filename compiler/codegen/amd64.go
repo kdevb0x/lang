@@ -131,6 +131,17 @@ func (a *amd64Registers) tempPhysicalRegister(skipDX bool) (PhysicalRegister, er
 }
 
 func (a amd64Registers) getPhysicalRegister(r ir.Register) (PhysicalRegister, error) {
+	pr, err := a.getPhysicalRegisterInternal(r)
+	if err != nil {
+		return "", err
+	}
+	if r, ok := r.(ir.FuncArg); ok && r.Reference {
+		// It's a pointer, so it needs indirection.
+		return PhysicalRegister(fmt.Sprintf("(%v)", pr)), nil
+	}
+	return pr, nil
+}
+func (a amd64Registers) getPhysicalRegisterInternal(r ir.Register) (PhysicalRegister, error) {
 	switch {
 	case a.ax == r:
 		return "AX", nil
@@ -173,7 +184,7 @@ func (a *amd64Registers) clearRegisterMapping(f ir.Func) {
 	if f.NumArgs != 0 {
 		// FIXME: This shouldn't make assumptions about the type in
 		// arg 0.
-		a.bp = ir.FuncArg{0, ast.TypeInfo{8, true}}
+		a.bp = ir.FuncArg{0, ast.TypeInfo{8, true}, false}
 	} else {
 		a.bp = nil
 	}
@@ -225,6 +236,13 @@ func (a *Amd64) ToPhysical(r ir.Register, altform bool) PhysicalRegister {
 		// FIXME: The prefix of this is supposed to be the variable name,
 		// not the IR register name..
 		return PhysicalRegister(fmt.Sprintf("%v+%d(FP)", v.String(), int(v.Id)*8))
+	case ir.Pointer:
+		switch v.Register.(type) {
+		case ir.LocalValue:
+			return PhysicalRegister(fmt.Sprintf("$%v", a.ToPhysical(v.Register, false)))
+		default:
+			panic("Not implemented")
+		}
 	default:
 		panic(fmt.Sprintf("Unhandled register type %v", reflect.TypeOf(v)))
 	}
@@ -260,7 +278,7 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 
 		var src PhysicalRegister
 		switch val := o.Src.(type) {
-		case ir.LocalValue, ir.FuncArg, ir.FuncRetVal, ir.StringLiteral:
+		case ir.LocalValue, ir.FuncRetVal, ir.FuncArg, ir.StringLiteral, ir.Pointer:
 			// First check if the arg is already in a register.
 			r, err := a.getPhysicalRegister(val)
 			if err == nil {
@@ -273,16 +291,29 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 			}
 			suffix := a.opSuffix(val.Size())
 			v += fmt.Sprintf("\tMOV%v %v, %v\n\t", suffix, a.ToPhysical(val, returning), src)
-
 		default:
 			src = a.ToPhysical(val, returning)
 		}
 
-		v += fmt.Sprintf("MOV%v %v, %v", a.opSuffix(o.Src.Size()), src, dst)
+		switch d := o.Dst.(type) {
+		case ir.FuncArg:
+			if d.Reference {
+				// FIXME: This is far more inefficient than it should be
+				reg, err := a.nextPhysicalRegister(d, false)
+				if err != nil {
+					panic(err)
+				}
+				v += fmt.Sprintf("\tMOV%v %v, %v\n\t", a.opSuffix(o.Src.Size()), dst, reg)
+				v += fmt.Sprintf("\tMOV%v %v, (%v)", a.opSuffix(o.Src.Size()), src, reg)
+			} else {
+				v += fmt.Sprintf("MOV%v %v, %v", a.opSuffix(o.Src.Size()), src, dst)
+			}
+		default:
+			v += fmt.Sprintf("MOV%v %v, %v", a.opSuffix(o.Src.Size()), src, dst)
+		}
 		return v
 	case ir.CALL:
 		var v string
-
 		if o.TailCall {
 			// Make sure every FuncArg used is in a physical register,
 			// so that it doesn't get clobbered by a previous argument
@@ -305,14 +336,14 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 			if o.TailCall {
 				// If it's a tail call, the dst should get optimized
 				// to the same location as this call's.
-				fa = a.ToPhysical(ir.FuncArg{uint(i), ast.TypeInfo{arg.Size(), arg.Signed()}}, true)
+				fa = a.ToPhysical(ir.FuncArg{uint(i), ast.TypeInfo{arg.Size(), arg.Signed()}, false}, true)
 			} else {
 				fa = a.ToPhysical(ir.FuncCallArg{i, ast.TypeInfo{arg.Size(), arg.Signed()}}, true)
 			}
 			var physArg PhysicalRegister
 			src := a.ToPhysical(arg, false)
 			switch arg.(type) {
-			case ir.LocalValue, ir.StringLiteral, ir.FuncArg:
+			case ir.LocalValue, ir.StringLiteral, ir.FuncArg, ir.Pointer:
 				// First check if the arg is already in a register.
 				r, err := a.getPhysicalRegister(arg)
 				if err == nil {
@@ -398,7 +429,7 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 		// FIXME: This is only required if o.Right isn't really a register,
 		// but a fake register like "$15". This also should have a better
 		// way to keep track of what the register is and delete it.
-		r, err := a.nextPhysicalRegister(ir.FuncArg{9999, ast.TypeInfo{8, true}}, true)
+		r, err := a.nextPhysicalRegister(ir.FuncArg{9999, ast.TypeInfo{8, true}, false}, true)
 		if err != nil {
 			panic(err)
 		}
@@ -426,7 +457,7 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 		// FIXME: This is only required if o.Right isn't really a register,
 		// but a fake register like "$15". This also should have a better
 		// way to keep track of what the register is and delete it.
-		r, err := a.nextPhysicalRegister(ir.FuncArg{9999, ast.TypeInfo{8, true}}, true)
+		r, err := a.nextPhysicalRegister(ir.FuncArg{9999, ast.TypeInfo{8, true}, false}, true)
 		if err != nil {
 			panic(err)
 		}
@@ -461,7 +492,7 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 		// FIXME: This is only required if o.Right isn't really a register,
 		// but a fake register like "$15". This also should have a better
 		// way to keep track of what the register is and delete it.
-		r, err := a.nextPhysicalRegister(ir.FuncArg{9999, ast.TypeInfo{8, true}}, true)
+		r, err := a.nextPhysicalRegister(ir.FuncArg{9999, ast.TypeInfo{8, true}, false}, true)
 		if err != nil {
 			panic(err)
 		}
@@ -496,7 +527,7 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 		// FIXME: This is only required if o.Right isn't really a register,
 		// but a fake register like "$15". This also should have a better
 		// way to keep track of what the register is and delete it.
-		r, err := a.nextPhysicalRegister(ir.FuncArg{9999, ast.TypeInfo{8, true}}, true)
+		r, err := a.nextPhysicalRegister(ir.FuncArg{9999, ast.TypeInfo{8, true}, false}, true)
 		if err != nil {
 			panic(err)
 		}

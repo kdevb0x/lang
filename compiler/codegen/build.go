@@ -40,7 +40,7 @@ func BuildProgram(d string, src io.Reader) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	prog, ti, err := ast.Construct(tokens)
+	prog, ti, c, err := ast.Construct(tokens)
 	if err != nil {
 		return "", err
 	}
@@ -51,7 +51,7 @@ func BuildProgram(d string, src io.Reader) (string, error) {
 	for _, v := range prog {
 		switch v.(type) {
 		case ast.SumTypeDefn:
-			_, opts, err := irgen.GenerateIR(v, ti, enums)
+			_, opts, err := irgen.GenerateIR(v, ti, c, enums)
 			if err != nil {
 				return "", err
 			}
@@ -68,7 +68,7 @@ func BuildProgram(d string, src io.Reader) (string, error) {
 	for _, v := range prog {
 		switch v.(type) {
 		case ast.FuncDecl, ast.ProcDecl:
-			fnc, _, err := irgen.GenerateIR(v, ti, enums)
+			fnc, _, err := irgen.GenerateIR(v, ti, c, enums)
 			if err != nil {
 				return "", err
 			}

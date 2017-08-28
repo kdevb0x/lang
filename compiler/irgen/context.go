@@ -12,8 +12,10 @@ type variableLayout struct {
 	values     map[ast.VarWithType]ir.Register
 	tempVars   int
 	typeinfo   ast.TypeInformation
+	funcargs   []ast.VarWithType
 	rettypes   []ast.TypeInfo
 	enumvalues EnumMap
+	callables  ast.Callables
 }
 
 func (c variableLayout) GetTypeInfo(t string) ast.TypeInfo {
@@ -57,7 +59,7 @@ func (c *variableLayout) NextLocalRegister(varname ast.VarWithType) ir.Register 
 func (c *variableLayout) FuncParamRegister(varname ast.VarWithType, i int) ir.Register {
 	c.tempVars--
 	ti := c.typeinfo
-	c.values[varname] = ir.FuncArg{uint(i), ti[varname.Type()]}
+	c.values[varname] = ir.FuncArg{uint(i), ti[varname.Type()], varname.Reference}
 	return c.values[varname]
 }
 

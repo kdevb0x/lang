@@ -28,13 +28,13 @@ func NewContext() Context {
 			"PrintString": ProcDecl{
 				Name: "PrintString",
 				Args: []VarWithType{
-					{"", TypeLiteral("string")},
+					{"", TypeLiteral("string"), false},
 				},
 			},
 			"PrintInt": ProcDecl{
 				Name: "PrintInt",
 				Args: []VarWithType{
-					{"", TypeLiteral("int")},
+					{"", TypeLiteral("int"), false},
 				},
 			},
 			// FIXME: Remove this. Some of the invalidprogram examples depend on it now.
@@ -154,11 +154,12 @@ type TypeInfo struct {
 }
 
 type TypeInformation map[string]TypeInfo
+type Callables map[string][]Callable
 
-func Parse(val string) ([]Node, TypeInformation, error) {
+func Parse(val string) ([]Node, TypeInformation, Callables, error) {
 	tokens, err := token.Tokenize(strings.NewReader(val))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	return Construct(tokens)
 }
@@ -179,7 +180,7 @@ func stripWhitespace(tokens []token.Token) []token.Token {
 }
 
 // Construct constructs the top level ASTNodes for a file.
-func Construct(tokens []token.Token) ([]Node, TypeInformation, error) {
+func Construct(tokens []token.Token) ([]Node, TypeInformation, Callables, error) {
 	var nodes []Node
 	ti := TypeInformation{
 		("int"):     TypeInfo{8, true},
@@ -207,16 +208,17 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, error) {
 		}
 	*/
 
+	callables := make(Callables)
 	err := extractPrototypes(tokens, &c)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	for i := 0; i < len(tokens); i++ {
 		// Parse the top level "func" or "proc" keyword
 		cn, err := topLevelNode(tokens[i])
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		switch cur := cn.(type) {
@@ -235,7 +237,7 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, error) {
 
 			n, a, r, err := consumePrototype(i, tokens, &c)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 			cur.Args = a
 			cur.Return = r
@@ -243,16 +245,20 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, error) {
 
 			for _, v := range cur.Args {
 				c.Variables[string(v.Name)] = v
+				if v.Reference {
+					c.Mutables[string(v.Name)] = v
+				}
 			}
 			n, block, err := consumeBlock(i, tokens, &c)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 			cur.Body = block
 
 			i += n
 
 			nodes = append(nodes, cur)
+			callables[cur.Name] = append(callables[cur.Name], cur)
 		case FuncDecl:
 			// move past the "func" keyword and reset the local
 			// variables and mutables, since we're in a new function.
@@ -269,7 +275,7 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, error) {
 
 			n, a, r, err := consumePrototype(i, tokens, &c)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 			cur.Args = a
 			cur.Return = r
@@ -280,12 +286,13 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, error) {
 
 			n, block, err := consumeBlock(i, tokens, &c)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 			cur.Body = block
 
 			i += n
 			nodes = append(nodes, cur)
+			callables[cur.Name] = append(callables[cur.Name], cur)
 		case TypeDefn:
 			typeName := tokens[i+1].String()
 			nodes = append(nodes, c.Types[typeName])
@@ -301,14 +308,14 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, error) {
 		case SumTypeDefn:
 			n, typeNames, err := consumeIdentifiersUntilEquals(i+1, tokens, &c)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 			i += n + 1
 
 			cur.Name = TypeLiteral(typeNames[0].String())
 			n, options, err := consumeSumTypeList(i+1, tokens, &c)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 			for _, constructor := range options {
 				constructor.ParentType = cur.Name
@@ -321,7 +328,7 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, error) {
 			nodes = append(nodes, cur)
 		}
 	}
-	return nodes, ti, nil
+	return nodes, ti, callables, nil
 }
 
 func consumePrototype(start int, tokens []token.Token, c *Context) (n int, args []VarWithType, retn []VarWithType, err error) {
@@ -585,7 +592,7 @@ func consumeBlock(start int, tokens []token.Token, c *Context) (int, BlockStmt, 
 				}
 				nm := Variable(fmt.Sprintf("%v[%d]", av.Base.Name, av.Index))
 				blockStmt.Stmts = append(blockStmt.Stmts, AssignmentOperator{
-					Variable: VarWithType{nm, basetype.Base},
+					Variable: VarWithType{nm, basetype.Base, false},
 					Value:    val,
 				})
 				i += n - 1
@@ -1074,11 +1081,13 @@ func consumeArgs(start int, tokens []token.Token, c *Context) (int, []VarWithTyp
 	started := false
 	parsingNames := true
 	var names []Variable
+	mutable := false
 	for i := start; i < len(tokens); i++ {
 		switch t := tokens[i].(type) {
 		case token.Char:
 			if t == "," {
 				parsingNames = true
+				mutable = false
 			} else if t == "(" {
 				started = true
 			} else if t == ")" {
@@ -1100,13 +1109,15 @@ func consumeArgs(start int, tokens []token.Token, c *Context) (int, []VarWithTyp
 
 				for _, n := range names {
 					args = append(args, VarWithType{
-						Name: n,
-						Typ:  tk,
+						Name:      n,
+						Typ:       tk,
+						Reference: mutable,
 					})
 				}
 
 				names = nil
 				parsingNames = true
+				mutable = false
 			}
 		case token.Type:
 			if parsingNames {
@@ -1114,13 +1125,20 @@ func consumeArgs(start int, tokens []token.Token, c *Context) (int, []VarWithTyp
 			}
 			for _, n := range names {
 				args = append(args, VarWithType{
-					Name: n,
-					Typ:  TypeLiteral(t.String()),
+					Name:      n,
+					Typ:       TypeLiteral(t.String()),
+					Reference: mutable,
 				})
 			}
 			names = nil
 			parsingNames = true
+			mutable = false
 			continue
+		case token.Keyword:
+			if t != "mutable" {
+				return 0, nil, fmt.Errorf("Unexpected keyword in argument list: %v %v", t, started)
+			}
+			mutable = true
 		default:
 			return 0, nil, fmt.Errorf("Invalid token in argument list: %v %v", t, started)
 		}
@@ -1147,7 +1165,7 @@ func consumeTypeList(start int, tokens []token.Token, c Context) (int, []VarWith
 				return 0, nil, err
 			}
 			i += n - 1
-			args = append(args, VarWithType{"", tk})
+			args = append(args, VarWithType{"", tk, false})
 			continue
 		default:
 			return 0, nil, fmt.Errorf("Invalid token in argument list: %v", t)

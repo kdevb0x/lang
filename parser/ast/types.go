@@ -56,8 +56,9 @@ func (ev EnumValue) String() string {
 }
 
 type VarWithType struct {
-	Name Variable
-	Typ  Type
+	Name      Variable
+	Typ       Type
+	Reference bool
 }
 
 func (vt VarWithType) Type() string {
@@ -79,7 +80,7 @@ func (v VarWithType) BoolValue() bool {
 }
 
 func (v VarWithType) String() string {
-	return fmt.Sprintf("VarWithType{%v %v}", v.Name, v.Typ)
+	return fmt.Sprintf("VarWithType{%v %v %v}", v.Name, v.Typ, v.Reference)
 }
 
 type Node interface {

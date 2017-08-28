@@ -31,13 +31,13 @@ func RunProgram(name, p string) error {
 }
 
 func TestCompileHelloWorld(t *testing.T) {
-	prgAst, types, err := ast.Parse(sampleprograms.HelloWorld)
+	prgAst, types, callables, err := ast.Parse(sampleprograms.HelloWorld)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	var w bytes.Buffer
-	fnc, _, err := irgen.GenerateIR(prgAst[0], types, nil)
+	fnc, _, err := irgen.GenerateIR(prgAst[0], types, callables, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -457,4 +457,13 @@ func ExampleMutationArray() {
 	// Output: 4
 	// 2
 	// 3
+}
+
+func ExampleReference() {
+	if err := RunProgram("referencevariable", sampleprograms.ReferenceVariable); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: 3
+	// 4
+	// 7
 }

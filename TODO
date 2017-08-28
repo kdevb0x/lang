@@ -1,5 +1,4 @@
 - Add slices
-- Mutable parameters (references)
 - Implement Read (syscall)
 - Add better documentation
 - Implement "import" / package namespaces
@@ -18,7 +17,7 @@
 - Investigate and decide on what other types should be implemented:
 	- interfaces?
 	- structs? (are 2 product types necessary if there's already a tuple?)
-	- pointers? (pointers with GC? Just references? Are sum types, generics and a maybe monad enough to not have pointers?) references?
+	- pointers? (pointers with GC? Just references? Are sum types, generics and a maybe monad enough to not have pointers?)
 	- float? dec64?
 	- remove "int" and force an explicit size?
 - add better test cases for non-recursive tail call optimization with different stack sizes

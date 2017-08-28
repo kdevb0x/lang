@@ -59,8 +59,9 @@ func (fa FuncRetVal) Signed() bool {
 
 // Arguments to this function.
 type FuncArg struct {
-	Id   uint
-	Info ast.TypeInfo
+	Id        uint
+	Info      ast.TypeInfo
+	Reference bool
 }
 
 func (fa FuncArg) String() string {
@@ -74,6 +75,14 @@ func (fa FuncArg) Size() int {
 }
 func (fa FuncArg) Signed() bool {
 	return fa.Info.Signed
+}
+
+type Pointer struct {
+	Register
+}
+
+func (p Pointer) String() string {
+	return fmt.Sprintf("&%v", p.Register)
 }
 
 // Registers for local variables
