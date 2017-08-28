@@ -14,7 +14,7 @@ const SimpleArrayInference = `proc main() () {
 
 // ArrayMutation tests mutating an array value.
 const ArrayMutation = `proc main() () {
-	mut n = { 1, 2, 3, 4, 5 }
+	mutable n = { 1, 2, 3, 4, 5 }
 	PrintInt(n[3])
 	PrintString("\n")
 	n[3] = 2

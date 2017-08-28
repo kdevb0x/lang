@@ -20,7 +20,7 @@ func TestParseFizzbuzz(t *testing.T) {
 		Whitespace(" "),
 		Char("{"),
 		Whitespace("\n\t"), // 10
-		Keyword("mut"),
+		Keyword("mutable"),
 		Whitespace(" "),
 		Unknown("terminate"),
 		Whitespace(" "),
@@ -30,7 +30,7 @@ func TestParseFizzbuzz(t *testing.T) {
 		Whitespace(" "),
 		Unknown("false"),
 		Whitespace("\n\t"), // 20
-		Keyword("mut"),
+		Keyword("mutable"),
 		Whitespace(" "),
 		Unknown("i"),
 		Whitespace(" "),

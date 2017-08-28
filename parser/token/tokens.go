@@ -15,7 +15,7 @@ func (t Keyword) String() string {
 
 func (k Keyword) IsValid() bool {
 	switch k {
-	case "proc", "while", "mut", "let", "func",
+	case "proc", "while", "mutable", "let", "func",
 		"if", "else", "else if", "return",
 		"type", "match", "data", "case":
 		return true

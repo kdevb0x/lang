@@ -2,7 +2,7 @@ package sampleprograms
 
 const TypeInference = `
 func foo(x int) (int) {
-	mut a = x
+	mutable a = x
 	a = a + 1
 
 	let x = a + 1

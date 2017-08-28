@@ -619,7 +619,7 @@ func consumeBlock(start int, tokens []token.Token, c *Context) (int, BlockStmt, 
 				}
 				blockStmt.Stmts = append(blockStmt.Stmts, letstmt)
 				i += n
-			case "mut":
+			case "mutable":
 				n, mutstmt, err := consumeMutStmt(i, tokens, c)
 				if err != nil {
 					return 0, BlockStmt{}, err
@@ -745,7 +745,7 @@ func consumeStmt(start int, tokens []token.Token, c *Context) (int, Node, error)
 		switch t {
 		case "let":
 			return consumeLetStmt(start, tokens, c)
-		case "mut":
+		case "mutable":
 			return consumeMutStmt(start, tokens, c)
 		case "return":
 			n, nd, err := consumeValue(start+1, tokens, c)
@@ -993,7 +993,7 @@ func consumeMutStmt(start int, tokens []token.Token, c *Context) (int, Node, err
 		c.Mutables[l.Var.Name.String()] = l.Var
 	}()
 
-	if tokens[start] != token.Keyword("mut") {
+	if tokens[start] != token.Keyword("mutable") {
 		return 0, nil, fmt.Errorf("Invalid mutable variable statement")
 	}
 	for i := start + 1; i < len(tokens); i++ {
@@ -1010,13 +1010,13 @@ func consumeMutStmt(start int, tokens []token.Token, c *Context) (int, Node, err
 					return 0, nil, fmt.Errorf("Invalid type: %v", t.String())
 				}
 			} else {
-				return 0, nil, fmt.Errorf("Invalid name for mut statement")
+				return 0, nil, fmt.Errorf("Invalid name for mutable declaration")
 			}
 		case token.Type:
 			if l.Var.Typ == nil {
 				l.Var.Typ = TypeLiteral(t.String())
 			} else {
-				return 0, nil, fmt.Errorf("Unexpected type in mut statement")
+				return 0, nil, fmt.Errorf("Unexpected type in mutable declaration")
 
 			}
 		case token.Char:
@@ -1028,7 +1028,7 @@ func consumeMutStmt(start int, tokens []token.Token, c *Context) (int, Node, err
 				l.Var.Typ = ty
 				i += n - 1
 			} else {
-				return 0, nil, fmt.Errorf("Unexpected char in mut statement: %v(%v)", reflect.TypeOf(t), t)
+				return 0, nil, fmt.Errorf("Unexpected char in mutable declaration: %v(%v)", reflect.TypeOf(t), t)
 			}
 		case token.Operator:
 			if t == token.Operator("=") {
@@ -1059,14 +1059,14 @@ func consumeMutStmt(start int, tokens []token.Token, c *Context) (int, Node, err
 				l.InitialValue = v
 				return i + n - start, l, nil
 			}
-			return 0, nil, fmt.Errorf("Invalid mut statement")
+			return 0, nil, fmt.Errorf("Invalid mutable declaration")
 		case token.Whitespace:
 		default:
-			return 0, nil, fmt.Errorf("Invalid mut statement: %v", t)
+			return 0, nil, fmt.Errorf("Invalid mutable declaration: %v", t)
 		}
 
 	}
-	return 0, nil, fmt.Errorf("Invalid mut statement")
+	return 0, nil, fmt.Errorf("Invalid mutable declaration")
 }
 
 func consumeArgs(start int, tokens []token.Token, c *Context) (int, []VarWithType, error) {

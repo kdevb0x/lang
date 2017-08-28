@@ -12,16 +12,16 @@ const LetAssignment = `proc main() () {
 // MutStatementShadow creates a mutable variable, and then tries to shadow
 // it, which is illegal.
 const MutStatementShadow = `proc main() () {
-	mut n int = 5
+	mutable n int = 5
 	print("%d\n", n)
-	mut n string = "hello"
+	mutable n string = "hello"
 	print("%s\n", n)
 }`
 
 // MutStatementShadow creates a mutable variable, and then tries to shadow
 // it with a let statement, which is still illegal.
 const MutStatementShadow2 = `proc main() () {
-	mut n int = 5
+	mutable n int = 5
 	print("%d\n", n)
 	let n string = "hello"
 	print("%s\n", n)
@@ -30,10 +30,10 @@ const MutStatementShadow2 = `proc main() () {
 // MutStatementScopeShadow creates a mutable variable, and tries to shadow
 // it in a different scope, which is still illegal.
 const MutStatementScopeShadow = `proc main() () {
-	mut n int = 5
+	mutable n int = 5
 	print("%d\n", n)
 	if n == 5 {
-		mut n string = "hello"
+		mutable n string = "hello"
 		print("%s\n", n)
 	}
 }`
@@ -41,7 +41,7 @@ const MutStatementScopeShadow = `proc main() () {
 // MutStatementScopeShadow creates a mutable variable, and tries to shadow
 // it with a let variable in a different scope, which is still illegal.
 const MutStatementScopeShadow2 = `proc main() () {
-	mut n int = 5
+	mutable n int = 5
 	print("%d\n", n)
 	if n == 5 {
 		let n string = "hello"

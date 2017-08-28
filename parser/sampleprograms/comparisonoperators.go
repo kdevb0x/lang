@@ -1,7 +1,7 @@
 package sampleprograms
 
 const EqualComparison = `proc main() () {
-	mut a int = 3
+	mutable a int = 3
 	let b int = 3
 	if a == b {
 		PrintString("true\n")
@@ -17,7 +17,7 @@ const EqualComparison = `proc main() () {
 }`
 
 const NotEqualComparison = `proc main() () {
-	mut a int = 3
+	mutable a int = 3
 	let b int = 3
 	if a != b {
 		PrintString("true\n")
@@ -33,7 +33,7 @@ const NotEqualComparison = `proc main() () {
 }`
 
 const GreaterComparison = `proc main() () {
-	mut a int = 4
+	mutable a int = 4
 	let b int = 3
 	if a > b {
 		PrintString("true\n")
@@ -50,7 +50,7 @@ const GreaterComparison = `proc main() () {
 }`
 
 const GreaterOrEqualComparison = `proc main() () {
-	mut a int = 4
+	mutable a int = 4
 	let b int = 3
 	if a >= b {
 		PrintString("true\n")
@@ -67,7 +67,7 @@ const GreaterOrEqualComparison = `proc main() () {
 }`
 
 const LessThanComparison = `proc main() () {
-	mut a int = 4
+	mutable a int = 4
 	let b int = 3
 	if a < b {
 		PrintString("true\n")
@@ -83,7 +83,7 @@ const LessThanComparison = `proc main() () {
 }`
 
 const LessThanOrEqualComparison = `proc main() () {
-	mut a int = 1
+	mutable a int = 1
 	let b int = 3
 	if a <= b {
 		PrintString("true\n")
