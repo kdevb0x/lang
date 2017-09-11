@@ -7,8 +7,8 @@ proc main() () {
 	let x = A
 	match x {
 	case A:
-		print("I am A\n")
+		PrintString("I am A\n")
 	case B:
-		print("I am B\n")
+		PrintString("I am B\n")
 	}
 }`

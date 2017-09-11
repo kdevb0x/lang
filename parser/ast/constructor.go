@@ -37,8 +37,6 @@ func NewContext() Context {
 					{"", TypeLiteral("int"), false},
 				},
 			},
-			// FIXME: Remove this. Some of the invalidprogram examples depend on it now.
-			"print": FuncDecl{Name: "print"},
 		},
 		Mutables: make(map[string]VarWithType),
 		Types: map[string]TypeDefn{
@@ -823,52 +821,6 @@ func consumeFuncCall(start int, tokens []token.Token, c *Context) (int, FuncCall
 	if c.PureContext {
 		if _, ok := decl.(ProcDecl); ok {
 			return 0, FuncCall{}, fmt.Errorf("Can not call procedure from pure function.")
-		}
-	}
-	// FIXME: Hack because printf is variadic, and variadic functions aren't
-	// implemented, but print is required for pretty much every test.
-	if name == "print" {
-		consumingString := false
-		var strLit StringLiteral
-		for i := start + 1; i < len(tokens); i++ {
-			switch t := tokens[i].(type) {
-			case token.Char:
-				if t == ")" {
-					return i - start, f, nil
-				} else if t == `"` {
-					if consumingString {
-						f.UserArgs = append(f.UserArgs, strLit)
-						strLit = ""
-						consumingString = false
-					} else {
-						consumingString = true
-					}
-					continue
-				} else if t == "," || t == "(" {
-					continue
-				} else {
-					panic("Unexpected Char in function call" + t.String())
-				}
-			case token.Unknown:
-				if c.IsVariable(t.String()) {
-					f.UserArgs = append(f.UserArgs, c.Variables[t.String()])
-				} else if c.IsFunction(t.String()) {
-					n, subcall, err := consumeFuncCall(i, tokens, c)
-					if err != nil {
-						return 0, FuncCall{}, err
-					}
-					f.UserArgs = append(f.UserArgs, subcall)
-					i += n
-				} else {
-					return 0, FuncCall{}, fmt.Errorf(`Use of undefined variable "%v".`, t)
-				}
-			case token.String:
-			default:
-				panic("Unexpected token consuming func call." + t.String())
-			}
-			if consumingString {
-				strLit += StringLiteral(tokens[i].String())
-			}
 		}
 	}
 

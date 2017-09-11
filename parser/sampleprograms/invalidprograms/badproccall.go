@@ -4,7 +4,7 @@ package invalidprograms
 // from a pure function, but is otherwise valid.
 const BadProcCall = `proc main() () {
 	let x int = aFunc()
-	print("%d\n", x)
+	PrintInt(x)
 }
 
 func aFunc() (int) {

@@ -316,9 +316,10 @@ func consumeValue(start int, tokens []token.Token, c *Context) (int, Value, erro
 			} else if eo := c.EnumeratedOption(t.String()); eo != nil {
 				return i + 1 - start, *eo, nil
 			} else {
+				return 0, nil, fmt.Errorf(`Use of undefined variable "%v".`, t)
 				// FIXME: Otherwise, it may still be a parameter.
 				// Validate this.
-				partial = c.Variables[t.String()]
+				//partial = c.Variables[t.String()]
 			}
 
 			for isInfixOperator(i+1, tokens) {
