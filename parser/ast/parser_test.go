@@ -3006,3 +3006,239 @@ func TestReferenceVariable(t *testing.T) {
 	}
 
 }
+
+func TestSimpleSlice(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.SimpleSlice))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Node{
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					LetStmt{
+						Var: VarWithType{"n",
+							SliceType{
+								Base: TypeLiteral("int"),
+							},
+							false,
+						},
+						Value: ArrayLiteral{
+							IntLiteral(1),
+							IntLiteral(2),
+							IntLiteral(3),
+							IntLiteral(4),
+							IntLiteral(5),
+						},
+					},
+					FuncCall{
+						Name: "PrintInt",
+						UserArgs: []Value{
+							ArrayValue{
+								Base: VarWithType{"n",
+									SliceType{
+										Base: TypeLiteral("int"),
+									},
+									false,
+								},
+								Index: IntLiteral(3),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("let statement (%d): got %v want %v", i, ast[i], v)
+		}
+	}
+
+}
+
+func TestSimpleSliceInference(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.SimpleSliceInference))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Node{
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					LetStmt{
+						Var: VarWithType{"n",
+							SliceType{
+								Base: TypeLiteral("int"),
+							},
+							false,
+						},
+						Value: ArrayLiteral{
+							IntLiteral(1),
+							IntLiteral(2),
+							IntLiteral(3),
+							IntLiteral(4),
+							IntLiteral(5),
+						},
+					},
+					LetStmt{
+						Var: VarWithType{"n2",
+							SliceType{
+								Base: TypeLiteral("int"),
+							},
+							false,
+						},
+						Value: VarWithType{
+							"n",
+							SliceType{
+								Base: TypeLiteral("int"),
+							},
+							false,
+						},
+					},
+					FuncCall{
+						Name: "PrintInt",
+						UserArgs: []Value{
+							ArrayValue{
+								Base: VarWithType{"n2",
+									SliceType{
+										Base: TypeLiteral("int"),
+									},
+									false,
+								},
+								Index: IntLiteral(3),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("let statement (%d): got %v want %v", i, ast[i], v)
+		}
+	}
+
+}
+
+func TestSliceMutation(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.SliceMutation))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Node{
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					MutStmt{
+						Var: VarWithType{"n",
+							SliceType{
+								Base: TypeLiteral("int"),
+							},
+							false,
+						},
+						InitialValue: ArrayLiteral{
+							IntLiteral(1),
+							IntLiteral(2),
+							IntLiteral(3),
+							IntLiteral(4),
+							IntLiteral(5),
+						},
+					},
+					FuncCall{
+						Name: "PrintInt",
+						UserArgs: []Value{
+							ArrayValue{
+								Base: VarWithType{"n",
+									SliceType{
+										Base: TypeLiteral("int"),
+									},
+									false,
+								},
+								Index: IntLiteral(3),
+							},
+						},
+					},
+					FuncCall{
+						Name: "PrintString",
+						UserArgs: []Value{
+							StringLiteral(`\n`),
+						},
+					},
+					AssignmentOperator{
+						Variable: VarWithType{"n[3]", TypeLiteral("int"), false},
+						Value:    IntLiteral(2),
+					},
+					FuncCall{
+						Name: "PrintInt",
+						UserArgs: []Value{
+							ArrayValue{
+								Base: VarWithType{"n",
+									SliceType{
+										Base: TypeLiteral("int"),
+									},
+									false,
+								},
+								Index: IntLiteral(3),
+							},
+						},
+					},
+					FuncCall{
+						Name: "PrintString",
+						UserArgs: []Value{
+							StringLiteral(`\n`),
+						},
+					},
+					FuncCall{
+						Name: "PrintInt",
+						UserArgs: []Value{
+							ArrayValue{
+								Base: VarWithType{"n",
+									SliceType{
+										Base: TypeLiteral("int"),
+									},
+									false,
+								},
+								Index: IntLiteral(2),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("let statement (%d): got %v want %v", i, ast[i], v)
+		}
+	}
+
+}

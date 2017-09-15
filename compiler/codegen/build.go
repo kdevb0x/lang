@@ -45,7 +45,6 @@ func BuildProgram(d string, src io.Reader) (string, error) {
 		return "", err
 	}
 
-
 	// Identify required type information before code generation
 	// for the functions.
 	enums := make(irgen.EnumMap)

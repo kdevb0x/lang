@@ -62,3 +62,18 @@ func (v ArrayValue) Node() Node {
 func (v ArrayValue) Value() interface{} {
 	return v
 }
+
+type SliceType struct {
+	Base Type
+}
+
+func (a SliceType) Type() string {
+	return fmt.Sprintf("[]%v", a.Base.Type())
+}
+
+func (a SliceType) Node() Node {
+	return a
+}
+func (a SliceType) String() string {
+	return fmt.Sprintf("SliceType{[]%v}", a.Base.Type())
+}

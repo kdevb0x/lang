@@ -575,25 +575,39 @@ func consumeBlock(start int, tokens []token.Token, c *Context) (int, BlockStmt, 
 					return 0, BlockStmt{}, fmt.Errorf("Can not index non-array value")
 				}
 
-				basetype, ok := av.Base.Typ.(ArrayType)
-				if !ok {
-					return 0, BlockStmt{}, fmt.Errorf("Array type must be ArrayType")
-				}
+				if basetype, ok := av.Base.Typ.(ArrayType); ok {
+					// Adjust i to take into account what we consumed and the
+					i += n + 1
 
-				// Adjust i to take into account what we consumed and the
-				i += n + 1
+					// Get the value that's being assigned.
+					n, val, err := consumeValue(i, tokens, c)
+					if err != nil {
+						return 0, BlockStmt{}, err
+					}
+					nm := Variable(fmt.Sprintf("%v[%d]", av.Base.Name, av.Index))
+					blockStmt.Stmts = append(blockStmt.Stmts, AssignmentOperator{
+						Variable: VarWithType{nm, basetype.Base, false},
+						Value:    val,
+					})
+					i += n - 1
+				} else if basetype, ok := av.Base.Typ.(SliceType); ok {
+					// Adjust i to take into account what we consumed and the
+					i += n + 1
 
-				// Get the value that's being assigned.
-				n, val, err := consumeValue(i, tokens, c)
-				if err != nil {
-					return 0, BlockStmt{}, err
+					// Get the value that's being assigned.
+					n, val, err := consumeValue(i, tokens, c)
+					if err != nil {
+						return 0, BlockStmt{}, err
+					}
+					nm := Variable(fmt.Sprintf("%v[%d]", av.Base.Name, av.Index))
+					blockStmt.Stmts = append(blockStmt.Stmts, AssignmentOperator{
+						Variable: VarWithType{nm, basetype.Base, false},
+						Value:    val,
+					})
+					i += n - 1
+				} else {
+					return 0, BlockStmt{}, fmt.Errorf("Array type must be ArrayType or SliceType")
 				}
-				nm := Variable(fmt.Sprintf("%v[%d]", av.Base.Name, av.Index))
-				blockStmt.Stmts = append(blockStmt.Stmts, AssignmentOperator{
-					Variable: VarWithType{nm, basetype.Base, false},
-					Value:    val,
-				})
-				i += n - 1
 			case token.Operator("="):
 				if !c.IsVariable(t.String()) {
 					return 0, BlockStmt{}, fmt.Errorf("Invalid variable for assignment: %v", tokens[i])
@@ -915,7 +929,7 @@ func consumeLetStmt(start int, tokens []token.Token, c *Context) (int, Node, err
 				if l.Var.Typ == nil {
 					td := c.Types[v.Type()]
 					switch td.ConcreteType.(type) {
-					case ArrayType:
+					case ArrayType, SliceType:
 						l.Var.Typ = td.ConcreteType
 					default:
 						l.Var.Typ = TypeLiteral(v.Type())
@@ -998,7 +1012,7 @@ func consumeMutStmt(start int, tokens []token.Token, c *Context) (int, Node, err
 				if l.Var.Typ == nil {
 					td := c.Types[v.Type()]
 					switch td.ConcreteType.(type) {
-					case ArrayType:
+					case ArrayType, SliceType:
 						l.Var.Typ = td.ConcreteType
 					default:
 						l.Var.Typ = TypeLiteral(v.Type())
@@ -1130,8 +1144,19 @@ func consumeType(start int, tokens []token.Token, c Context) (int, Type, error) 
 	nm := tokens[start].String()
 	if nm == "[" {
 		if tokens[start+1] == token.Char("]") {
-			panic("Variable length slices not implemented")
+			// It is a slice.
+			n, base, err := consumeType(start+2, tokens, c)
+			if err != nil {
+				return 0, nil, err
+			}
+			tn := fmt.Sprintf("[]%v", base)
+			t := SliceType{
+				Base: base,
+			}
+			c.Types[tn] = TypeDefn{t, t, nil}
+			return n + 2, t, nil
 		}
+		// It is an array
 		in, size, err := consumeValue(start+1, tokens, &c)
 		if err != nil {
 			return 0, nil, err

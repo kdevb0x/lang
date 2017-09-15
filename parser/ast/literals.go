@@ -42,7 +42,6 @@ func IsCompatibleType(t TypeDefn, v Value) error {
 		case "uint64":
 			// FIXME: The upper range check doesn't work because IntLiteral
 			// is an int64 type. Replace with varint?
-			//if t2 >= 0 && t2 <  {
 			if t2 >= 0 {
 				return nil
 			}
@@ -81,6 +80,11 @@ func IsCompatibleType(t TypeDefn, v Value) error {
 		}
 		if t.ConcreteType.Type() == v.Type() {
 			return nil
+		}
+		if st, ok := t.ConcreteType.(SliceType); ok {
+			if len(t2) > 1 && st.Base.Type() == t2[0].Type() {
+				return nil
+			}
 		}
 		return fmt.Errorf("Can not assign %v to %v", v.Type(), t.Name)
 	default:

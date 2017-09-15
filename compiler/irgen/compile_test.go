@@ -1810,3 +1810,205 @@ func TestIRReferenceVariable(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 }
+
+func TestIRSimpleSlice(t *testing.T) {
+	loopNum = 0
+	as, ti, c, err := ast.Parse(sampleprograms.SimpleSlice)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, err := GenerateIR(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// LV0 == size of the slice, 1-5=the values
+	expected := []ir.Opcode{
+		ir.MOV{
+			Src: ir.IntLiteral(5),
+			Dst: ir.LocalValue{0, ast.TypeInfo{8, false}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(1),
+			Dst: ir.LocalValue{1, ast.TypeInfo{8, true}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(2),
+			Dst: ir.LocalValue{2, ast.TypeInfo{8, true}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(3),
+			Dst: ir.LocalValue{3, ast.TypeInfo{8, true}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(4),
+			Dst: ir.LocalValue{4, ast.TypeInfo{8, true}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(5),
+			Dst: ir.LocalValue{5, ast.TypeInfo{8, true}},
+		},
+		ir.CALL{
+			FName: "PrintInt",
+			Args: []ir.Register{
+				ir.LocalValue{4, ast.TypeInfo{8, true}},
+			},
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestIRSimpleSliceInference(t *testing.T) {
+	loopNum = 0
+	as, ti, c, err := ast.Parse(sampleprograms.SimpleSliceInference)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, err := GenerateIR(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []ir.Opcode{
+		ir.MOV{
+			Src: ir.IntLiteral(5),
+			Dst: ir.LocalValue{0, ast.TypeInfo{8, false}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(1),
+			Dst: ir.LocalValue{1, ast.TypeInfo{8, true}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(2),
+			Dst: ir.LocalValue{2, ast.TypeInfo{8, true}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(3),
+			Dst: ir.LocalValue{3, ast.TypeInfo{8, true}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(4),
+			Dst: ir.LocalValue{4, ast.TypeInfo{8, true}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(5),
+			Dst: ir.LocalValue{5, ast.TypeInfo{8, true}},
+		},
+		ir.CALL{
+			FName: "PrintInt",
+			Args: []ir.Register{
+				ir.LocalValue{4, ast.TypeInfo{8, true}},
+			},
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestIRSimpleSliceMutation(t *testing.T) {
+	loopNum = 0
+	as, ti, c, err := ast.Parse(sampleprograms.SliceMutation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, err := GenerateIR(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []ir.Opcode{
+		ir.MOV{
+			Src: ir.IntLiteral(5),
+			Dst: ir.LocalValue{0, ast.TypeInfo{8, false}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(1),
+			Dst: ir.LocalValue{1, ast.TypeInfo{8, true}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(2),
+			Dst: ir.LocalValue{2, ast.TypeInfo{8, true}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(3),
+			Dst: ir.LocalValue{3, ast.TypeInfo{8, true}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(4),
+			Dst: ir.LocalValue{4, ast.TypeInfo{8, true}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(5),
+			Dst: ir.LocalValue{5, ast.TypeInfo{8, true}},
+		},
+		ir.CALL{
+			FName: "PrintInt",
+			Args: []ir.Register{
+				ir.LocalValue{4, ast.TypeInfo{8, true}},
+			},
+		},
+		ir.CALL{FName: "PrintString", Args: []ir.Register{ir.StringLiteral(`\n`)}},
+		ir.MOV{
+			Src: ir.IntLiteral(2),
+			Dst: ir.LocalValue{4, ast.TypeInfo{8, true}},
+		},
+		ir.CALL{
+			FName: "PrintInt",
+			Args: []ir.Register{
+				ir.LocalValue{4, ast.TypeInfo{8, true}},
+			},
+		},
+		ir.CALL{FName: "PrintString", Args: []ir.Register{ir.StringLiteral(`\n`)}},
+		ir.CALL{
+			FName: "PrintInt",
+			Args: []ir.Register{
+				ir.LocalValue{3, ast.TypeInfo{8, true}},
+			},
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+/*
+func TestIRWriteSyscall(t *testing.T) {
+	loopNum = 0
+	as, ti, c, err := ast.Parse(sampleprograms.WriteSyscall)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, err := GenerateIR(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []ir.Opcode{
+		ir.CALL{
+			FName: "Write",
+			Args: []ir.Register{
+				ir.IntLiteral(1),
+				ir.StringLiteral("Stdout!"),
+			},
+		},
+		ir.CALL{
+			FName: "Write",
+			Args: []ir.Register{
+				ir.IntLiteral(2),
+				ir.StringLiteral("Stderr!"),
+			},
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+*/

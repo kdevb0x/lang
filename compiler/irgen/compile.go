@@ -113,13 +113,17 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]ir.Opc
 				panic("Only literal offsets are currently supported")
 			}
 			reg.Id += uint(offset)
-			at, ok := a.Base.Typ.(ast.ArrayType)
-			if !ok {
+			switch at := a.Base.Typ.(type) {
+			case ast.ArrayType:
+				reg.Info = context.GetTypeInfo(at.Base.Type())
+				argRegs = append(argRegs, reg)
+			case ast.SliceType:
+				reg.Id++
+				reg.Info = context.GetTypeInfo(at.Base.Type())
+				argRegs = append(argRegs, reg)
+			default:
 				panic("Array value must have an ArrayType as the base type")
 			}
-
-			reg.Info = context.GetTypeInfo(at.Base.Type())
-			argRegs = append(argRegs, reg)
 		case ast.VarWithType:
 			lv := context.Get(a)
 			if funcArgs != nil && funcArgs[i].Reference {
@@ -260,13 +264,36 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 					}
 					multiwordoffset += len(words) - 1
 				}
+			case ast.VarWithType:
+				// A let statement being assigned to a variable doesn't need any IR, it just needs to make sure that the reference points
+				// to the right place.
+				// The verification that nothing gets modified happens at the AST level.
+				// FIXME: This should make a copy if the
+				// reference to the variable.
+				vr := context.Get(v)
+				context.SetLocalRegister(s.Var, vr)
 			case ast.ArrayLiteral:
 				regs := make([]ir.Register, len(v))
 				// First generate the LocalValue registers to ensure they're consecutive if there's a variable
 				// or some other expression in one of the literal pieces.
+				isSlice := false
+				if _, ok := s.Var.Typ.(ast.SliceType); ok {
+					// Move the size to the start of the slice.
+					isSlice = true
+					if lv, ok := reg.(ir.LocalValue); ok {
+						lv.Info = ast.TypeInfo{8, false}
+						ops = append(ops, ir.MOV{
+							Src: ir.IntLiteral(len(v)),
+							Dst: lv,
+						})
+					} else {
+						panic("Unexpected LocalValue")
+					}
+				}
+
 				for i := range regs {
 					entryVar := ast.VarWithType{ast.Variable(fmt.Sprintf("%s[%d]", s.Var.Name, i)), ast.TypeLiteral(v[i].Type()), false}
-					if i == 0 {
+					if i == 0 && !isSlice {
 						// Convert the type information for the first LocalValue allocated to match
 						// foo[0], not the (useless) defaults that foo generated, rather than allocating
 						// a new register.
@@ -280,7 +307,7 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 						context.tempVars--
 						continue
 					}
-					// Allocate a new LocalValue for foo[1...n]
+					// Allocate a new LocalValue for foo[0...n]
 					regs[i] = context.NextLocalRegister(entryVar)
 				}
 
@@ -376,11 +403,25 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 				})
 			case ast.ArrayLiteral:
 				regs := make([]ir.Register, len(v))
+				isSlice := false
+				if _, ok := s.Var.Typ.(ast.SliceType); ok {
+					// Move the size to the start of the slice.
+					isSlice = true
+					if lv, ok := reg.(ir.LocalValue); ok {
+						lv.Info = ast.TypeInfo{8, false}
+						ops = append(ops, ir.MOV{
+							Src: ir.IntLiteral(len(v)),
+							Dst: lv,
+						})
+					} else {
+						panic("Unexpected LocalValue")
+					}
+				}
 				// First generate the LocalValue registers to ensure they're consecutive if there's a variable
 				// or some other expression in one of the literal pieces.
 				for i := range regs {
 					entryVar := ast.VarWithType{ast.Variable(fmt.Sprintf("%s[%d]", s.Var.Name, i)), ast.TypeLiteral(v[i].Type()), false}
-					if i == 0 {
+					if i == 0 && !isSlice {
 						// Convert the type information for the first LocalValue allocated to match
 						// foo[0], not the (useless) defaults that foo generated, rather than allocating
 						// a new register.

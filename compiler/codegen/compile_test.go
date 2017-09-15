@@ -467,3 +467,91 @@ func ExampleReference() {
 	// 4
 	// 7
 }
+
+func ExampleSimpleSlice() {
+	if err := RunProgram("simpleslice", sampleprograms.SimpleSlice); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: 4
+}
+
+func ExampleSimpleSliceInference() {
+	if err := RunProgram("simplesliceinference", sampleprograms.SimpleSliceInference); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: 4
+}
+
+func ExampleSliceMutation() {
+	if err := RunProgram("slicemutation", sampleprograms.SliceMutation); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: 4
+	// 2
+	// 3
+}
+
+/*
+func ExamplePrintString() {
+	if err := RunProgram("printstring", sampleprograms.PrintString); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: Success!
+}
+
+func ExampleWriteSyscall() {
+	if err := RunProgram("writestring", sampleprograms.WriteSyscall); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Example output only compares stdout, not stderr, so the Write(2, "Stderr!") call
+	// isn't automatically tested.
+
+	// Output: Stdout!
+}
+
+// Test that Open/Write work correctly. This isn't done as an Example test because we
+// need to know a little outside context (ie. what the current directory is, we also
+// need to be able to read the file from the test, to make sure it got written correctly
+// and cleaned up correctly.
+func TestOpenSyscall(t *testing.T) {
+	// Inline the RunProgram call, because we want to cd to the directory so that the foo.txt
+	// file isn't created as garbage in the cwd..
+	dir, err := ioutil.TempDir("", "langtestOpenSyscall")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	// There's currently no way to define constants, no bitwise operations, and only decimal
+	// numbers, so modes and flags are hardcoded in decimal.
+	// 513 = O_WRONLY | O_CREAT, and 493 = 0755
+	exe, err := BuildProgram(dir, strings.NewReader(`proc main () () {
+		let fd = Open("foo.txt", 513, 493)
+		Write(fd, "Hello\n")
+		Close(fd)
+	}
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Make sure foo.txt gets created in dir, so that the defer cleans it up..
+	if err := os.Chdir(dir); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("./" + exe)
+	if _, err := cmd.Output(); err != nil {
+		t.Fatal(err)
+	}
+
+	content, err := ioutil.ReadFile("foo.txt")
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+
+	if string(content) != "Hello\n" {
+		t.Errorf("Unexpected content of file foo.txt: got %v want %v", string(content), "Hello\n")
+	}
+
+}
+*/
