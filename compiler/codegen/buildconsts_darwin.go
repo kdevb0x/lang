@@ -1,12 +1,7 @@
 package codegen
 
 const (
-	entrypoint = `#define NPRIVATES 16
-GLOBL argv(SB), 8+16, $8
-GLOBL _tos(SB), 8+16, $8
-GLOBL _privates(SB), 8+16, $8
-GLOBL _nprivates(SB), 8+16, $4
-
+	entrypoint = `
 TEXT	_main(SB), 21, $144
 	CALL	main(SB)
 loop:
@@ -17,8 +12,8 @@ loop:
 
 	exits = `
 TEXT exits(SB), 20, $0
-	// MOVQ retcode+0(FP), 0(FP)
-	MOVQ $8, BP
+	MOVQ retcode+0(FP), DI
+	MOVQ $0x2000001, AX
 	SYSCALL
 	RET // Unreached
 `
@@ -28,14 +23,14 @@ TEXT exits(SB), 20, $0
 	// the order of the params in the syscall
 	write = `
 TEXT Write(SB), 20, $0-24
-	MOVQ $-1, offset+24(FP)
+	MOVQ fd+0(FP), DI
+
+	// Strings have the format
+	// struct{ len int64, buf *char} 
 	MOVQ str+8(FP), R8
-	LEAQ 8(R8), SI
-	MOVQ 0(R8), DX
-	MOVQ DX, nbytes+16(FP)
-	MOVQ SI, buf+8(FP)	
-	
-	MOVQ $51, BP // pwrite syscall
+	LEAQ 8(R8), SI // buf
+	MOVQ 0(R8), DX // nbytes
+	MOVQ $0x2000004, AX // write syscall
 	SYSCALL
 	RET
 `
@@ -45,14 +40,16 @@ TEXT Write(SB), 20, $0-24
 	// the order of the params in the syscall
 	read = `
 TEXT Read(SB), 20, $0-24
-	MOVQ $-1, offset+24(FP)
-	// MOVQ fd+0(FP), DI
+	MOVQ fd+0(FP), DI
 
+	// Strings have the format
+	// struct{ len int64, buf *char} 
 	MOVQ buf+16(FP), SI // buf
 	MOVQ len+8(FP), DX // nbytes
-	MOVQ DX, nbytes+16(FP)
-	MOVQ SI, buf+8(FP)
-	MOVQ $50, BP // pread syscall
+	MOVQ $0, R10
+	MOVQ $0, R8
+	MOVQ $0, R9
+	MOVQ $0x2000003, AX // read syscall
 	SYSCALL
 	RET
 `
@@ -67,11 +64,13 @@ TEXT Open(SB), 20, $0-24
 	// Move (the C string portion) into the first arg to the syscall
 	LEAQ 8(BX), DI
 	// Move the length into a register, so that we can index by it
-	// MOVQ 0(BX), CX
-	// FIXME: This should ensure that it's nil terminated.
-	MOVQ DI, file+0(FP)
-	MOVQ $0, omode+8(FP) // omode = 0 = OREAD
-	MOVQ $14, BP // open syscall
+	MOVQ 0(BX), CX
+	// Ensure the string is null terminated.
+	// FIXME: This is segfaulting.
+	// MOVB $0, (DI)(CX*1)
+	MOVQ $0, SI // open mode = 0 = O_RDONLY
+	MOVQ $0, DX // fileperms = irrelevant, since it's read only.. 
+	MOVQ $0x2000005, AX // open syscall
 	SYSCALL
 	RET
 `
@@ -89,18 +88,17 @@ TEXT Create(SB), 20, $0-24
 	// Ensure the string is null terminated.
 	// FIXME: This is segfaulting.
 	// MOVB $0, (DI)(CX*1)
-	MOVQ DI, file+0(FP)
-	MOVQ $%d, omode+8(FP) // open mode = O_WRONLY|O_CREAT
-	MOVQ $438, perms+16(FP) // fileperms. 438 decimal = 0666 octal.
-	MOVQ $22, BP // create syscall
+	MOVQ $%d, SI // open mode = O_WRONLY|O_CREAT
+	MOVQ $438, DX // fileperms. 438 decimal = 0666 octal.
+	MOVQ $0x2000005, AX // open syscall
 	SYSCALL
 	RET
 `
 
 	closestr = `
 TEXT Close(SB), 20, $0-8
-//	MOVQ fd+0(FP), DI
-	MOVQ $4, BP // close syscall
+	MOVQ fd+0(FP), DI
+	MOVQ $0x2000006, AX // close syscall
 	SYSCALL
 	RET
 `
@@ -108,14 +106,16 @@ TEXT Close(SB), 20, $0-8
 	// FIXME: This should just be a wrapper to PrintString(), but
 	// for some reason it's not working unless it's inlined..
 	printbyteslice = `
-TEXT PrintByteSlice(SB), 20, $0-24
-	MOVQ $-1, offset+24(FP)
-	MOVQ nbytes+0(FP), DX // nbytes
-	MOVQ DX, nbytes+16(FP)
+TEXT PrintByteSlice(SB), 20, $16
+	// wrapper around
+	// write(1, *buf, nbytes) syscall.
+	// Byte slices have the format
+	// struct{ len int64, buf *char}, the inverse
+	// of what we want
+	MOVQ $1, DI // fd
 	MOVQ buf+8(FP), SI // buf
-	MOVQ SI, buf+8(FP)
-	MOVQ $1, fd+0(FP)
-	MOVQ $51, BP // pwrite syscall
+	MOVQ len+0(FP), DX // nbytes
+	MOVQ $0x2000004, AX // write syscall
 	SYSCALL
 	RET
 `

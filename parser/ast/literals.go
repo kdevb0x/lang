@@ -24,7 +24,7 @@ func IsCompatibleType(t TypeDefn, v Value) error {
 		switch t.ConcreteType.Type() {
 		case "int":
 			return nil
-		case "uint8":
+		case "uint8", "byte":
 			if t2 >= 0 && t2 < 256 {
 				return nil
 			}
@@ -81,12 +81,18 @@ func IsCompatibleType(t TypeDefn, v Value) error {
 		if t.ConcreteType.Type() == v.Type() {
 			return nil
 		}
-		if st, ok := t.ConcreteType.(SliceType); ok {
-			if len(t2) > 1 && st.Base.Type() == t2[0].Type() {
-				return nil
+
+		// Check if each element in te literal is compatible.
+		for _, el := range t2 {
+			if err := IsCompatibleType(TypeDefn{t.Name, el, nil}, el); err != nil {
+				return err
 			}
 		}
-		return fmt.Errorf("Can not assign %v to %v", v.Type(), t.Name)
+		if st, ok := t.ConcreteType.(SliceType); ok {
+			// Fake an array type comparison instead of a slice type.
+			return IsCompatibleType(TypeDefn{t.Name, ArrayType{st.Base, IntLiteral(len(t2))}, nil}, v)
+		}
+		return nil
 	default:
 		panic("Unhandled literal type in IsCompatibleType")
 	}

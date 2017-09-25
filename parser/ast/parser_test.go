@@ -3242,3 +3242,189 @@ func TestSliceMutation(t *testing.T) {
 	}
 
 }
+func TestSliceParam(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.SliceParam))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Node{
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					LetStmt{
+						Var: VarWithType{
+							"b",
+							SliceType{
+								Base: TypeLiteral("byte"),
+							},
+							false,
+						},
+						Value: ArrayLiteral{
+							IntLiteral(44),
+							IntLiteral(55),
+							IntLiteral(88),
+						},
+					},
+					FuncCall{
+						Name: "PrintASlice",
+						UserArgs: []Value{
+							VarWithType{
+								"b",
+								SliceType{
+									Base: TypeLiteral("byte"),
+								},
+								false,
+							},
+						},
+					},
+				},
+			},
+		},
+		ProcDecl{
+			Name: "PrintASlice",
+			Args: []VarWithType{
+				{Name: "A", Typ: SliceType{Base: TypeLiteral("byte")}},
+			},
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					FuncCall{
+						Name: "PrintByteSlice",
+						UserArgs: []Value{
+							VarWithType{
+								"A",
+								SliceType{
+									Base: TypeLiteral("byte"),
+								},
+								false,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("let statement (%d): got %v want %v", i, ast[i], v)
+		}
+	}
+
+}
+
+func TestReadSyscall(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.ReadSyscall))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Node{
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					LetStmt{
+						Var: VarWithType{
+							"fd",
+							TypeLiteral("uint64"),
+							false,
+						},
+						Value: FuncCall{
+							Name: "Open",
+							UserArgs: []Value{
+								StringLiteral("foo.txt"),
+							},
+						},
+					},
+					MutStmt{
+						Var: VarWithType{
+							"dta",
+							SliceType{
+								Base: TypeLiteral("byte"),
+							},
+							false,
+						},
+						InitialValue: ArrayLiteral{
+							IntLiteral(0),
+							IntLiteral(1),
+							IntLiteral(2),
+							IntLiteral(3),
+							IntLiteral(4),
+							IntLiteral(5),
+						},
+					},
+					LetStmt{
+						Var: VarWithType{
+							"n",
+							TypeLiteral("uint64"),
+							false,
+						},
+						Value: FuncCall{
+							Name: "Read",
+							UserArgs: []Value{
+								VarWithType{
+									"fd",
+									TypeLiteral("uint64"),
+									false,
+								},
+								VarWithType{
+									"dta",
+									SliceType{
+										Base: TypeLiteral("byte"),
+									},
+									false,
+								},
+							},
+						},
+					},
+					FuncCall{
+						Name: "PrintByteSlice",
+						UserArgs: []Value{
+							VarWithType{
+								"dta",
+								SliceType{
+									Base: TypeLiteral("byte"),
+								},
+								false,
+							},
+						},
+					},
+					FuncCall{
+						Name: "Close",
+						UserArgs: []Value{
+
+							VarWithType{
+								"fd",
+								TypeLiteral("uint64"),
+								false,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("let statement (%d): got %v want %v", i, ast[i], v)
+		}
+	}
+
+}

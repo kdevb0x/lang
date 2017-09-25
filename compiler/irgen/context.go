@@ -74,7 +74,11 @@ func (c variableLayout) Get(varname ast.VarWithType) ir.Register {
 	if varname.Name == "" {
 		panic("Can not get empty varname")
 	}
-	return c.values[varname]
+	val, ok := c.values[varname]
+	if !ok {
+		panic("Could not get variable named " + varname.Name)
+	}
+	return val
 }
 
 // Gets the register for an existing variable, and a bool denoting whether

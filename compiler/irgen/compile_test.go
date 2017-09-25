@@ -1977,7 +1977,66 @@ func TestIRSimpleSliceMutation(t *testing.T) {
 	}
 }
 
-/*
+func TestIRSliceParam(t *testing.T) {
+	loopNum = 0
+	as, ti, c, err := ast.Parse(sampleprograms.SliceParam)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i, _, err := GenerateIR(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []ir.Opcode{
+		ir.MOV{
+			Src: ir.IntLiteral(3),
+			Dst: ir.LocalValue{0, ast.TypeInfo{8, false}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(44),
+			Dst: ir.LocalValue{1, ast.TypeInfo{1, false}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(55),
+			Dst: ir.LocalValue{2, ast.TypeInfo{1, false}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(88),
+			Dst: ir.LocalValue{3, ast.TypeInfo{1, false}},
+		},
+		ir.CALL{
+			FName: "PrintASlice",
+			Args: []ir.Register{
+				ir.LocalValue{0, ast.TypeInfo{8, false}},
+				ir.Pointer{ir.LocalValue{1, ast.TypeInfo{1, false}}},
+			},
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	i, _, err = GenerateIR(as[1], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected = []ir.Opcode{
+		ir.CALL{
+			FName: "PrintByteSlice",
+			Args: []ir.Register{
+				ir.FuncArg{0, ast.TypeInfo{8, false}, false},
+				ir.FuncArg{1, ast.TypeInfo{8, false}, false},
+			},
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
 func TestIRWriteSyscall(t *testing.T) {
 	loopNum = 0
 	as, ti, c, err := ast.Parse(sampleprograms.WriteSyscall)
@@ -2011,4 +2070,84 @@ func TestIRWriteSyscall(t *testing.T) {
 	}
 }
 
-*/
+func TestIRReadSyscall(t *testing.T) {
+	loopNum = 0
+	as, ti, c, err := ast.Parse(sampleprograms.ReadSyscall)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, err := GenerateIR(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []ir.Opcode{
+		ir.CALL{
+			FName: "Open",
+			Args: []ir.Register{
+				ir.StringLiteral("foo.txt"),
+			},
+		},
+		ir.MOV{
+			Src: ir.FuncRetVal{0, ast.TypeInfo{8, false}},
+			Dst: ir.LocalValue{0, ast.TypeInfo{8, false}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(6),
+			Dst: ir.LocalValue{1, ast.TypeInfo{8, false}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(0),
+			Dst: ir.LocalValue{2, ast.TypeInfo{1, false}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(1),
+			Dst: ir.LocalValue{3, ast.TypeInfo{1, false}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(2),
+			Dst: ir.LocalValue{4, ast.TypeInfo{1, false}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(3),
+			Dst: ir.LocalValue{5, ast.TypeInfo{1, false}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(4),
+			Dst: ir.LocalValue{6, ast.TypeInfo{1, false}},
+		},
+		ir.MOV{
+			Src: ir.IntLiteral(5),
+			Dst: ir.LocalValue{7, ast.TypeInfo{1, false}},
+		},
+		ir.CALL{
+			FName: "Read",
+			Args: []ir.Register{
+				ir.LocalValue{0, ast.TypeInfo{8, false}},
+				ir.LocalValue{1, ast.TypeInfo{8, false}},
+				ir.Pointer{ir.LocalValue{2, ast.TypeInfo{1, false}}},
+			},
+		},
+		ir.MOV{
+			Src: ir.FuncRetVal{0, ast.TypeInfo{8, false}},
+			Dst: ir.LocalValue{8, ast.TypeInfo{8, false}},
+		},
+		ir.CALL{
+			FName: "PrintByteSlice",
+			Args: []ir.Register{
+				ir.LocalValue{1, ast.TypeInfo{8, false}},
+				ir.Pointer{ir.LocalValue{2, ast.TypeInfo{1, false}}},
+			},
+		},
+		ir.CALL{
+			FName: "Close",
+			Args: []ir.Register{
+				ir.LocalValue{0, ast.TypeInfo{8, false}},
+			},
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+}

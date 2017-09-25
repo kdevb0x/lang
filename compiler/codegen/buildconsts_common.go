@@ -88,4 +88,13 @@ print0:
 	ADDQ $32, SP
 	RET
 `
+
+	printstring = `
+TEXT PrintString(SB), 20, $24
+	MOVQ $1, 0(SP) // fd
+	MOVQ str+0(FP), AX
+	MOVQ AX, 8(SP)
+	CALL Write(SB)
+	RET
+`
 )

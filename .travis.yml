@@ -1,0 +1,18 @@
+language: go
+
+go:
+    - 1.x
+    - master
+os:
+    - linux
+    - osx
+
+install:
+    # Use git clone instead of go get, because there's no .go files in the main
+    - go get -d github.com/driusan/noruntime/runtime
+    - go get -t ./...
+
+script:
+    - go test -v ./...
+    - go install ./...
+

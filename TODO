@@ -1,4 +1,3 @@
-- Implement Read (syscall)
 - Add better documentation
 - Implement "import" / package namespaces
 	- refactor builtins into separate, optional package

@@ -491,7 +491,13 @@ func ExampleSliceMutation() {
 	// 3
 }
 
-/*
+func ExampleSliceParam() {
+	if err := RunProgram("sliceparam", sampleprograms.SliceParam); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: ,7X
+}
+
 func ExamplePrintString() {
 	if err := RunProgram("printstring", sampleprograms.PrintString); err != nil {
 		fmt.Println(err.Error())
@@ -509,28 +515,28 @@ func ExampleWriteSyscall() {
 	// Output: Stdout!
 }
 
-// Test that Open/Write work correctly. This isn't done as an Example test because we
+// Test that Create/Write work correctly. This isn't done as an Example test because we
 // need to know a little outside context (ie. what the current directory is, we also
 // need to be able to read the file from the test, to make sure it got written correctly
 // and cleaned up correctly.
-func TestOpenSyscall(t *testing.T) {
+func TestCreateSyscall(t *testing.T) {
+	// We chdir below, defer a cleanup that resets it after the test finishes.
+	pwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func(pwd string) {
+		os.Chdir(pwd)
+	}(pwd)
 	// Inline the RunProgram call, because we want to cd to the directory so that the foo.txt
 	// file isn't created as garbage in the cwd..
-	dir, err := ioutil.TempDir("", "langtestOpenSyscall")
+	dir, err := ioutil.TempDir("", "langtestCreateSyscall")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(dir)
 
-	// There's currently no way to define constants, no bitwise operations, and only decimal
-	// numbers, so modes and flags are hardcoded in decimal.
-	// 513 = O_WRONLY | O_CREAT, and 493 = 0755
-	exe, err := BuildProgram(dir, strings.NewReader(`proc main () () {
-		let fd = Open("foo.txt", 513, 493)
-		Write(fd, "Hello\n")
-		Close(fd)
-	}
-`))
+	exe, err := BuildProgram(dir, strings.NewReader(sampleprograms.CreateSyscall))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -552,6 +558,66 @@ func TestOpenSyscall(t *testing.T) {
 	if string(content) != "Hello\n" {
 		t.Errorf("Unexpected content of file foo.txt: got %v want %v", string(content), "Hello\n")
 	}
-
 }
-*/
+
+// Test that Open/Readwork correctly. This isn't done as an Example test because we
+// need to know a little outside context (ie. what the current directory is, we also
+// need to be able to read the file from the test, to make sure it got written correctly
+// and cleaned up correctly.
+func TestReadSyscall(t *testing.T) {
+	// We chdir below, defer a cleanup that resets it after the test finishes.
+	pwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func(pwd string) {
+		os.Chdir(pwd)
+	}(pwd)
+	// Inline the RunProgram call, because we want to cd to the directory so that the foo.txt
+	// file isn't created as garbage in the cwd..
+	dir, err := ioutil.TempDir("", "langtestReadSyscall")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	// There's currently no way to define constants, no bitwise operations, and only decimal
+	// numbers, so modes and flags are hardcoded in decimal.
+	exe, err := BuildProgram(dir, strings.NewReader(sampleprograms.ReadSyscall))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Make sure foo.txt gets created in dir, so that the defer cleans it up..
+	if err := os.Chdir(dir); err != nil {
+		t.Fatal(err)
+	}
+	if err := ioutil.WriteFile("foo.txt", []byte("Hello, world!"), 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := exec.Command("./" + exe)
+
+	content, err := cmd.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(content) != "Hello," {
+		t.Errorf("Unexpected content of file foo.txt: got %v want %v", string(content), "Hello,")
+	}
+
+	// Run it again with different file content.
+	if err := ioutil.WriteFile("foo.txt", []byte("Goodbye"), 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd = exec.Command("./" + exe)
+
+	content, err = cmd.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(content) != "Goodby" {
+		t.Errorf("Unexpected content of file foo.txt: got %v want %v", string(content), "Goodby")
+	}
+}

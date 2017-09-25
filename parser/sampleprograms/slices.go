@@ -25,3 +25,14 @@ const SliceMutation = `proc main() () {
 	PrintString("\n")
 	PrintInt(n[2])
 }`
+
+// SliceParam tests passing a slice as a parameter.
+const SliceParam = `proc main() () {
+	let b []byte = { 44, 55, 88 }
+	PrintASlice(b)
+}
+
+proc PrintASlice(A []byte) () {
+	PrintByteSlice(A)
+}
+`

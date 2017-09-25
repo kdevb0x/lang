@@ -37,12 +37,77 @@ func NewContext() Context {
 					{"", TypeLiteral("int"), false},
 				},
 			},
+			"PrintByteSlice": ProcDecl{
+				Name: "PrintByteSlice",
+				Args: []VarWithType{
+					{"slice", SliceType{TypeLiteral("byte")}, false},
+				},
+			},
+			// FIXME: These should be moved out of the compiler
+			// and into a standard library, once enough of the
+			// compiler is implemented to have a standard
+			// library.
+			"Write": ProcDecl{
+				Name: "Write",
+				Args: []VarWithType{
+					{"fd", TypeLiteral("uint64"), false},
+					{"val", TypeLiteral("string"), false}, // NB. this should be []byte, once arrays are implemented.
+				},
+			},
+			"Read": ProcDecl{
+				Args: []VarWithType{
+					{"fd", TypeLiteral("uint64"), false},
+					// NB. this should be []byte, once arrays are implemented.
+					// NB2. This will read exactly the length of string from fd int
+					//     dst and overwrite what's there.
+					//     It needs a way to mark parameters mutable.
+					{"dst", SliceType{TypeLiteral("byte")}, true},
+				},
+				Return: []VarWithType{{"", TypeLiteral("uint64"), false}},
+			},
+			"Open": ProcDecl{
+				Name: "Open",
+				Args: []VarWithType{
+					{"val", TypeLiteral("string"), false},
+					/*
+						Follow Go/Plan9 conventions. Open just opens, Create
+						just creates with a default umask, rather than having
+						options on a generic Open like POSIX does.
+						This makes it easier to port to Plan 9.
+						{"mode", TypeLiteral("int"), false},
+						{"createperms", TypeLiteral("int"), false},
+					*/
+				},
+				Return: []VarWithType{{"", TypeLiteral("uint64"), false}},
+			},
+			"Create": ProcDecl{
+				Name: "Create",
+				Args: []VarWithType{
+					{"val", TypeLiteral("string"), false},
+					/*
+						Follow Go/Plan9 conventions. Open just opens, Create
+						just creates with a default umask, rather than having
+						options on a generic Open like POSIX does.
+						This makes it easier to port to Plan 9.
+						{"mode", TypeLiteral("int"), false},
+						{"createperms", TypeLiteral("int"), false},
+					*/
+				},
+				Return: []VarWithType{{"", TypeLiteral("uint64"), false}},
+			},
+			"Close": ProcDecl{
+				Name: "Close",
+				Args: []VarWithType{
+					{"val", TypeLiteral("string"), false},
+				},
+			},
 		},
 		Mutables: make(map[string]VarWithType),
 		Types: map[string]TypeDefn{
 			"int":    TypeDefn{TypeLiteral("int"), TypeLiteral("int"), nil},
 			"uint":   TypeDefn{TypeLiteral("uint"), TypeLiteral("uint"), nil},
 			"uint8":  TypeDefn{TypeLiteral("uint8"), TypeLiteral("uint8"), nil},
+			"byte":   TypeDefn{TypeLiteral("byte"), TypeLiteral("byte"), nil},
 			"uint16": TypeDefn{TypeLiteral("uint16"), TypeLiteral("uint16"), nil},
 			"uint32": TypeDefn{TypeLiteral("uint32"), TypeLiteral("uint32"), nil},
 			"uint64": TypeDefn{TypeLiteral("uint64"), TypeLiteral("uint64"), nil},
@@ -185,6 +250,7 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, Callables, error)
 		("uint"):    TypeInfo{8, false},
 		("int8"):    TypeInfo{1, true},
 		("uint8"):   TypeInfo{1, false},
+		("byte"):    TypeInfo{1, false},
 		("int16"):   TypeInfo{2, true},
 		("uint16"):  TypeInfo{2, false},
 		("int32"):   TypeInfo{4, true},
@@ -207,6 +273,9 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, Callables, error)
 	*/
 
 	callables := make(Callables)
+	for k, v := range c.Functions {
+		callables[k] = append(callables[k], v)
+	}
 	err := extractPrototypes(tokens, &c)
 	if err != nil {
 		return nil, nil, nil, err
@@ -297,7 +366,7 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, Callables, error)
 			switch concrete := c.Types[typeName].ConcreteType.Type(); concrete {
 			case "int", "uint", "int8", "uint8", "int16", "uint16",
 				"int32", "uint32", "int64", "uint64", "bool", "string",
-				"sumtype":
+				"sumtype", "byte":
 				ti[typeName] = ti[c.Types[typeName].ConcreteType.Type()]
 			default:
 				panic("Unhandled concrete type: " + string(c.Types[typeName].ConcreteType.Type()))
@@ -911,7 +980,7 @@ func consumeLetStmt(start int, tokens []token.Token, c *Context) (int, Node, err
 			}
 		case token.Char:
 			if l.Var.Typ == nil && t == "[" {
-				n, ty, err := consumeType(i, tokens, *c)
+				n, ty, err := consumeType(i, tokens, c)
 				if err != nil {
 					return 0, nil, err
 				}
@@ -994,7 +1063,7 @@ func consumeMutStmt(start int, tokens []token.Token, c *Context) (int, Node, err
 			}
 		case token.Char:
 			if l.Var.Typ == nil && t == "[" {
-				n, ty, err := consumeType(i, tokens, *c)
+				n, ty, err := consumeType(i, tokens, c)
 				if err != nil {
 					return 0, nil, err
 				}
@@ -1054,20 +1123,42 @@ func consumeArgs(start int, tokens []token.Token, c *Context) (int, []VarWithTyp
 			if t == "," {
 				parsingNames = true
 				mutable = false
+				continue
 			} else if t == "(" {
 				started = true
+				continue
+
 			} else if t == ")" {
 				return i + 1 - start, args, nil
-			} else {
+			} else if t != "[" {
+				// If it's a [ char, treat it as if it was the
+				// start of a type below
 				return 0, nil, fmt.Errorf("Invalid argument")
 			}
-			continue
+
+			n, tk, err := consumeType(i, tokens, c)
+			if err != nil {
+				return 0, nil, err
+			}
+			i += n - 1
+
+			for _, n := range names {
+				args = append(args, VarWithType{
+					Name:      n,
+					Typ:       tk,
+					Reference: mutable,
+				})
+			}
+
+			names = nil
+			parsingNames = true
+			mutable = false
 		case token.Unknown:
 			if parsingNames {
 				names = append(names, Variable(t.String()))
 				parsingNames = false
 			} else {
-				n, tk, err := consumeType(i, tokens, *c)
+				n, tk, err := consumeType(i, tokens, c)
 				if err != nil {
 					return 0, nil, err
 				}
@@ -1126,7 +1217,7 @@ func consumeTypeList(start int, tokens []token.Token, c Context) (int, []VarWith
 			}
 			continue
 		case token.Unknown, token.Type:
-			n, tk, err := consumeType(i, tokens, c)
+			n, tk, err := consumeType(i, tokens, &c)
 			if err != nil {
 				return 0, nil, err
 			}
@@ -1140,7 +1231,7 @@ func consumeTypeList(start int, tokens []token.Token, c Context) (int, []VarWith
 	return 0, nil, fmt.Errorf("Could not parse arguments")
 }
 
-func consumeType(start int, tokens []token.Token, c Context) (int, Type, error) {
+func consumeType(start int, tokens []token.Token, c *Context) (int, Type, error) {
 	nm := tokens[start].String()
 	if nm == "[" {
 		if tokens[start+1] == token.Char("]") {
@@ -1157,7 +1248,7 @@ func consumeType(start int, tokens []token.Token, c Context) (int, Type, error) 
 			return n + 2, t, nil
 		}
 		// It is an array
-		in, size, err := consumeValue(start+1, tokens, &c)
+		in, size, err := consumeValue(start+1, tokens, c)
 		if err != nil {
 			return 0, nil, err
 		}

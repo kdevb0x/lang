@@ -125,11 +125,51 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]ir.Opc
 				panic("Array value must have an ArrayType as the base type")
 			}
 		case ast.VarWithType:
-			lv := context.Get(a)
-			if funcArgs != nil && funcArgs[i].Reference {
-				lv = ir.Pointer{lv}
+			switch st := a.Typ.(type) {
+			case ast.SliceType:
+				lv := context.Get(a)
+				// Slice types have 2 internal representations:
+				//     struct{ n int, [n]foo}
+				// where n foos directly follow the size (this form is used when they're allocated) and:
+				//     struct{ n int, first *foo}
+				// where a pointer to the first foo follows n (this form is used when they're passed around).
+				// This should be harmonized (probably by getting rid of the first) but for now w
+				// need to handle both.
+				switch l := lv.(type) {
+				case ir.LocalValue:
+					val1, ok := context.SafeGet(ast.VarWithType{
+						Name: ast.Variable(fmt.Sprintf("%s[%d]", a.Name, 0)),
+						Typ:  st.Base,
+					})
+					if !ok {
+						val1 = context.Get(ast.VarWithType{
+							Name:      ast.Variable(fmt.Sprintf("%s[%d]", a.Name, 0)),
+							Typ:       st.Base,
+							Reference: true,
+						})
+					}
+					argRegs = append(argRegs, lv)
+					argRegs = append(argRegs, ir.Pointer{val1})
+				case ir.FuncArg:
+					argRegs = append(argRegs, ir.FuncArg{
+						Id:   l.Id,
+						Info: ast.TypeInfo{8, false},
+					})
+					argRegs = append(argRegs, ir.FuncArg{
+						Id:   l.Id + 1,
+						Info: ast.TypeInfo{8, false},
+					})
+				default:
+					panic(fmt.Sprintf("This should not happen %v", reflect.TypeOf(lv)))
+				}
+			default:
+				lv := context.Get(a)
+				if funcArgs != nil && funcArgs[i].Reference {
+					lv = ir.Pointer{lv}
+				}
+				argRegs = append(argRegs, lv)
+
 			}
-			argRegs = append(argRegs, lv)
 		case ast.FuncCall:
 			// a function call as a parameter to a function call in
 			// a return statement shouldn't be tail call optimized,
@@ -277,7 +317,8 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 				// First generate the LocalValue registers to ensure they're consecutive if there's a variable
 				// or some other expression in one of the literal pieces.
 				isSlice := false
-				if _, ok := s.Var.Typ.(ast.SliceType); ok {
+				var baseType ast.Type
+				if st, ok := s.Var.Typ.(ast.SliceType); ok {
 					// Move the size to the start of the slice.
 					isSlice = true
 					if lv, ok := reg.(ir.LocalValue); ok {
@@ -286,14 +327,18 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 							Src: ir.IntLiteral(len(v)),
 							Dst: lv,
 						})
+						context.values[s.Var] = lv
 					} else {
 						panic("Unexpected LocalValue")
 					}
+					baseType = st.Base
 				}
 
 				for i := range regs {
 					entryVar := ast.VarWithType{ast.Variable(fmt.Sprintf("%s[%d]", s.Var.Name, i)), ast.TypeLiteral(v[i].Type()), false}
-					if i == 0 && !isSlice {
+					if isSlice {
+						entryVar.Typ = baseType
+					} else if i == 0 { // && !isSlice
 						// Convert the type information for the first LocalValue allocated to match
 						// foo[0], not the (useless) defaults that foo generated, rather than allocating
 						// a new register.
@@ -404,7 +449,8 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 			case ast.ArrayLiteral:
 				regs := make([]ir.Register, len(v))
 				isSlice := false
-				if _, ok := s.Var.Typ.(ast.SliceType); ok {
+				var baseType ast.Type
+				if st, ok := s.Var.Typ.(ast.SliceType); ok {
 					// Move the size to the start of the slice.
 					isSlice = true
 					if lv, ok := reg.(ir.LocalValue); ok {
@@ -413,15 +459,19 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]ir.Opcode, er
 							Src: ir.IntLiteral(len(v)),
 							Dst: lv,
 						})
+						context.values[s.Var] = lv
 					} else {
 						panic("Unexpected LocalValue")
 					}
+					baseType = st.Base
 				}
 				// First generate the LocalValue registers to ensure they're consecutive if there's a variable
 				// or some other expression in one of the literal pieces.
 				for i := range regs {
 					entryVar := ast.VarWithType{ast.Variable(fmt.Sprintf("%s[%d]", s.Var.Name, i)), ast.TypeLiteral(v[i].Type()), false}
-					if i == 0 && !isSlice {
+					if isSlice {
+						entryVar.Typ = baseType
+					} else if i == 0 { // && !isSlice
 						// Convert the type information for the first LocalValue allocated to match
 						// foo[0], not the (useless) defaults that foo generated, rather than allocating
 						// a new register.

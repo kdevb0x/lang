@@ -26,6 +26,9 @@ type Amd64 struct {
 	// The number of arguments in the currently used function. Used for
 	// ToPhysical to calculate where local (non-parameter) variables start.
 	numArgs uint
+
+	// A mapping of ir.LocalValue IDs to the offset relative to FP in a function
+	lvOffsets map[uint]uint
 }
 
 func (a *amd64Registers) nextPhysicalRegister(r ir.Register, skipDX bool) (PhysicalRegister, error) {
@@ -85,6 +88,7 @@ func (a *amd64Registers) nextPhysicalRegister(r ir.Register, skipDX bool) (Physi
 	}
 	return "", fmt.Errorf("No physical registers available")
 }
+
 func (a *amd64Registers) tempPhysicalRegister(skipDX bool) (PhysicalRegister, error) {
 	// Avoids AX and BP, since AX is the return register and BP is the first
 	// argument to a function call.
@@ -207,7 +211,8 @@ func (a *Amd64) ToPhysical(r ir.Register, altform bool) PhysicalRegister {
 	case ir.FuncCallArg:
 		return PhysicalRegister(fmt.Sprintf("%d(SP)", 8*v.Id))
 	case ir.LocalValue:
-		return PhysicalRegister(fmt.Sprintf("%v+%d(FP)", v.String(), (int(v.Id)*8)+(int(a.numArgs)*8)))
+		return PhysicalRegister(fmt.Sprintf("%v+%d(FP)", v.String(), a.lvOffsets[v.Id]))
+		//return PhysicalRegister(fmt.Sprintf("%v+%d(FP)", v.String(), (int(v.Id)*8)+(int(a.numArgs)*8)))
 	case ir.FuncRetVal:
 		if v.Id == 0 {
 			return "AX"
@@ -355,6 +360,9 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 					panic(err)
 				}
 				suffix := a.opSuffix(arg.Size())
+				if _, ok := arg.(ir.Pointer); ok {
+					suffix = "Q"
+				}
 				v += fmt.Sprintf("\tMOV%v %v, %v\n\t", suffix, src, physArg)
 
 			default:

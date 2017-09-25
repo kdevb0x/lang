@@ -23,11 +23,17 @@ func BuildProgram(d string, src io.Reader) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
 	fmt.Fprintf(f, entrypoint+"\n")
 	fmt.Fprintf(f, exits+"\n")
+	fmt.Fprintf(f, write+"\n")
+	fmt.Fprintf(f, read+"\n")
+	fmt.Fprintf(f, open+"\n")
+	fmt.Fprintf(f, closestr+"\n")
+	fmt.Fprintf(f, createf+"\n", O_WRONLY|O_CREAT)
 	fmt.Fprintf(f, printstring+"\n")
+	fmt.Fprintf(f, printbyteslice+"\n")
 	fmt.Fprintf(f, printint+"\n")
+	f.Close()
 
 	f, err = os.Create(d + "/main.s")
 	if err != nil {

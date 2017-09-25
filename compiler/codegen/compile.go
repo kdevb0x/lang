@@ -14,8 +14,24 @@ func Compile(w io.Writer, f ir.Func) error {
 	printPragmas(w, f)
 	fmt.Fprintf(w, "TEXT %v(SB), 4+16, $%d\n", f.Name, reserveStackSize(f))
 	data := dataLiterals(w, f)
-	cpu := Amd64{stringLiterals: data, numArgs: f.NumArgs}
+	cpu := Amd64{stringLiterals: data, numArgs: f.NumArgs, lvOffsets: make(map[uint]uint)}
 	cpu.clearRegisterMapping(f)
+	// calculate the offsets of every local value
+	offset := uint(f.NumArgs * 8)
+	for _, op := range f.Body {
+		regs := op.Registers()
+		for _, r := range regs {
+			switch lv := r.(type) {
+			case ir.LocalValue:
+				_, ok := cpu.lvOffsets[lv.Id]
+				if !ok {
+					cpu.lvOffsets[lv.Id] = offset
+					offset += uint(lv.Size())
+				}
+			}
+		}
+
+	}
 	for i := range f.Body {
 		// For debugging, add a comment with the IR serialization
 		//fmt.Fprintf(w, "\t%s // %s", cpu.ConvertInstruction(i, f.Body), f.Body[i])

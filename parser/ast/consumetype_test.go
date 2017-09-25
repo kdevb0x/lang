@@ -24,7 +24,7 @@ func TestConsumeType(t *testing.T) {
 		tokens = stripWhitespace(tokens)
 
 		c := NewContext()
-		n, value, err := consumeType(0, tokens, c)
+		n, value, err := consumeType(0, tokens, &c)
 		if err != nil {
 			t.Fatal(err)
 		}
