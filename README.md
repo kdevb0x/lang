@@ -1,22 +1,44 @@
-This is just me playing around with creating a toy language, which I
-really have no business doing.
+# lang
 
-It's only online as a backup for myself.  Pay no attention to this
-repo.
+This is just me playing around with creating a toy language, which
+I really have no business doing.
 
-If you refuse to listen to the above and are curious about this
-language, see the `parser/sampleprograms` directory for simple
-programs that act as tests.  As currently written, they'll only
-compile under Plan9/AMD64, but it shouldn't be too much work to get
-the generated assembly files to compile with the Go tool chain instead
-of the Plan 9 C toolchain (it'll just result in much bigger binaries,
-since you can't tell Go to not link in the Go runtime.)
+The language is (crudely) specified in the LANG.md file. The
+`parser/sampleprograms` directory has a number of simple programs
+that act as tests, and aren't necessarily idiomatic programs, as
+they're mostly intended to catch regressions in the compiler.
 
-My main goal with this language is to have a simple, easy to use
-language with sum types, a strict delineation of pure and impure
-functions, and variables that are immutable by default, and then
-experimenting with whatever seems interesting from there.  (I plan on
-add compiler time evaluation for pure functions with known arguments
-and tail call optimization, too, but right now this code base doesn't
-even have the most basic of type systems or operator precedence.)
+The compiler will currently only work for the AMD64 architecture,
+and requires the Go toolchain to be installed (which isn't a high
+barrier, because the compiler itself is written in Go.) It currently
+supports Plan 9, DragonFlyBSD, Linux, and MacOS X.
 
+The code itself isn't terribly well written, because my initial
+plan was to quickly bootstrap a self-hosted compiler, but in
+retrospect that was probably too ambitious, so is a long way off
+and for now the reference compiler will remain in Go and needs some
+refactoring.
+
+The package `github.com/driusan/noruntime/runtime` is required in
+order to link a binary that doesn't include the overhead of the Go
+runtime.
+
+To install, run: 
+
+```
+go get github.com/driusan/noruntime/... 
+go get github.com/driusan/lang/...
+```
+
+Which will install a compiler named "l" into your `$GOBIN` directory.
+To invoke it, run "l" with no arguments. It'll concatenate all files
+with the `.l` extension in the current directory and compile them
+into a binary named after the directory.
+
+The compiler is very buggy. If (when) you encounter any crashes,
+or it compiles something that should be valid as per the language
+spec but crashes, please create a GitHub issue with a sample program.
+Ideally, your bug report should be small/short enough that it can
+be included as a regression in the `parser/sampleprograms` directory.
+(For now, the priority is to get all valid programs to compile
+before getting all invalid programs to be rejected.)
