@@ -97,6 +97,7 @@ TEXT PrintString(SB), 20, $24
 	CALL Write(SB)
 	RET
 `
+
 	slicelen = `
 TEXT len(SB), 20, $0-16
 	MOVQ len+0(FP), AX
