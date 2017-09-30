@@ -65,6 +65,113 @@ func TestCompileHelloWorld(t *testing.T) {
 	}
 }
 
+// Test that Create/Write work correctly. This isn't done as an Example test because we
+// need to know a little outside context (ie. what the current directory is, we also
+// need to be able to read the file from the test, to make sure it got written correctly
+// and cleaned up correctly.
+func TestCreateSyscall(t *testing.T) {
+	// We chdir below, defer a cleanup that resets it after the test finishes.
+	pwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func(pwd string) {
+		os.Chdir(pwd)
+	}(pwd)
+	// Inline the RunProgram call, because we want to cd to the directory so that the foo.txt
+	// file isn't created as garbage in the cwd..
+	dir, err := ioutil.TempDir("", "langtestCreateSyscall")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	exe, err := BuildProgram(dir, strings.NewReader(sampleprograms.CreateSyscall))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Make sure foo.txt gets created in dir, so that the defer cleans it up..
+	if err := os.Chdir(dir); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("./" + exe)
+	if _, err := cmd.Output(); err != nil {
+		t.Fatal(err)
+	}
+
+	content, err := ioutil.ReadFile("foo.txt")
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+
+	if string(content) != "Hello\n" {
+		t.Errorf("Unexpected content of file foo.txt: got %v want %v", string(content), "Hello\n")
+	}
+}
+
+// Test that Open/Readwork correctly. This isn't done as an Example test because we
+// need to know a little outside context (ie. what the current directory is, we also
+// need to be able to read the file from the test, to make sure it got written correctly
+// and cleaned up correctly.
+func TestReadSyscall(t *testing.T) {
+	// We chdir below, defer a cleanup that resets it after the test finishes.
+	pwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func(pwd string) {
+		os.Chdir(pwd)
+	}(pwd)
+	// Inline the RunProgram call, because we want to cd to the directory so that the foo.txt
+	// file isn't created as garbage in the cwd..
+	dir, err := ioutil.TempDir("", "langtestReadSyscall")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	// There's currently no way to define constants, no bitwise operations, and only decimal
+	// numbers, so modes and flags are hardcoded in decimal.
+	exe, err := BuildProgram(dir, strings.NewReader(sampleprograms.ReadSyscall))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Make sure foo.txt gets created in dir, so that the defer cleans it up..
+	if err := os.Chdir(dir); err != nil {
+		t.Fatal(err)
+	}
+	if err := ioutil.WriteFile("foo.txt", []byte("Hello, world!"), 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := exec.Command("./" + exe)
+
+	content, err := cmd.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(content) != "Hello," {
+		t.Errorf("Unexpected content of file foo.txt: got %v want %v", string(content), "Hello,")
+	}
+
+	// Run it again with different file content.
+	if err := ioutil.WriteFile("foo.txt", []byte("Goodbye"), 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd = exec.Command("./" + exe)
+
+	content, err = cmd.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(content) != "Goodby" {
+		t.Errorf("Unexpected content of file foo.txt: got %v want %v", string(content), "Goodby")
+	}
+}
+
 func ExampleCompileEmptyMain() {
 	if err := RunProgram("emptymain", sampleprograms.EmptyMain); err != nil {
 		fmt.Println(err.Error())
@@ -515,109 +622,16 @@ func ExampleWriteSyscall() {
 	// Output: Stdout!
 }
 
-// Test that Create/Write work correctly. This isn't done as an Example test because we
-// need to know a little outside context (ie. what the current directory is, we also
-// need to be able to read the file from the test, to make sure it got written correctly
-// and cleaned up correctly.
-func TestCreateSyscall(t *testing.T) {
-	// We chdir below, defer a cleanup that resets it after the test finishes.
-	pwd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
+func ExampleSliceLength() {
+	if err := RunProgram("slicelength", sampleprograms.SliceLength); err != nil {
+		fmt.Println(err.Error())
 	}
-	defer func(pwd string) {
-		os.Chdir(pwd)
-	}(pwd)
-	// Inline the RunProgram call, because we want to cd to the directory so that the foo.txt
-	// file isn't created as garbage in the cwd..
-	dir, err := ioutil.TempDir("", "langtestCreateSyscall")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
-
-	exe, err := BuildProgram(dir, strings.NewReader(sampleprograms.CreateSyscall))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Make sure foo.txt gets created in dir, so that the defer cleans it up..
-	if err := os.Chdir(dir); err != nil {
-		t.Fatal(err)
-	}
-	cmd := exec.Command("./" + exe)
-	if _, err := cmd.Output(); err != nil {
-		t.Fatal(err)
-	}
-
-	content, err := ioutil.ReadFile("foo.txt")
-	if err != nil {
-		t.Errorf("%v", err)
-	}
-
-	if string(content) != "Hello\n" {
-		t.Errorf("Unexpected content of file foo.txt: got %v want %v", string(content), "Hello\n")
-	}
+	// Output: 4
 }
 
-// Test that Open/Readwork correctly. This isn't done as an Example test because we
-// need to know a little outside context (ie. what the current directory is, we also
-// need to be able to read the file from the test, to make sure it got written correctly
-// and cleaned up correctly.
-func TestReadSyscall(t *testing.T) {
-	// We chdir below, defer a cleanup that resets it after the test finishes.
-	pwd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
+func ExampleSliceLength2() {
+	if err := RunProgram("slicelength2", sampleprograms.SliceLength2); err != nil {
+		fmt.Println(err.Error())
 	}
-	defer func(pwd string) {
-		os.Chdir(pwd)
-	}(pwd)
-	// Inline the RunProgram call, because we want to cd to the directory so that the foo.txt
-	// file isn't created as garbage in the cwd..
-	dir, err := ioutil.TempDir("", "langtestReadSyscall")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
-
-	// There's currently no way to define constants, no bitwise operations, and only decimal
-	// numbers, so modes and flags are hardcoded in decimal.
-	exe, err := BuildProgram(dir, strings.NewReader(sampleprograms.ReadSyscall))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Make sure foo.txt gets created in dir, so that the defer cleans it up..
-	if err := os.Chdir(dir); err != nil {
-		t.Fatal(err)
-	}
-	if err := ioutil.WriteFile("foo.txt", []byte("Hello, world!"), 0755); err != nil {
-		t.Fatal(err)
-	}
-
-	cmd := exec.Command("./" + exe)
-
-	content, err := cmd.Output()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(content) != "Hello," {
-		t.Errorf("Unexpected content of file foo.txt: got %v want %v", string(content), "Hello,")
-	}
-
-	// Run it again with different file content.
-	if err := ioutil.WriteFile("foo.txt", []byte("Goodbye"), 0755); err != nil {
-		t.Fatal(err)
-	}
-
-	cmd = exec.Command("./" + exe)
-
-	content, err = cmd.Output()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(content) != "Goodby" {
-		t.Errorf("Unexpected content of file foo.txt: got %v want %v", string(content), "Goodby")
-	}
+	// Output: 5
 }

@@ -83,14 +83,14 @@ func IsCompatibleType(t TypeDefn, v Value) error {
 		}
 
 		// Check if each element in te literal is compatible.
-		for _, el := range t2 {
-			if err := IsCompatibleType(TypeDefn{t.Name, el, nil}, el); err != nil {
-				return err
-			}
-		}
 		if st, ok := t.ConcreteType.(SliceType); ok {
 			// Fake an array type comparison instead of a slice type.
 			return IsCompatibleType(TypeDefn{t.Name, ArrayType{st.Base, IntLiteral(len(t2))}, nil}, v)
+		}
+		for _, el := range t2 { // t2=ArrayLiteral
+			if err := IsCompatibleType(TypeDefn{t.Name, el, nil}, el); err != nil {
+				return err
+			}
 		}
 		return nil
 	default:

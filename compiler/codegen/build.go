@@ -33,6 +33,7 @@ func BuildProgram(d string, src io.Reader) (string, error) {
 	fmt.Fprintf(f, printstring+"\n")
 	fmt.Fprintf(f, printbyteslice+"\n")
 	fmt.Fprintf(f, printint+"\n")
+	fmt.Fprintf(f, slicelen+"\n")
 	f.Close()
 
 	f, err = os.Create(d + "/main.s")

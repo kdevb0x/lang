@@ -3428,3 +3428,61 @@ func TestReadSyscall(t *testing.T) {
 	}
 
 }
+
+func TestSliceLength(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.SliceLength))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Node{
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					LetStmt{
+						Var: VarWithType{
+							"x",
+							SliceType{TypeLiteral("string")},
+							false,
+						},
+						Value: ArrayLiteral{
+							StringLiteral("3"),
+							StringLiteral("foo"),
+							StringLiteral("hello"),
+							StringLiteral("world"),
+						},
+					},
+					FuncCall{
+						Name: "PrintInt",
+						UserArgs: []Value{
+							FuncCall{
+								Name: "len",
+								UserArgs: []Value{
+									VarWithType{
+										"x",
+										SliceType{TypeLiteral("string")},
+										false,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("let statement (%d): got %v want %v", i, ast[i], v)
+		}
+	}
+
+}

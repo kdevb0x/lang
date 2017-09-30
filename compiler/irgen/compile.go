@@ -1001,8 +1001,7 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]ir.Opcode, ir.Regi
 		ops = append(ops, ir.Label(cname+"done"))
 
 		return ops, a, nil
-
-	case ast.VarWithType, ast.IntLiteral, ast.BoolLiteral, ast.EnumOption:
+	case ast.VarWithType, ast.IntLiteral, ast.BoolLiteral, ast.EnumOption, ast.StringLiteral:
 		return nil, getRegister(s, context), nil
 	default:
 		panic(fmt.Errorf("Unhandled value type: %v", reflect.TypeOf(s)))

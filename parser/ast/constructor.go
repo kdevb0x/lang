@@ -43,6 +43,18 @@ func NewContext() Context {
 					{"slice", SliceType{TypeLiteral("byte")}, false},
 				},
 			},
+			"len": FuncDecl{
+				Name: "len",
+				Args: []VarWithType{
+					// FIXME: This should be any slice, not just string slices, but
+					// string slices take priority until there's some sort of generic func
+					// decl, because they're passed to main..
+					{"slice", SliceType{TypeLiteral("string")}, false},
+				},
+				Return: []VarWithType{
+					{"", TypeLiteral("uint64"), false},
+				},
+			},
 			// FIXME: These should be moved out of the compiler
 			// and into a standard library, once enough of the
 			// compiler is implemented to have a standard
