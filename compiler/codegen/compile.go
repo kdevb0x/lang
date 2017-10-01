@@ -8,6 +8,8 @@ import (
 	"github.com/driusan/lang/compiler/ir"
 )
 
+var debug bool = false
+
 // Compile takes an AST and writes the assembly that it compiles to to
 // w.
 func Compile(w io.Writer, f ir.Func) error {
@@ -34,8 +36,11 @@ func Compile(w io.Writer, f ir.Func) error {
 	}
 	for i := range f.Body {
 		// For debugging, add a comment with the IR serialization
-		//fmt.Fprintf(w, "\t%s // %s", cpu.ConvertInstruction(i, f.Body), f.Body[i])
-		fmt.Fprintf(w, "\t%s\n", cpu.ConvertInstruction(i, f.Body))
+		if debug {
+			fmt.Fprintf(w, "\t%s // %s", cpu.ConvertInstruction(i, f.Body), f.Body[i])
+		} else {
+			fmt.Fprintf(w, "\t%s\n", cpu.ConvertInstruction(i, f.Body))
+		}
 	}
 	if len(f.Body) == 0 || f.Body[len(f.Body)-1] != (ir.RET{}) {
 		fmt.Fprintf(w, "\tRET\n")

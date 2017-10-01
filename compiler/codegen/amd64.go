@@ -275,13 +275,25 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 		return o.String()
 	case ir.MOV:
 		returning := false
-		if _, ok := o.Dst.(ir.FuncRetVal); ok {
-			returning = true
-		}
-		dst := a.ToPhysical(o.Dst, true)
 		v := ""
+		var src, dst PhysicalRegister
+		switch o.Dst.(type) {
+		case ir.FuncRetVal:
+			returning = true
+			dst = a.ToPhysical(o.Dst, true)
+		case ir.TempValue:
+			d, err := a.getPhysicalRegister(o.Dst)
+			if err != nil {
+				d, err = a.nextPhysicalRegister(o.Dst, false)
+				if err != nil {
+					panic(err)
+				}
+			}
+			dst = d
+		default:
+			dst = a.ToPhysical(o.Dst, true)
+		}
 
-		var src PhysicalRegister
 		switch val := o.Src.(type) {
 		case ir.LocalValue, ir.FuncRetVal, ir.FuncArg, ir.StringLiteral, ir.Pointer:
 			// First check if the arg is already in a register.
@@ -296,6 +308,12 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 			}
 			suffix := a.opSuffix(val.Size())
 			v += fmt.Sprintf("\tMOV%v %v, %v\n\t", suffix, a.ToPhysical(val, returning), src)
+		case ir.TempValue:
+			var err error
+			src, err = a.getPhysicalRegister(val)
+			if err != nil {
+				panic(err)
+			}
 		default:
 			src = a.ToPhysical(val, returning)
 		}
@@ -346,10 +364,11 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 				fa = a.ToPhysical(ir.FuncCallArg{i, ast.TypeInfo{arg.Size(), arg.Signed()}}, true)
 			}
 			var physArg PhysicalRegister
-			src := a.ToPhysical(arg, false)
+			var src PhysicalRegister
 			switch arg.(type) {
 			case ir.LocalValue, ir.StringLiteral, ir.FuncArg, ir.Pointer:
 				// First check if the arg is already in a register.
+				src = a.ToPhysical(arg, false)
 				r, err := a.getPhysicalRegister(arg)
 				if err == nil {
 					physArg = r
@@ -364,7 +383,12 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 					suffix = "Q"
 				}
 				v += fmt.Sprintf("\tMOV%v %v, %v\n\t", suffix, src, physArg)
-
+			case ir.TempValue:
+				r, err := a.getPhysicalRegister(arg)
+				if err != nil {
+					panic(err)
+				}
+				physArg = r
 			default:
 				physArg = a.ToPhysical(arg, true)
 			}
@@ -417,6 +441,8 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 				panic(err)
 			}
 			v += fmt.Sprintf("\tMOVQ %v, %v\n\t", a.ToPhysical(val, false), src)
+		case ir.TempValue:
+			src, err = a.getPhysicalRegister(val)
 		default:
 			src = a.ToPhysical(val, false)
 		}
@@ -429,22 +455,47 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 			// Subtracting 0 from something is stupid.
 			return ""
 		} else if o.Src == ir.IntLiteral(1) {
-			return fmt.Sprintf("DECQ %v", a.ToPhysical(o.Dst, false))
+			if dst, err := a.getPhysicalRegister(o.Dst); err == nil {
+				return fmt.Sprintf("DECQ %v", dst)
+			}
+			//return fmt.Sprintf("DECQ %v", a.ToPhysical(o.Dst, false))
 		} else if o.Src == ir.IntLiteral(-1) {
-			return fmt.Sprintf("INCQ %v", a.ToPhysical(o.Dst, false))
+			if dst, err := a.getPhysicalRegister(o.Dst); err == nil {
+				return fmt.Sprintf("INCQ %v", dst)
+			}
 		}
 		// Normal subtraction.
 		// FIXME: This is only required if o.Right isn't really a register,
-		// but a fake register like "$15". This also should have a better
-		// way to keep track of what the register is and delete it.
-		r, err := a.nextPhysicalRegister(ir.FuncArg{9999, ast.TypeInfo{8, true}, false}, true)
+		// but a fake register like "$15".
+		r, err := a.tempPhysicalRegister(true)
 		if err != nil {
 			panic(err)
 		}
 
-		v := fmt.Sprintf("MOVQ %v, %v\n\t", a.ToPhysical(o.Src, false), r)
-
-		return v + fmt.Sprintf("SUBQ %v, %v", r, a.ToPhysical(o.Dst, false))
+		v := ""
+		switch o.Src.(type) {
+		case ir.TempValue:
+			src, err := a.getPhysicalRegister(o.Src)
+			if err != nil {
+				panic(err)
+			}
+			v += fmt.Sprintf("MOVQ %v, %v\n\t", src, r)
+		default:
+			v += fmt.Sprintf("MOVQ %v, %v\n\t", a.ToPhysical(o.Src, false), r)
+		}
+		switch o.Dst.(type) {
+		case ir.TempValue:
+			dst, err := a.getPhysicalRegister(o.Dst)
+			if err != nil {
+				dst, err = a.nextPhysicalRegister(o.Dst, false)
+				if err != nil {
+					panic(err)
+				}
+			}
+			return v + fmt.Sprintf("SUBQ %v, %v", r, dst)
+		default:
+			return v + fmt.Sprintf("SUBQ %v, %v", r, a.ToPhysical(o.Dst, false))
+		}
 	case ir.MOD:
 		v := ""
 		// DIV clobbers DX with the result of the MOD, so if there's
@@ -463,16 +514,24 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 		v += fmt.Sprintf("MOVQ %v, AX // %v\n\t", a.ToPhysical(o.Left, false), o.Left)
 
 		// FIXME: This is only required if o.Right isn't really a register,
-		// but a fake register like "$15". This also should have a better
-		// way to keep track of what the register is and delete it.
-		r, err := a.nextPhysicalRegister(ir.FuncArg{9999, ast.TypeInfo{8, true}, false}, true)
+		// but a fake register like "$15".
+		r, err := a.tempPhysicalRegister(true)
 		if err != nil {
 			panic(err)
 		}
 
 		v += fmt.Sprintf("MOVQ %v, %v\n\t", a.ToPhysical(o.Right, false), r)
 		v += fmt.Sprintf("IDIVQ %v\n\t", r)
-		v += fmt.Sprintf("MOVQ DX, %v", a.ToPhysical(o.Dst, false))
+		switch o.Dst.(type) {
+		case ir.TempValue:
+			r, err = a.nextPhysicalRegister(o.Dst, false)
+			if err != nil {
+				panic(err)
+			}
+			v += fmt.Sprintf("MOVQ DX, %v", r)
+		default:
+			v += fmt.Sprintf("MOVQ DX, %v", a.ToPhysical(o.Dst, false))
+		}
 		if popdx {
 			v += "\n\tPOPQ DX"
 		}
@@ -498,16 +557,24 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 		v += fmt.Sprintf("MOVQ %v, AX // %v\n\t", a.ToPhysical(o.Left, false), o.Left)
 
 		// FIXME: This is only required if o.Right isn't really a register,
-		// but a fake register like "$15". This also should have a better
-		// way to keep track of what the register is and delete it.
-		r, err := a.nextPhysicalRegister(ir.FuncArg{9999, ast.TypeInfo{8, true}, false}, true)
+		// but a fake register like "$15".
+		r, err := a.tempPhysicalRegister(true)
 		if err != nil {
 			panic(err)
 		}
 
 		v += fmt.Sprintf("MOVQ %v, %v\n\t", a.ToPhysical(o.Right, false), r)
 		v += fmt.Sprintf("IDIVQ %v\n\t", r)
-		v += fmt.Sprintf("MOVQ AX, %v", a.ToPhysical(o.Dst, false))
+		switch o.Dst.(type) {
+		case ir.TempValue:
+			dst, err := a.nextPhysicalRegister(o.Dst, false)
+			if err != nil {
+				panic(err)
+			}
+			v += fmt.Sprintf("MOVQ AX, %v", dst)
+		default:
+			v += fmt.Sprintf("MOVQ AX, %v", a.ToPhysical(o.Dst, false))
+		}
 		if popdx {
 			v += "\n\tPOPQ DX"
 		}
@@ -533,16 +600,24 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 		v += fmt.Sprintf("MOVQ %v, AX // %v\n\t", a.ToPhysical(o.Left, false), o.Left)
 
 		// FIXME: This is only required if o.Right isn't really a register,
-		// but a fake register like "$15". This also should have a better
-		// way to keep track of what the register is and delete it.
-		r, err := a.nextPhysicalRegister(ir.FuncArg{9999, ast.TypeInfo{8, true}, false}, true)
+		// but a fake register like "$15".
+		r, err := a.tempPhysicalRegister(true)
 		if err != nil {
 			panic(err)
 		}
 
 		v += fmt.Sprintf("MOVQ %v, %v\n\t", a.ToPhysical(o.Right, false), r)
 		v += fmt.Sprintf("MULQ %v\n\t", r)
-		v += fmt.Sprintf("MOVQ AX, %v", a.ToPhysical(o.Dst, false))
+		switch o.Dst.(type) {
+		case ir.TempValue:
+			dst, err := a.nextPhysicalRegister(o.Dst, false)
+			if err != nil {
+				panic(err)
+			}
+			v += fmt.Sprintf("MOVQ AX, %v", dst)
+		default:
+			v += fmt.Sprintf("MOVQ AX, %v", a.ToPhysical(o.Dst, false))
+		}
 		if popdx {
 			v += "\n\tPOPQ DX"
 		}
@@ -553,54 +628,51 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 	case ir.JMP:
 		return fmt.Sprintf("JMP %v", o.Label.Inline())
 	case ir.JE:
-		// FIXME: Only required if both src and dst are not really registers
-		src, err := a.tempPhysicalRegister(false)
-		if err != nil {
-			panic(err)
-		}
-		v := fmt.Sprintf("MOVQ %v, %v", a.ToPhysical(o.Src, false), src)
-		return v + fmt.Sprintf("\n\tCMPQ %v, %v\n\tJE %v", src, a.ToPhysical(o.Dst, false), o.Label.Inline())
+		return a.cJmpIR("JE", o.ConditionalJump)
 	case ir.JL:
-		// FIXME: Only required if both src and dst are not really registers
-		src, err := a.tempPhysicalRegister(false)
-		if err != nil {
-			panic(err)
-		}
-		v := fmt.Sprintf("MOVQ %v, %v", a.ToPhysical(o.Src, false), src)
-		return v + fmt.Sprintf("\n\tCMPQ %v, %v\n\tJL %v", src, a.ToPhysical(o.Dst, false), o.Label.Inline())
+		return a.cJmpIR("JL", o.ConditionalJump)
 	case ir.JLE:
-		// FIXME: Only required if both src and dst are not really registers
-		src, err := a.tempPhysicalRegister(false)
-		if err != nil {
-			panic(err)
-		}
-		v := fmt.Sprintf("MOVQ %v, %v", a.ToPhysical(o.Src, false), src)
-		return v + fmt.Sprintf("\n\tCMPQ %v, %v\n\tJLE %v", src, a.ToPhysical(o.Dst, false), o.Label.Inline())
+		return a.cJmpIR("JLE", o.ConditionalJump)
 	case ir.JNE:
-		// FIXME: Only required if both src and dst are not really registers
-		src, err := a.tempPhysicalRegister(false)
-		if err != nil {
-			panic(err)
-		}
-		v := fmt.Sprintf("MOVQ %v, %v", a.ToPhysical(o.Src, false), src)
-		return v + fmt.Sprintf("\n\tCMPQ %v, %v\n\tJNE %v", src, a.ToPhysical(o.Dst, false), o.Label.Inline())
+		return a.cJmpIR("JNE", o.ConditionalJump)
 	case ir.JGE:
-		// FIXME: Only required if both src and dst are not really registers
-		src, err := a.tempPhysicalRegister(false)
-		if err != nil {
-			panic(err)
-		}
-		v := fmt.Sprintf("MOVQ %v, %v", a.ToPhysical(o.Src, false), src)
-		return v + fmt.Sprintf("\n\tCMPQ %v, %v\n\tJGE %v", src, a.ToPhysical(o.Dst, false), o.Label.Inline())
+		return a.cJmpIR("JGE", o.ConditionalJump)
 	case ir.JG:
-		// FIXME: Only required if both src and dst are not really registers
-		src, err := a.tempPhysicalRegister(false)
-		if err != nil {
-			panic(err)
-		}
-		v := fmt.Sprintf("MOVQ %v, %v", a.ToPhysical(o.Src, false), src)
-		return v + fmt.Sprintf("\n\tCMPQ %v, %v\n\tJG %v", src, a.ToPhysical(o.Dst, false), o.Label.Inline())
+		return a.cJmpIR("JG", o.ConditionalJump)
 	default:
 		panic(fmt.Sprintf("Unhandled instruction in AMD64 code generation %v", reflect.TypeOf(o)))
+	}
+}
+
+func (a Amd64) cJmpIR(op string, o ir.ConditionalJump) string {
+	switch o.Src.(type) {
+	case ir.TempValue:
+		src, err := a.getPhysicalRegister(o.Src)
+		if err != nil {
+			panic(err)
+		}
+		return fmt.Sprintf("\n\tCMPQ %v, %v\n\t%v %v", src, a.ToPhysical(o.Dst, false), op, o.Label.Inline())
+	default:
+		src, err := a.tempPhysicalRegister(false)
+		if err != nil {
+			panic(err)
+		}
+		switch o.Dst.(type) {
+		case ir.TempValue:
+			dst, err := a.getPhysicalRegister(o.Dst)
+			if err != nil {
+				dst, err = a.nextPhysicalRegister(o.Dst, false)
+				if err != nil {
+					panic(err)
+				}
+			}
+			// FIXME: Only required if both src and dst are not really registers.
+			v := fmt.Sprintf("MOVQ %v, %v", a.ToPhysical(o.Src, false), src)
+			return v + fmt.Sprintf("\n\tCMPQ %v, %v\n\t%v %v", src, dst, op, o.Label.Inline())
+		default:
+			// FIXME: Only required if both src and dst are not really registers
+			v := fmt.Sprintf("MOVQ %v, %v", a.ToPhysical(o.Src, false), src)
+			return v + fmt.Sprintf("\n\tCMPQ %v, %v\n\t%v %v", src, a.ToPhysical(o.Dst, false), op, o.Label.Inline())
+		}
 	}
 }

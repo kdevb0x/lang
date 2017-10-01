@@ -10,6 +10,7 @@ import (
 type variableLayout struct {
 	values     map[ast.VarWithType]Register
 	tempVars   int
+	tempRegs   uint
 	typeinfo   ast.TypeInformation
 	funcargs   []ast.VarWithType
 	rettypes   []ast.TypeInfo
@@ -26,6 +27,12 @@ func (c variableLayout) GetTypeInfo(t string) ast.TypeInfo {
 }
 func (c variableLayout) GetReturnTypeInfo(v uint) ast.TypeInfo {
 	return c.rettypes[v]
+}
+
+func (c *variableLayout) NextTempRegister() Register {
+	r := TempValue(c.tempRegs)
+	c.tempRegs++
+	return r
 }
 
 // Reserves the next available register for varname

@@ -19,7 +19,7 @@ func RunProgram(name, p string) error {
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(dir)
+	//	defer os.RemoveAll(dir)
 	exe, err := BuildProgram(dir, strings.NewReader(p))
 	if err != nil {
 		return err

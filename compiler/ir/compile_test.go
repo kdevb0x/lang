@@ -309,34 +309,34 @@ func TestIRGenMutAddition(t *testing.T) {
 		},
 		ADD{
 			Src: LocalValue{0, ast.TypeInfo{8, true}},
-			Dst: LocalValue{2, ast.TypeInfo{8, true}},
+			Dst: TempValue(0),
 		},
 		ADD{
 			Src: IntLiteral(1),
-			Dst: LocalValue{2, ast.TypeInfo{8, true}},
+			Dst: TempValue(0),
 		},
 		MOV{
-			Src: LocalValue{2, ast.TypeInfo{8, true}},
+			Src: TempValue(0),
 			Dst: LocalValue{1, ast.TypeInfo{8, true}},
 		},
 		ADD{
 			Src: LocalValue{0, ast.TypeInfo{8, true}},
-			Dst: LocalValue{3, ast.TypeInfo{8, true}},
+			Dst: TempValue(1),
 		},
 		ADD{
 			Src: LocalValue{1, ast.TypeInfo{8, true}},
-			Dst: LocalValue{4, ast.TypeInfo{8, true}},
+			Dst: TempValue(2),
 		},
 		ADD{
 			Src: IntLiteral(1),
-			Dst: LocalValue{4, ast.TypeInfo{8, true}},
+			Dst: TempValue(2),
 		},
 		ADD{
-			Src: LocalValue{4, ast.TypeInfo{8, true}},
-			Dst: LocalValue{3, ast.TypeInfo{8, true}},
+			Src: TempValue(2),
+			Dst: TempValue(1),
 		},
 		MOV{
-			Src: LocalValue{3, ast.TypeInfo{8, true}},
+			Src: TempValue(1),
 			Dst: LocalValue{0, ast.TypeInfo{8, true}},
 		},
 		CALL{FName: "PrintInt", Args: []Register{
@@ -442,26 +442,26 @@ func TestIRGenSumToTen(t *testing.T) {
 		},
 		ADD{
 			Src: LocalValue{1, ast.TypeInfo{8, true}},
-			Dst: LocalValue{2, ast.TypeInfo{8, true}},
+			Dst: TempValue(0),
 		},
 		ADD{
 			Src: LocalValue{0, ast.TypeInfo{8, true}},
-			Dst: LocalValue{2, ast.TypeInfo{8, true}},
+			Dst: TempValue(0),
 		},
 		MOV{
-			Src: LocalValue{2, ast.TypeInfo{8, true}},
+			Src: TempValue(0),
 			Dst: LocalValue{1, ast.TypeInfo{8, true}},
 		},
 		MOV{
 			Src: LocalValue{0, ast.TypeInfo{8, true}},
-			Dst: LocalValue{3, ast.TypeInfo{8, true}},
+			Dst: TempValue(1),
 		},
 		SUB{
 			Src: IntLiteral(1),
-			Dst: LocalValue{3, ast.TypeInfo{8, true}},
+			Dst: TempValue(1),
 		},
 		MOV{
-			Src: LocalValue{3, ast.TypeInfo{8, true}},
+			Src: TempValue(1),
 			Dst: LocalValue{0, ast.TypeInfo{8, true}},
 		},
 		JMP{"loop0cond"},
@@ -572,25 +572,25 @@ func TestIRGenSumToTenRecursive(t *testing.T) {
 		Label("if1elsedone"),
 		ADD{
 			Src: FuncArg{0, ast.TypeInfo{8, true}, false},
-			Dst: LocalValue{0, ast.TypeInfo{8, true}},
+			Dst: TempValue(0),
 		},
 		ADD{
 			Src: FuncArg{1, ast.TypeInfo{8, true}, false},
-			Dst: LocalValue{0, ast.TypeInfo{8, true}},
+			Dst: TempValue(0),
 		},
 		MOV{
 			Src: FuncArg{1, ast.TypeInfo{8, true}, false},
-			Dst: LocalValue{1, ast.TypeInfo{8, true}},
+			Dst: TempValue(1),
 		},
 		SUB{
 			Src: IntLiteral(1),
-			Dst: LocalValue{1, ast.TypeInfo{8, true}},
+			Dst: TempValue(1),
 		},
 		CALL{
 			FName: "partial_sum",
 			Args: []Register{
-				LocalValue{0, ast.TypeInfo{8, true}},
-				LocalValue{1, ast.TypeInfo{8, true}},
+				TempValue(0),
+				TempValue(1),
 			},
 			TailCall: true,
 		},
@@ -651,18 +651,18 @@ func TestIRGenFizzBuzz(t *testing.T) {
 		MOV{Src: IntLiteral(1), Dst: LocalValue{1, ast.TypeInfo{8, true}}},
 		Label("loop2cond"),
 		JE{ConditionalJump{Label: "loop2end", Src: LocalValue{0, ast.TypeInfo{1, false}}, Dst: IntLiteral(1)}},
-		MOD{Left: LocalValue{1, ast.TypeInfo{8, true}}, Right: IntLiteral(15), Dst: LocalValue{2, ast.TypeInfo{8, true}}},
-		JNE{ConditionalJump{Label: "if3else", Src: LocalValue{2, ast.TypeInfo{8, true}}, Dst: IntLiteral(0)}},
+		MOD{Left: LocalValue{1, ast.TypeInfo{8, true}}, Right: IntLiteral(15), Dst: TempValue(0)},
+		JNE{ConditionalJump{Label: "if3else", Src: TempValue(0), Dst: IntLiteral(0)}},
 		CALL{FName: "PrintString", Args: []Register{StringLiteral(`fizzbuzz`)}},
 		JMP{"if3elsedone"},
 		Label("if3else"),
-		MOD{Left: LocalValue{1, ast.TypeInfo{8, true}}, Right: IntLiteral(5), Dst: LocalValue{3, ast.TypeInfo{8, true}}},
-		JNE{ConditionalJump{Label: "if4else", Src: LocalValue{3, ast.TypeInfo{8, true}}, Dst: IntLiteral(0)}},
+		MOD{Left: LocalValue{1, ast.TypeInfo{8, true}}, Right: IntLiteral(5), Dst: TempValue(1)},
+		JNE{ConditionalJump{Label: "if4else", Src: TempValue(1), Dst: IntLiteral(0)}},
 		CALL{FName: "PrintString", Args: []Register{StringLiteral(`buzz`)}},
 		JMP{"if4elsedone"},
 		Label("if4else"),
-		MOD{Left: LocalValue{1, ast.TypeInfo{8, true}}, Right: IntLiteral(3), Dst: LocalValue{4, ast.TypeInfo{8, true}}},
-		JNE{ConditionalJump{Label: "if5else", Src: LocalValue{4, ast.TypeInfo{8, true}}, Dst: IntLiteral(0)}},
+		MOD{Left: LocalValue{1, ast.TypeInfo{8, true}}, Right: IntLiteral(3), Dst: TempValue(2)},
+		JNE{ConditionalJump{Label: "if5else", Src: TempValue(2), Dst: IntLiteral(0)}},
 		CALL{FName: "PrintString", Args: []Register{StringLiteral(`fizz`)}},
 		JMP{"if5elsedone"},
 		Label("if5else"),
@@ -671,9 +671,9 @@ func TestIRGenFizzBuzz(t *testing.T) {
 		Label("if4elsedone"),
 		Label("if3elsedone"),
 		CALL{FName: "PrintString", Args: []Register{StringLiteral(`\n`)}},
-		ADD{Src: LocalValue{1, ast.TypeInfo{8, true}}, Dst: LocalValue{5, ast.TypeInfo{8, true}}},
-		ADD{Src: IntLiteral(1), Dst: LocalValue{5, ast.TypeInfo{8, true}}},
-		MOV{Src: LocalValue{5, ast.TypeInfo{8, true}}, Dst: LocalValue{1, ast.TypeInfo{8, true}}},
+		ADD{Src: LocalValue{1, ast.TypeInfo{8, true}}, Dst: TempValue(3)},
+		ADD{Src: IntLiteral(1), Dst: TempValue(3)},
+		MOV{Src: TempValue(3), Dst: LocalValue{1, ast.TypeInfo{8, true}}},
 		JL{ConditionalJump{Label: Label("if6else"), Src: LocalValue{1, ast.TypeInfo{8, true}}, Dst: IntLiteral(100)}},
 		MOV{Src: IntLiteral(1), Dst: LocalValue{0, ast.TypeInfo{1, false}}},
 		JMP{"if6elsedone"},
@@ -709,73 +709,72 @@ func TestIRGenSomeMathStatement(t *testing.T) {
 	expected := []Opcode{
 		ADD{
 			Src: IntLiteral(1),
-			Dst: LocalValue{1, ast.TypeInfo{8, true}},
+			Dst: TempValue(0),
 		},
 		ADD{
 			Src: IntLiteral(2),
-			Dst: LocalValue{1, ast.TypeInfo{8, true}},
+			Dst: TempValue(0),
 		},
 		MOV{
-			Src: LocalValue{1, ast.TypeInfo{8, true}},
+			Src: TempValue(0),
 			Dst: LocalValue{0, ast.TypeInfo{8, true}},
 		},
 
 		MOV{
 			Src: IntLiteral(1),
-			Dst: LocalValue{3, ast.TypeInfo{8, true}},
+			Dst: TempValue(1),
 		},
 		SUB{
 			Src: IntLiteral(2),
-			Dst: LocalValue{3, ast.TypeInfo{8, true}},
+			Dst: TempValue(1),
 		},
 		MOV{
-			Src: LocalValue{3, ast.TypeInfo{8, true}},
-			Dst: LocalValue{2, ast.TypeInfo{8, true}},
+			Src: TempValue(1),
+			Dst: LocalValue{1, ast.TypeInfo{8, true}},
 		},
-
 		MUL{
 			Left:  IntLiteral(2),
 			Right: IntLiteral(3),
-			Dst:   LocalValue{5, ast.TypeInfo{8, true}},
+			Dst:   TempValue(2),
 		},
 		MOV{
-			Src: LocalValue{5, ast.TypeInfo{8, true}},
-			Dst: LocalValue{4, ast.TypeInfo{8, true}},
+			Src: TempValue(2),
+			Dst: LocalValue{2, ast.TypeInfo{8, true}},
 		},
 		DIV{
 			Left:  IntLiteral(6),
 			Right: IntLiteral(2),
-			Dst:   LocalValue{7, ast.TypeInfo{8, true}},
+			Dst:   TempValue(3),
 		},
 		MOV{
-			Src: LocalValue{7, ast.TypeInfo{8, true}},
-			Dst: LocalValue{6, ast.TypeInfo{8, true}},
+			Src: TempValue(3),
+			Dst: LocalValue{3, ast.TypeInfo{8, true}},
 		},
 		ADD{
 			Src: IntLiteral(1),
-			Dst: LocalValue{9, ast.TypeInfo{8, true}},
+			Dst: TempValue(4),
 		},
 		MUL{
 			Left:  IntLiteral(2),
 			Right: IntLiteral(3),
-			Dst:   LocalValue{11, ast.TypeInfo{8, true}},
+			Dst:   TempValue(6),
 		},
 		DIV{
 			Left:  IntLiteral(4),
 			Right: IntLiteral(2),
-			Dst:   LocalValue{12, ast.TypeInfo{8, true}},
+			Dst:   TempValue(7),
 		},
 		SUB{
-			Src: LocalValue{12, ast.TypeInfo{8, true}},
-			Dst: LocalValue{11, ast.TypeInfo{8, true}},
+			Src: TempValue(7),
+			Dst: TempValue(6),
 		},
 		ADD{
-			Src: LocalValue{11, ast.TypeInfo{8, true}},
-			Dst: LocalValue{9, ast.TypeInfo{8, true}},
+			Src: TempValue(6),
+			Dst: TempValue(4),
 		},
 		MOV{
-			Src: LocalValue{9, ast.TypeInfo{8, true}},
-			Dst: LocalValue{8, ast.TypeInfo{8, true}},
+			Src: TempValue(4),
+			Dst: LocalValue{4, ast.TypeInfo{8, true}},
 		},
 		CALL{FName: "PrintString", Args: []Register{
 			StringLiteral(`Add: `),
@@ -795,7 +794,7 @@ func TestIRGenSomeMathStatement(t *testing.T) {
 		},
 		},
 		CALL{FName: "PrintInt", Args: []Register{
-			LocalValue{2, ast.TypeInfo{8, true}},
+			LocalValue{1, ast.TypeInfo{8, true}},
 		},
 		},
 		CALL{FName: "PrintString", Args: []Register{
@@ -808,7 +807,7 @@ func TestIRGenSomeMathStatement(t *testing.T) {
 		},
 		},
 		CALL{FName: "PrintInt", Args: []Register{
-			LocalValue{4, ast.TypeInfo{8, true}},
+			LocalValue{2, ast.TypeInfo{8, true}},
 		},
 		},
 		CALL{FName: "PrintString", Args: []Register{
@@ -821,7 +820,7 @@ func TestIRGenSomeMathStatement(t *testing.T) {
 		},
 		},
 		CALL{FName: "PrintInt", Args: []Register{
-			LocalValue{6, ast.TypeInfo{8, true}},
+			LocalValue{3, ast.TypeInfo{8, true}},
 		},
 		},
 		CALL{FName: "PrintString", Args: []Register{
@@ -834,7 +833,7 @@ func TestIRGenSomeMathStatement(t *testing.T) {
 		},
 		},
 		CALL{FName: "PrintInt", Args: []Register{
-			LocalValue{8, ast.TypeInfo{8, true}},
+			LocalValue{4, ast.TypeInfo{8, true}},
 		},
 		},
 		CALL{FName: "PrintString", Args: []Register{
@@ -1176,14 +1175,14 @@ func TestIRGenFibonacci(t *testing.T) {
 	expected := []Opcode{
 		ADD{
 			Src: FuncArg{0, ast.TypeInfo{8, false}, false},
-			Dst: LocalValue{1, ast.TypeInfo{8, false}},
+			Dst: TempValue(0),
 		},
 		ADD{
 			Src: FuncArg{1, ast.TypeInfo{8, false}, false},
-			Dst: LocalValue{1, ast.TypeInfo{8, false}},
+			Dst: TempValue(0),
 		},
 		MOV{
-			Src: LocalValue{1, ast.TypeInfo{8, false}},
+			Src: TempValue(0),
 			Dst: LocalValue{0, ast.TypeInfo{8, false}},
 		},
 		JL{ConditionalJump{Label: "if0else", Src: LocalValue{0, ast.TypeInfo{8, false}}, Dst: IntLiteral(200)}},
@@ -1569,10 +1568,10 @@ func TestIRSimpleAlgorithm(t *testing.T) {
 		MUL{
 			Left:  FuncArg{0, ast.TypeInfo{8, true}, false},
 			Right: IntLiteral(2),
-			Dst:   LocalValue{3, ast.TypeInfo{8, true}},
+			Dst:   TempValue(0),
 		},
 		MOV{
-			Src: LocalValue{3, ast.TypeInfo{8, true}},
+			Src: TempValue(0),
 			Dst: LocalValue{2, ast.TypeInfo{8, true}},
 		},
 		MOV{
@@ -1583,24 +1582,24 @@ func TestIRSimpleAlgorithm(t *testing.T) {
 		JGE{
 			ConditionalJump{Label: Label("loop0end"), Src: LocalValue{1, ast.TypeInfo{8, true}}, Dst: LocalValue{2, ast.TypeInfo{8, true}}},
 		},
-		MOD{Left: LocalValue{1, ast.TypeInfo{8, true}}, Right: IntLiteral(2), Dst: LocalValue{4, ast.TypeInfo{8, true}}},
+		MOD{Left: LocalValue{1, ast.TypeInfo{8, true}}, Right: IntLiteral(2), Dst: TempValue(1)},
 		JNE{
-			ConditionalJump{Label: Label("if1else"), Src: LocalValue{4, ast.TypeInfo{8, true}}, Dst: IntLiteral(0)},
+			ConditionalJump{Label: Label("if1else"), Src: TempValue(1), Dst: IntLiteral(0)},
 		},
-		ADD{Src: LocalValue{0, ast.TypeInfo{8, true}}, Dst: LocalValue{5, ast.TypeInfo{8, true}}},
+		ADD{Src: LocalValue{0, ast.TypeInfo{8, true}}, Dst: TempValue(2)},
 		MUL{
 			Left:  LocalValue{1, ast.TypeInfo{8, true}},
 			Right: IntLiteral(2),
-			Dst:   LocalValue{6, ast.TypeInfo{8, true}},
+			Dst:   TempValue(3),
 		},
-		ADD{Src: LocalValue{6, ast.TypeInfo{8, true}}, Dst: LocalValue{5, ast.TypeInfo{8, true}}},
-		MOV{Src: LocalValue{5, ast.TypeInfo{8, true}}, Dst: LocalValue{0, ast.TypeInfo{8, true}}},
+		ADD{Src: TempValue(3), Dst: TempValue(2)},
+		MOV{Src: TempValue(2), Dst: LocalValue{0, ast.TypeInfo{8, true}}},
 		JMP{"if1elsedone"},
 		Label("if1else"),
 		Label("if1elsedone"),
-		ADD{Src: LocalValue{1, ast.TypeInfo{8, true}}, Dst: LocalValue{7, ast.TypeInfo{8, true}}},
-		ADD{Src: IntLiteral(1), Dst: LocalValue{7, ast.TypeInfo{8, true}}},
-		MOV{Src: LocalValue{7, ast.TypeInfo{8, true}}, Dst: LocalValue{1, ast.TypeInfo{8, true}}},
+		ADD{Src: LocalValue{1, ast.TypeInfo{8, true}}, Dst: TempValue(4)},
+		ADD{Src: IntLiteral(1), Dst: TempValue(4)},
+		MOV{Src: TempValue(4), Dst: LocalValue{1, ast.TypeInfo{8, true}}},
 		JMP{"loop0cond"},
 		Label("loop0end"),
 		MOV{Src: LocalValue{0, ast.TypeInfo{8, true}}, Dst: FuncRetVal{0, ast.TypeInfo{8, true}}},
@@ -1763,14 +1762,14 @@ func TestIRReferenceVariable(t *testing.T) {
 		},
 		ADD{
 			Src: FuncArg{0, ast.TypeInfo{8, true}, true},
-			Dst: LocalValue{0, ast.TypeInfo{8, true}},
+			Dst: TempValue(0),
 		},
 		ADD{
 			Src: FuncArg{1, ast.TypeInfo{8, true}, false},
-			Dst: LocalValue{0, ast.TypeInfo{8, true}},
+			Dst: TempValue(0),
 		},
 		MOV{
-			Src: LocalValue{0, ast.TypeInfo{8, true}},
+			Src: TempValue(0),
 			Dst: FuncRetVal{0, ast.TypeInfo{8, true}},
 		},
 		RET{},
@@ -2143,6 +2142,130 @@ func TestIRReadSyscall(t *testing.T) {
 				LocalValue{0, ast.TypeInfo{8, false}},
 			},
 		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestIRIfElseMatch(t *testing.T) {
+	loopNum = 0
+	as, ti, c, err := ast.Parse(sampleprograms.IfElseMatch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		MOV{
+			Src: IntLiteral(3),
+			Dst: LocalValue{0, ast.TypeInfo{8, true}},
+		},
+		JGE{
+			ConditionalJump{
+				"comparison1false",
+				LocalValue{0, ast.TypeInfo{8, true}},
+				IntLiteral(3),
+			},
+		},
+		MOV{
+			Src: IntLiteral(1),
+			Dst: TempValue(0),
+		},
+		JMP{"comparison1done"},
+		Label("comparison1false"),
+		MOV{
+			Src: IntLiteral(0),
+			Dst: TempValue(0),
+		},
+		Label("comparison1done"),
+		JE{
+			ConditionalJump{
+				"match0v0",
+				IntLiteral(1),
+				TempValue(0),
+			},
+		},
+		JLE{
+			ConditionalJump{
+				"comparison2false",
+				LocalValue{0, ast.TypeInfo{8, true}},
+				IntLiteral(3),
+			},
+		},
+		MOV{
+			Src: IntLiteral(1),
+			Dst: TempValue(1),
+		},
+		JMP{"comparison2done"},
+		Label("comparison2false"),
+		MOV{
+			Src: IntLiteral(0),
+			Dst: TempValue(1),
+		},
+		Label("comparison2done"),
+		JE{
+			ConditionalJump{
+				"match0v1",
+				IntLiteral(1),
+				TempValue(1),
+			},
+		},
+		JGE{
+			ConditionalJump{
+				"comparison3false",
+				LocalValue{0, ast.TypeInfo{8, true}},
+				IntLiteral(4),
+			},
+		},
+		MOV{
+			Src: IntLiteral(1),
+			Dst: TempValue(2),
+		},
+		JMP{"comparison3done"},
+		Label("comparison3false"),
+		MOV{
+			Src: IntLiteral(0),
+			Dst: TempValue(2),
+		},
+		Label("comparison3done"),
+		JE{
+			ConditionalJump{
+				"match0v2",
+				IntLiteral(1),
+				TempValue(2),
+			},
+		},
+		JMP{"match0done"},
+		Label("match0v0"),
+		CALL{
+			FName: "PrintString",
+			Args: []Register{
+				StringLiteral(`x is less than 3\n`),
+			},
+		},
+		JMP{"match0done"},
+		Label("match0v1"),
+		CALL{
+			FName: "PrintString",
+			Args: []Register{
+				StringLiteral(`x is greater than 3\n`),
+			},
+		},
+		JMP{"match0done"},
+		Label("match0v2"),
+		CALL{
+			FName: "PrintString",
+			Args: []Register{
+				StringLiteral(`x is less than 4\n`),
+			},
+		},
+		JMP{"match0done"},
+		Label("match0done"),
 	}
 
 	if err := compareIR(i.Body, expected); err != nil {

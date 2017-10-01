@@ -104,6 +104,38 @@ func (lv LocalValue) Signed() bool {
 	return lv.Info.Signed
 }
 
+// A TempValue is for a temporary calculation. It lives in a register,
+// but never makes it to the stack. It's mostly for intermediate calculations
+// such as the "x + 1" in "let y = x + 1"
+type TempValue uint
+
+func (lv TempValue) String() string {
+	return fmt.Sprintf("TV%d", lv)
+}
+
+func (lv TempValue) Size() int {
+	return 8
+}
+
+func (lv TempValue) Signed() bool {
+	return true
+}
+
+// An unsigned TempValue
+type UTempValue uint
+
+func (lv UTempValue) String() string {
+	return fmt.Sprintf("TV%d", lv)
+}
+
+func (lv UTempValue) Size() int {
+	return 8
+}
+
+func (lv UTempValue) Signed() bool {
+	return false
+}
+
 type IntLiteral int
 
 func (il IntLiteral) String() string {

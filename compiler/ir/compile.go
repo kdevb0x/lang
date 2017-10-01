@@ -16,6 +16,7 @@ func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callabl
 	context := &variableLayout{
 		make(map[ast.VarWithType]Register),
 		0,
+		0,
 		typeInfo,
 		nil,
 		nil,
@@ -637,7 +638,6 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 					default:
 						panic(fmt.Sprintf("Expected enumeration to be a local variable or function argument: got %v", reflect.TypeOf(vreg)))
 					}
-
 				}
 				body, err := compileBlock(s.Cases[i].Body, context)
 				if err != nil {
@@ -795,18 +795,9 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, Register, 
 	var ops []Opcode
 	switch s := val.(type) {
 	case ast.AdditionOperator:
-		a := context.NextLocalRegister(ast.VarWithType{"", ast.TypeLiteral("int"), false})
-		switch v := s.Left.(type) {
-		case ast.VarWithType:
-			lv := a.(LocalValue)
-			lv.Info = context.GetTypeInfo(v.Type())
-			a = lv
-
-			ops = append(ops, ADD{
-				Src: getRegister(s.Left, context),
-				Dst: a,
-			})
-		case ast.IntLiteral:
+		a := context.NextTempRegister()
+		switch s.Left.(type) {
+		case ast.VarWithType, ast.IntLiteral:
 			ops = append(ops, ADD{
 				Src: getRegister(s.Left, context),
 				Dst: a,
@@ -844,18 +835,9 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, Register, 
 		})
 		return ops, a, nil
 	case ast.SubtractionOperator:
-		a := context.NextLocalRegister(ast.VarWithType{"", ast.TypeLiteral("int"), false})
-		switch v := s.Left.(type) {
-		case ast.VarWithType:
-			lv := a.(LocalValue)
-			lv.Info = context.GetTypeInfo(v.Type())
-			a = lv
-
-			ops = append(ops, MOV{
-				Src: getRegister(s.Left, context),
-				Dst: a,
-			})
-		case ast.IntLiteral:
+		a := context.NextTempRegister()
+		switch s.Left.(type) {
+		case ast.VarWithType, ast.IntLiteral:
 			ops = append(ops, MOV{
 				Src: getRegister(s.Left, context),
 				Dst: a,
@@ -903,8 +885,7 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, Register, 
 			return nil, nil, err
 		}
 
-		// FIXME: This shouldn't hard code int.
-		a := context.NextLocalRegister(ast.VarWithType{"", ast.TypeLiteral("int"), false})
+		a := context.NextTempRegister()
 		ops = append(ops, bodyb...)
 		ops = append(ops, MOD{
 			Left:  ra,
@@ -913,8 +894,7 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, Register, 
 		})
 		return ops, a, nil
 	case ast.MulOperator:
-		// FIXME: This shouldn't hard code int.
-		a := context.NextLocalRegister(ast.VarWithType{"", ast.TypeLiteral("int"), false})
+		a := context.NextTempRegister()
 		var l, r Register
 		switch s.Left.(type) {
 		case ast.IntLiteral, ast.VarWithType:
@@ -941,8 +921,7 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, Register, 
 		})
 		return ops, a, nil
 	case ast.DivOperator:
-		// FIXME: This shouldn't hardcode int
-		a := context.NextLocalRegister(ast.VarWithType{"", ast.TypeLiteral("int"), false})
+		a := context.NextTempRegister()
 		var l, r Register
 		switch s.Left.(type) {
 		case ast.IntLiteral, ast.VarWithType:
@@ -977,7 +956,7 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, Register, 
 		cname := Label(fmt.Sprintf("comparison%d", loopNum))
 		loopNum++
 
-		a := context.NextLocalRegister(ast.VarWithType{"", ast.TypeLiteral("int"), false})
+		a := context.NextTempRegister()
 		bv, ok := s.(ast.BoolValue)
 		if !ok {
 			panic("Comparison operator doesn't implement BoolValue")
