@@ -17,7 +17,7 @@ func Compile(w io.Writer, f ir.Func) error {
 	fmt.Fprintf(w, "TEXT %v(SB), 4+16, $%d\n", f.Name, reserveStackSize(f))
 	data := dataLiterals(w, f)
 	cpu := Amd64{stringLiterals: data, numArgs: f.NumArgs, lvOffsets: make(map[uint]uint)}
-	cpu.clearRegisterMapping(f)
+	cpu.clearRegisterMapping()
 	// calculate the offsets of every local value
 	offset := uint(f.NumArgs * 8)
 	for _, op := range f.Body {

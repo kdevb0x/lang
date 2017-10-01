@@ -19,7 +19,9 @@ func RunProgram(name, p string) error {
 	if err != nil {
 		return err
 	}
-	//	defer os.RemoveAll(dir)
+	if !debug {
+		defer os.RemoveAll(dir)
+	}
 	exe, err := BuildProgram(dir, strings.NewReader(p))
 	if err != nil {
 		return err
@@ -31,6 +33,9 @@ func RunProgram(name, p string) error {
 }
 
 func TestCompileHelloWorld(t *testing.T) {
+	if debug {
+		t.Fatal("Can not run helloworld test in debug mode.")
+	}
 	prgAst, types, callables, err := ast.Parse(sampleprograms.HelloWorld)
 	if err != nil {
 		t.Fatal(err)
@@ -634,4 +639,12 @@ func ExampleSliceLength2() {
 		fmt.Println(err.Error())
 	}
 	// Output: 5
+}
+
+func ExampleArrayIndex() {
+	if err := RunProgram("arrayindex", sampleprograms.ArrayIndex); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: 4
+	// 5
 }

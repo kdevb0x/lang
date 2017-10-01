@@ -1671,7 +1671,10 @@ func TestIRSimpleArray(t *testing.T) {
 		CALL{
 			FName: "PrintInt",
 			Args: []Register{
-				LocalValue{3, ast.TypeInfo{8, true}},
+				Offset{
+					Base:   LocalValue{0, ast.TypeInfo{8, true}},
+					Offset: IntLiteral(3 * 8),
+				},
 			},
 		},
 	}
@@ -1716,25 +1719,40 @@ func TestIRArrayMutation(t *testing.T) {
 		CALL{
 			FName: "PrintInt",
 			Args: []Register{
-				LocalValue{3, ast.TypeInfo{8, true}},
+				Offset{
+					Base:   LocalValue{0, ast.TypeInfo{8, true}},
+					Offset: IntLiteral(24),
+				},
 			},
 		},
 		CALL{FName: "PrintString", Args: []Register{StringLiteral(`\n`)}},
 		MOV{
 			Src: IntLiteral(2),
 			Dst: LocalValue{3, ast.TypeInfo{8, true}},
+			// FIXME: This should be
+			//	Dst:Offset{
+			//		Base: LocalValue{0, ast.TypeInfo{8, true}},
+			//		Offset: IntLiteral(24),
+			//	},
+			// But for now they evaluate to the same address ..
 		},
 		CALL{
 			FName: "PrintInt",
 			Args: []Register{
-				LocalValue{3, ast.TypeInfo{8, true}},
+				Offset{
+					Base:   LocalValue{0, ast.TypeInfo{8, true}},
+					Offset: IntLiteral(24),
+				},
 			},
 		},
 		CALL{FName: "PrintString", Args: []Register{StringLiteral(`\n`)}},
 		CALL{
 			FName: "PrintInt",
 			Args: []Register{
-				LocalValue{2, ast.TypeInfo{8, true}},
+				Offset{
+					Base:   LocalValue{0, ast.TypeInfo{8, true}},
+					Offset: IntLiteral(16),
+				},
 			},
 		},
 	}
@@ -1848,7 +1866,10 @@ func TestIRSimpleSlice(t *testing.T) {
 		CALL{
 			FName: "PrintInt",
 			Args: []Register{
-				LocalValue{4, ast.TypeInfo{8, true}},
+				Offset{
+					Offset: IntLiteral(24),
+					Base:   LocalValue{1, ast.TypeInfo{8, true}},
+				},
 			},
 		},
 	}
@@ -1897,7 +1918,10 @@ func TestIRSimpleSliceInference(t *testing.T) {
 		CALL{
 			FName: "PrintInt",
 			Args: []Register{
-				LocalValue{4, ast.TypeInfo{8, true}},
+				Offset{
+					Offset: IntLiteral(24),
+					Base:   LocalValue{1, ast.TypeInfo{8, true}},
+				},
 			},
 		},
 	}
@@ -1946,25 +1970,40 @@ func TestIRSimpleSliceMutation(t *testing.T) {
 		CALL{
 			FName: "PrintInt",
 			Args: []Register{
-				LocalValue{4, ast.TypeInfo{8, true}},
+				Offset{
+					Base:   LocalValue{1, ast.TypeInfo{8, true}},
+					Offset: IntLiteral(24),
+				},
 			},
 		},
 		CALL{FName: "PrintString", Args: []Register{StringLiteral(`\n`)}},
 		MOV{
 			Src: IntLiteral(2),
-			Dst: LocalValue{4, ast.TypeInfo{8, true}},
+				Dst:   LocalValue{4, ast.TypeInfo{8, true}},
+				/* FIXME: This should be:
+				but they're the same value, so it doesn't really matter for now
+			Dst: Offset{
+				Base:   LocalValue{1, ast.TypeInfo{8, true}},
+				Offset: IntLiteral(24),
+			},*/
 		},
 		CALL{
 			FName: "PrintInt",
 			Args: []Register{
-				LocalValue{4, ast.TypeInfo{8, true}},
+				Offset{
+					Base:   LocalValue{1, ast.TypeInfo{8, true}},
+					Offset: IntLiteral(24),
+				},
 			},
 		},
 		CALL{FName: "PrintString", Args: []Register{StringLiteral(`\n`)}},
 		CALL{
 			FName: "PrintInt",
 			Args: []Register{
-				LocalValue{3, ast.TypeInfo{8, true}},
+				Offset{
+					Base:   LocalValue{1, ast.TypeInfo{8, true}},
+					Offset: IntLiteral(16),
+				},
 			},
 		},
 	}
@@ -2266,6 +2305,201 @@ func TestIRIfElseMatch(t *testing.T) {
 		},
 		JMP{"match0done"},
 		Label("match0done"),
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+/*
+func TestIREcho(t *testing.T) {
+	loopNum = 0
+	as, ti, c, err := ast.Parse(sampleprograms.Echo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		MOV{
+			Src: IntLiteral(1),
+			Dst: LocalValue{0, ast.TypeInfo{8, true}},
+		},
+		CALL{
+			FName: "len",
+			Args: []Register{
+				FuncArg{0, ast.TypeInfo{8, false}, false},
+				FuncArg{1, ast.TypeInfo{8, false}, false},
+			},
+		},
+		MOV{
+			Src: FuncRetVal{0, ast.TypeInfo{8, false}},
+			Dst: LocalValue{1, ast.TypeInfo{8, false}},
+		},
+		Label("loop0cond"),
+		JGE{
+			ConditionalJump{Label: Label("loop0end"), Src: LocalValue{0, ast.TypeInfo{8, true}}, Dst: LocalValue{1, ast.TypeInfo{8, false}}},
+		},
+		MUL{
+			Left:  IntLiteral(8),
+			Right: LocalValue{1, ast.TypeInfo{8, true}},
+			Dst:   LocalValue{2, ast.TypeInfo{8, true}},
+		},
+		CALL{
+			FName: "PrintString",
+			Args: []Register{
+				FuncArg{1, ast.TypeInfo{0, false}, false},
+				Offset{
+					Offset: LocalValue{2, ast.TypeInfo{8, true}},
+					Base:   FuncArg{1, ast.TypeInfo{8, false}, false},
+				},
+			},
+		},
+		ADD{
+			Src: LocalValue{0, ast.TypeInfo{8, true}},
+			Dst: LocalValue{3, ast.TypeInfo{8, true}},
+		},
+		ADD{
+			Src: IntLiteral(1),
+			Dst: LocalValue{3, ast.TypeInfo{8, true}},
+		},
+		MOV{
+			Src: LocalValue{3, ast.TypeInfo{8, true}},
+			Dst: LocalValue{0, ast.TypeInfo{8, true}},
+		},
+		JE{
+			ConditionalJump{Label: Label("if1else"), Src: LocalValue{0, ast.TypeInfo{8, true}}, Dst: LocalValue{1, ast.TypeInfo{8, false}}},
+		},
+		CALL{
+			FName: "PrintString",
+			Args: []Register{
+				StringLiteral(" "),
+			},
+		},
+		JMP{"if1elsedone"},
+		Label("if1else"),
+		Label("if1elsedone"),
+		JMP{"loop0cond"},
+		Label("loop0end"),
+		CALL{
+			FName: "PrintString",
+			Args: []Register{
+				StringLiteral(`\n`),
+			},
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+*/
+
+func TestArrayIndex(t *testing.T) {
+	loopNum = 0
+	as, ti, c, err := ast.Parse(sampleprograms.ArrayIndex)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		// let x = 3
+		MOV{
+			Src: IntLiteral(3),
+			Dst: LocalValue{0, ast.TypeInfo{8, true}},
+		},
+		// Let statement
+		MOV{
+			Src: IntLiteral(1),
+			Dst: LocalValue{1, ast.TypeInfo{8, true}},
+		},
+		MOV{
+			Src: IntLiteral(2),
+			Dst: LocalValue{2, ast.TypeInfo{8, true}},
+		},
+		MOV{
+			Src: IntLiteral(3),
+			Dst: LocalValue{3, ast.TypeInfo{8, true}},
+		},
+		MOV{
+			Src: IntLiteral(4),
+			Dst: LocalValue{4, ast.TypeInfo{8, true}},
+		},
+		MOV{
+			Src: IntLiteral(5),
+			Dst: LocalValue{5, ast.TypeInfo{8, true}},
+		},
+		// mutable statement
+		MOV{
+			Src: IntLiteral(1),
+			Dst: LocalValue{6, ast.TypeInfo{8, true}},
+		},
+		MOV{
+			Src: IntLiteral(2),
+			Dst: LocalValue{7, ast.TypeInfo{8, true}},
+		},
+		MOV{
+			Src: IntLiteral(3),
+			Dst: LocalValue{8, ast.TypeInfo{8, true}},
+		},
+		MOV{
+			Src: IntLiteral(4),
+			Dst: LocalValue{9, ast.TypeInfo{8, true}},
+		},
+		MOV{
+			Src: IntLiteral(5),
+			Dst: LocalValue{10, ast.TypeInfo{8, true}},
+		},
+		// Convert index from index into byte offset
+		MUL{
+			Left:  IntLiteral(8),
+			Right: LocalValue{0, ast.TypeInfo{8, true}},
+			Dst:   LocalValue{11, ast.TypeInfo{8, true}},
+		},
+		CALL{
+			FName: "PrintInt",
+			Args: []Register{
+				Offset{
+					Base:   LocalValue{1, ast.TypeInfo{8, true}},
+					Offset: LocalValue{11, ast.TypeInfo{8, true}},
+				},
+			},
+		},
+		CALL{
+			FName: "PrintString",
+			Args:  []Register{StringLiteral(`\n`)},
+		},
+		// Convert x+1 offset from index into byte offset
+		ADD{
+			Src: LocalValue{0, ast.TypeInfo{8, true}},
+			Dst: TempValue(0),
+		},
+		ADD{
+			Src: IntLiteral(1),
+			Dst: TempValue(0),
+		},
+		MUL{
+			Left:  IntLiteral(8),
+			Right: TempValue(0),
+			Dst:   LocalValue{12, ast.TypeInfo{8, true}},
+		},
+		CALL{
+			FName: "PrintInt",
+			Args: []Register{
+				Offset{
+					Base:   LocalValue{6, ast.TypeInfo{8, true}},
+					Offset: LocalValue{12, ast.TypeInfo{8, true}},
+				},
+			},
+		},
 	}
 
 	if err := compareIR(i.Body, expected); err != nil {

@@ -345,15 +345,15 @@ func consumeValue(start int, tokens []token.Token, c *Context) (int, Value, erro
 					if tokens[i+2+n] != token.Char("]") {
 						return 0, nil, fmt.Errorf("Invalid index")
 					}
-					idx, ok := index.(IntLiteral)
+					/*idx, ok := index.(IntLiteral)
 					if !ok {
 						return 0, nil, fmt.Errorf("Only literal indexes are currently supported :(")
-					}
+					}*/
 					base, ok := partial.(VarWithType)
 					if !ok {
 						return 0, nil, fmt.Errorf("Can only index on variables")
 					}
-					av := ArrayValue{base, idx}
+					av := ArrayValue{base /* idx */, index}
 
 					return i + 3 - start + n, av, nil
 				default:

@@ -1,12 +1,16 @@
 (Note: If you've stumbled across this file, it will likely only make sense to @driusan. Ask if you're curious
 about something.)
 
+# Bugfix TODOs
+- `proc main(args []string) ()` should work
+- len should work on all slice types, and arrays, and strings
+
 # New features TODOs
 
+- Implement multiple dispatch
 - Implement "import" / package namespaces
 	- refactor builtins into separate standard library package
 - Casting (Syntax: `cast(val) as type`)
-- Implement multiple dispatch
 - Compile time evaluation of pure functions with constant arguments
 
 # Other TODOs

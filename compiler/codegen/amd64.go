@@ -178,20 +178,14 @@ func (a amd64Registers) getPhysicalRegisterInternal(r ir.Register) (PhysicalRegi
 	}
 	return "", fmt.Errorf("Register not mapped")
 }
-func (a *amd64Registers) clearRegisterMapping(f ir.Func) {
+func (a *amd64Registers) clearRegisterMapping() {
 	a.ax = nil
 	a.bx = nil
 	a.cx = nil
 	a.dx = nil
 	a.si = nil
 	a.di = nil
-	if f.NumArgs != 0 {
-		// FIXME: This shouldn't make assumptions about the type in
-		// arg 0.
-		a.bp = ir.FuncArg{0, ast.TypeInfo{8, true}, false}
-	} else {
-		a.bp = nil
-	}
+	a.bp = nil
 	a.r8 = nil
 	a.r9 = nil
 	a.r10 = nil
@@ -248,6 +242,10 @@ func (a *Amd64) ToPhysical(r ir.Register, altform bool) PhysicalRegister {
 		default:
 			panic("Not implemented")
 		}
+	case ir.Offset:
+		// Returns the address of the base of the offset. It needs to be manually indexed into
+		// whereever this is called from..
+		return PhysicalRegister(fmt.Sprintf("%v", a.ToPhysical(v.Base, false)))
 	default:
 		panic(fmt.Sprintf("Unhandled register type %v", reflect.TypeOf(v)))
 	}
@@ -331,6 +329,13 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 			} else {
 				v += fmt.Sprintf("MOV%v %v, %v", a.opSuffix(o.Src.Size()), src, dst)
 			}
+		case ir.LocalValue:
+			v += fmt.Sprintf("MOV%v %v, %v", a.opSuffix(o.Src.Size()), src, dst)
+			if phys := a.ToPhysical(o.Dst, false); dst != phys {
+				// dst is a physical register, so also save the value in the canonical
+				// memory location in case someone else looks it up there..
+				v += fmt.Sprintf("MOV%v %v, %v", a.opSuffix(o.Dst.Size()), dst, phys)
+			}
 		default:
 			v += fmt.Sprintf("MOV%v %v, %v", a.opSuffix(o.Src.Size()), src, dst)
 		}
@@ -365,7 +370,7 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 			}
 			var physArg PhysicalRegister
 			var src PhysicalRegister
-			switch arg.(type) {
+			switch val := arg.(type) {
 			case ir.LocalValue, ir.StringLiteral, ir.FuncArg, ir.Pointer:
 				// First check if the arg is already in a register.
 				src = a.ToPhysical(arg, false)
@@ -389,6 +394,51 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 					panic(err)
 				}
 				physArg = r
+			case ir.Offset:
+				src = a.ToPhysical(arg, false)
+				r, err := a.getPhysicalRegister(val)
+				if err == nil {
+					physArg = r
+					break
+				}
+
+				physArg, err = a.nextPhysicalRegister(arg, false)
+				if err != nil {
+					panic(err)
+				}
+
+				switch val.Offset.(type) {
+				case ir.IntLiteral:
+					baseAddr, err := a.tempPhysicalRegister(false)
+					if err != nil {
+						panic(err)
+					}
+					// Move the base address to a register.
+					v += fmt.Sprintf("\tMOVQ $%v, %v\n\t", src, baseAddr)
+					// Offset
+					v += fmt.Sprintf("\tMOVQ %d(%v), %v\n\t", val.Offset, baseAddr, physArg)
+				case ir.LocalValue, ir.FuncArg:
+					// Get the offset from memory into a register
+					offr, err := a.getPhysicalRegister(val.Offset)
+					if err != nil {
+						offr, err = a.nextPhysicalRegister(arg, false)
+						if err != nil {
+							panic(err)
+						}
+						v += fmt.Sprintf("\tMOVQ %v, %v\n\t", a.ToPhysical(val.Offset, false), offr)
+					}
+
+					/*baseAddr, err := a.tempPhysicalRegister(false)
+					if err != nil {
+						panic(err)
+					}*/
+					// Move the base address to a register.
+					//v += fmt.Sprintf("\tMOVQ %v, %v\n\t", src, baseAddr)
+					// Offset from base into a physical register
+					v += fmt.Sprintf("\tMOVQ %v(%v*1), %v\n\t", src, offr, physArg)
+				default:
+					panic(fmt.Sprintf("Unhandled offset type %v", reflect.TypeOf(val.Offset)))
+				}
 			default:
 				physArg = a.ToPhysical(arg, true)
 			}
@@ -411,7 +461,11 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 			v += fmt.Sprintf("MOVQ $%v+14(SB), %v\n\t", o.FName, tmp)
 			return v + fmt.Sprintf("JMP %v", tmp)
 		}
-		return v + fmt.Sprintf("CALL %v+0(SB)", o.FName)
+		v += fmt.Sprintf("CALL %v+0(SB)", o.FName)
+		// The call likely screwed up all the registers that we knew about, so reset our
+		// representation of them to fresh..
+		a.clearRegisterMapping()
+		return v
 	case ir.RET:
 		return fmt.Sprintf("RET")
 	case ir.ADD:
@@ -447,8 +501,19 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 			src = a.ToPhysical(val, false)
 		}
 
-		v += fmt.Sprintf("ADDQ %v, %v", src, dst)
-		return v
+		switch o.Dst.(type) {
+		case ir.TempValue:
+			dst, err := a.getPhysicalRegister(o.Dst)
+			if err != nil {
+				dst, err = a.nextPhysicalRegister(o.Dst, false)
+				if err != nil {
+					panic(err)
+				}
+			}
+			return v + fmt.Sprintf("ADDQ %v, %v", src, dst)
+		default:
+			return v + fmt.Sprintf("ADDQ %v, %v", src, a.ToPhysical(o.Dst, false))
+		}
 	case ir.SUB:
 		// Special cases: 1, 0, and -1
 		if o.Src == ir.IntLiteral(0) {
@@ -596,8 +661,11 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 			v += "PUSHQ DX\n\t"
 			popdx = true
 		}
-		//		v += "MOVQ $0, DX\n\t"
-		v += fmt.Sprintf("MOVQ %v, AX // %v\n\t", a.ToPhysical(o.Left, false), o.Left)
+		l, err := a.getPhysicalRegister(o.Left)
+		if err != nil {
+			l = a.ToPhysical(o.Left, false)
+		}
+		v += fmt.Sprintf("MOVQ %v, AX // %v\n\t", l, o.Left)
 
 		// FIXME: This is only required if o.Right isn't really a register,
 		// but a fake register like "$15".
@@ -606,13 +674,20 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 			panic(err)
 		}
 
-		v += fmt.Sprintf("MOVQ %v, %v\n\t", a.ToPhysical(o.Right, false), r)
+		rt, err := a.getPhysicalRegister(o.Right)
+		if err != nil {
+			rt = a.ToPhysical(o.Right, false)
+		}
+		v += fmt.Sprintf("MOVQ %v, %v\n\t", rt, r)
 		v += fmt.Sprintf("MULQ %v\n\t", r)
 		switch o.Dst.(type) {
 		case ir.TempValue:
-			dst, err := a.nextPhysicalRegister(o.Dst, false)
+			dst, err := a.getPhysicalRegister(o.Dst)
 			if err != nil {
-				panic(err)
+				dst, err = a.nextPhysicalRegister(o.Dst, false)
+				if err != nil {
+					panic(err)
+				}
 			}
 			v += fmt.Sprintf("MOVQ AX, %v", dst)
 		default:

@@ -5,6 +5,8 @@ import (
 	"github.com/driusan/lang/parser/ast"
 )
 
+var debug = false
+
 type Func struct {
 	Name    string
 	Body    []Opcode
@@ -44,8 +46,10 @@ type FuncRetVal struct {
 }
 
 func (fa FuncRetVal) String() string {
+	if debug {
+		return fmt.Sprintf("FR%d (%v)", fa.Id, fa.Info)
+	}
 	return fmt.Sprintf("FR%d", fa.Id)
-	//	return fmt.Sprintf("FR%d (%v)", fa.Id, fa.Info)
 }
 
 func (fa FuncRetVal) Size() int {
@@ -65,8 +69,10 @@ type FuncArg struct {
 }
 
 func (fa FuncArg) String() string {
+	if debug {
+		return fmt.Sprintf("P%d (%v)", fa.Id, fa.Info)
+	}
 	return fmt.Sprintf("P%d", fa.Id)
-	//return fmt.Sprintf("P%d (%v)", fa.Id, fa.Info)
 
 }
 
@@ -92,8 +98,10 @@ type LocalValue struct {
 }
 
 func (lv LocalValue) String() string {
+	if debug {
+		return fmt.Sprintf("LV%d (%v)", lv.Id, lv.Info)
+	}
 	return fmt.Sprintf("LV%d", lv.Id)
-	// return fmt.Sprintf("LV%d (%v)", lv.Id, lv.Info)
 }
 
 func (lv LocalValue) Size() int {
@@ -162,4 +170,25 @@ func (sl StringLiteral) Size() int {
 }
 func (l StringLiteral) Signed() bool {
 	return false
+}
+
+// An Offset denotes a memory location which is offset from a base address.
+// This is primarily for indexing into slices or arrays.
+type Offset struct {
+	// The register holding the offset from the base in bytes.
+	Offset Register
+	// The register holding the base address to be offset from.
+	Base Register
+}
+
+func (o Offset) Signed() bool {
+	return false
+}
+
+func (o Offset) Size() int {
+	return 0
+}
+
+func (o Offset) String() string {
+	return fmt.Sprintf("&(%v+%v)", o.Base, o.Offset)
 }
