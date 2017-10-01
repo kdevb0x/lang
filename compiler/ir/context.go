@@ -1,15 +1,14 @@
-package irgen
+package ir
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/driusan/lang/compiler/ir"
 	"github.com/driusan/lang/parser/ast"
 )
 
 type variableLayout struct {
-	values     map[ast.VarWithType]ir.Register
+	values     map[ast.VarWithType]Register
 	tempVars   int
 	typeinfo   ast.TypeInformation
 	funcargs   []ast.VarWithType
@@ -30,7 +29,7 @@ func (c variableLayout) GetReturnTypeInfo(v uint) ast.TypeInfo {
 }
 
 // Reserves the next available register for varname
-func (c *variableLayout) NextLocalRegister(varname ast.VarWithType) ir.Register {
+func (c *variableLayout) NextLocalRegister(varname ast.VarWithType) Register {
 	if varname.Type() == "" {
 		panic("No type for variable " + varname.Name + ".")
 	}
@@ -40,14 +39,14 @@ func (c *variableLayout) NextLocalRegister(varname ast.VarWithType) ir.Register 
 
 	if varname.Name == "" {
 		c.tempVars++
-		return ir.LocalValue{uint(len(c.values) + c.tempVars - 1), ti[firstType]}
+		return LocalValue{uint(len(c.values) + c.tempVars - 1), ti[firstType]}
 	}
 
 	// If this variable is shadowing another variable, increase tempVars to
 	// make sure the next calls increment the LocalVariable number and don't
 	// reuse the same variable.
 	_, postInc := c.values[varname]
-	c.values[varname] = ir.LocalValue{uint(len(c.values) + c.tempVars), ti[firstType]}
+	c.values[varname] = LocalValue{uint(len(c.values) + c.tempVars), ti[firstType]}
 	if postInc {
 		c.tempVars++
 	}
@@ -56,21 +55,21 @@ func (c *variableLayout) NextLocalRegister(varname ast.VarWithType) ir.Register 
 
 // Reserves a register for a function parameter. This must be done for every
 // parameter, before any LocalRegister calls are made.
-func (c *variableLayout) FuncParamRegister(varname ast.VarWithType, i int) ir.Register {
+func (c *variableLayout) FuncParamRegister(varname ast.VarWithType, i int) Register {
 	c.tempVars--
 	ti := c.typeinfo
-	c.values[varname] = ir.FuncArg{uint(i), ti[varname.Type()], varname.Reference}
+	c.values[varname] = FuncArg{uint(i), ti[varname.Type()], varname.Reference}
 	return c.values[varname]
 }
 
 // Sets a variable to refer to an existing register, without generating a new
 // one.
-func (c *variableLayout) SetLocalRegister(varname ast.VarWithType, val ir.Register) {
+func (c *variableLayout) SetLocalRegister(varname ast.VarWithType, val Register) {
 	c.values[varname] = val
 }
 
 // Gets the register for an existing variable. Panics on invalid variables.
-func (c variableLayout) Get(varname ast.VarWithType) ir.Register {
+func (c variableLayout) Get(varname ast.VarWithType) Register {
 	if varname.Name == "" {
 		panic("Can not get empty varname")
 	}
@@ -83,7 +82,7 @@ func (c variableLayout) Get(varname ast.VarWithType) ir.Register {
 
 // Gets the register for an existing variable, and a bool denoting whether
 // the variable exists or not.
-func (c variableLayout) SafeGet(varname ast.VarWithType) (ir.Register, bool) {
+func (c variableLayout) SafeGet(varname ast.VarWithType) (Register, bool) {
 	v, ok := c.values[varname]
 	return v, ok
 }

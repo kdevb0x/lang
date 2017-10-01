@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/driusan/lang/compiler/irgen"
+	"github.com/driusan/lang/compiler/ir"
 	"github.com/driusan/lang/parser/ast"
 	"github.com/driusan/lang/parser/sampleprograms"
 )
@@ -37,7 +37,7 @@ func TestCompileHelloWorld(t *testing.T) {
 	}
 
 	var w bytes.Buffer
-	fnc, _, err := irgen.GenerateIR(prgAst[0], types, callables, nil)
+	fnc, _, err := ir.Generate(prgAst[0], types, callables, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
