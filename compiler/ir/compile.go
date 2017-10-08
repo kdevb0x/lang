@@ -535,7 +535,7 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 
 			ops = append(ops, JMP{lcond})
 			ops = append(ops, lname)
-		case *ast.IfStmt:
+		case ast.IfStmt:
 			iname := Label(fmt.Sprintf("if%delse", loopNum))
 			dname := Label(fmt.Sprintf("if%delsedone", loopNum))
 			loopNum++

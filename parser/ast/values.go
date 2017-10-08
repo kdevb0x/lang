@@ -28,6 +28,8 @@ func isInfixOperator(pos int, tokens []token.Token) bool {
 
 func operatorPrecedence(op Value) int {
 	switch op.(type) {
+	case ArrayValue, FuncCall:
+		return 6
 	case MulOperator, DivOperator, ModOperator:
 		return 5
 	case AdditionOperator, SubtractionOperator:
@@ -317,9 +319,6 @@ func consumeValue(start int, tokens []token.Token, c *Context) (int, Value, erro
 				return i + 1 - start, *eo, nil
 			} else {
 				return 0, nil, fmt.Errorf(`Use of undefined variable "%v".`, t)
-				// FIXME: Otherwise, it may still be a parameter.
-				// Validate this.
-				//partial = c.Variables[t.String()]
 			}
 
 			for isInfixOperator(i+1, tokens) {
@@ -335,8 +334,8 @@ func consumeValue(start int, tokens []token.Token, c *Context) (int, Value, erro
 						return 0, nil, err
 					}
 
-					finalPos := i + 2 - start + n
-					return finalPos, createOperatorNode(tokens[i+1], partial, right), nil
+					partial = createOperatorNode(tokens[i+1], partial, right)
+					i += n + 1
 				case token.Char("["):
 					n, index, err := consumeValue(i+2, tokens, c)
 					if err != nil {
@@ -345,19 +344,16 @@ func consumeValue(start int, tokens []token.Token, c *Context) (int, Value, erro
 					if tokens[i+2+n] != token.Char("]") {
 						return 0, nil, fmt.Errorf("Invalid index")
 					}
-					/*idx, ok := index.(IntLiteral)
-					if !ok {
-						return 0, nil, fmt.Errorf("Only literal indexes are currently supported :(")
-					}*/
 					base, ok := partial.(VarWithType)
 					if !ok {
 						return 0, nil, fmt.Errorf("Can only index on variables")
 					}
-					av := ArrayValue{base /* idx */, index}
-
-					return i + 3 - start + n, av, nil
+					partial = ArrayValue{base /* idx */, index}
+					i += n + 2
+				case token.Operator("="):
+					return i + 1 - start, partial, nil
 				default:
-					panic(fmt.Sprintf("Unhandled infix operator %v at %v", tokens[i].String(), i))
+					panic(fmt.Sprintf("Unhandled infix operator %v at %v", tokens[i+1].String(), i))
 				}
 			}
 			return i + 1 - start, partial, nil
@@ -384,8 +380,6 @@ func consumeValue(start int, tokens []token.Token, c *Context) (int, Value, erro
 						Name:         TypeLiteral(at),
 						ConcreteType: typdef,
 					}
-					//fmt.Printf("%v", al)
-					//panic("Missing type info for: %v" + al.Type())
 				}
 				return tn + 2, al, err
 			case token.Char(`[`):

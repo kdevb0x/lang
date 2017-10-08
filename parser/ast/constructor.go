@@ -134,6 +134,7 @@ func NewContext() Context {
 		EnumOptions: make(map[string]EnumOption),
 	}
 }
+
 func (c Context) Clone() Context {
 	var c2 Context
 	c2.Variables = make(map[string]VarWithType)
@@ -334,7 +335,7 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, Callables, error)
 			}
 			cur.Body = block
 
-			i += n
+			i += n - 1
 
 			nodes = append(nodes, cur)
 			callables[cur.Name] = append(callables[cur.Name], cur)
@@ -369,7 +370,7 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, Callables, error)
 			}
 			cur.Body = block
 
-			i += n
+			i += n - 1
 			nodes = append(nodes, cur)
 			callables[cur.Name] = append(callables[cur.Name], cur)
 		case TypeDefn:
@@ -617,183 +618,14 @@ func consumeBlock(start int, tokens []token.Token, c *Context) (int, BlockStmt, 
 			i += n
 			continue
 		} else if tokens[i] == token.Char("}") {
-			return i - start, blockStmt, nil
+			return i + 1 - start, blockStmt, nil
 		}
-		switch t := tokens[i].(type) {
-		case token.Unknown:
-			if i+1 >= len(tokens) {
-				return 0, BlockStmt{}, fmt.Errorf("Invalid token at end of file.")
-			}
-			switch tokens[i+1] {
-			case token.Char("("):
-				if c.IsFunction(tokens[i].String()) {
-					n, funcCall, err := consumeFuncCall(i, tokens, c)
-					if err != nil {
-						return 0, BlockStmt{}, err
-					}
-					blockStmt.Stmts = append(blockStmt.Stmts, funcCall)
-					i += n
-				} else {
-					return 0, BlockStmt{}, fmt.Errorf("Call to undefined function: %v", tokens[i])
-				}
-			case token.Char("["):
-				// We're indexing into an array (probably)
-				// use consumeValue to get the ArrayValue for the index
-				// that we're checking.
-				n, v, err := consumeValue(i, tokens, c)
-				if err != nil {
-					return 0, BlockStmt{}, err
-				}
-
-				// After indexing into an array, the only operation that makes
-				// sense is assignment.
-				if tokens[n+i] != token.Operator("=") {
-					return 0, BlockStmt{}, fmt.Errorf("Invalid variable assignment.")
-				}
-
-				av, ok := v.(ArrayValue)
-				if !ok {
-					return 0, BlockStmt{}, fmt.Errorf("Can not index non-array value")
-				}
-
-				if basetype, ok := av.Base.Typ.(ArrayType); ok {
-					// Adjust i to take into account what we consumed and the
-					i += n + 1
-
-					// Get the value that's being assigned.
-					n, val, err := consumeValue(i, tokens, c)
-					if err != nil {
-						return 0, BlockStmt{}, err
-					}
-					nm := Variable(fmt.Sprintf("%v[%d]", av.Base.Name, av.Index))
-					blockStmt.Stmts = append(blockStmt.Stmts, AssignmentOperator{
-						Variable: VarWithType{nm, basetype.Base, false},
-						Value:    val,
-					})
-					i += n - 1
-				} else if basetype, ok := av.Base.Typ.(SliceType); ok {
-					// Adjust i to take into account what we consumed and the
-					i += n + 1
-
-					// Get the value that's being assigned.
-					n, val, err := consumeValue(i, tokens, c)
-					if err != nil {
-						return 0, BlockStmt{}, err
-					}
-					nm := Variable(fmt.Sprintf("%v[%d]", av.Base.Name, av.Index))
-					blockStmt.Stmts = append(blockStmt.Stmts, AssignmentOperator{
-						Variable: VarWithType{nm, basetype.Base, false},
-						Value:    val,
-					})
-					i += n - 1
-				} else {
-					return 0, BlockStmt{}, fmt.Errorf("Array type must be ArrayType or SliceType")
-				}
-			case token.Operator("="):
-				if !c.IsVariable(t.String()) {
-					return 0, BlockStmt{}, fmt.Errorf("Invalid variable for assignment: %v", tokens[i])
-				}
-
-				if !c.IsMutable(t.String()) {
-					return 0, BlockStmt{}, fmt.Errorf(`Can not assign to immutable let variable "%v".`, tokens[i])
-				}
-				n, val, err := consumeValue(i+2, tokens, c)
-				if err != nil {
-					return 0, BlockStmt{}, err
-				}
-
-				blockStmt.Stmts = append(blockStmt.Stmts, AssignmentOperator{
-					Variable: c.Variables[tokens[i].String()],
-					Value:    val,
-				})
-				i += n + 1
-			default:
-				return 0, BlockStmt{}, fmt.Errorf("Don't know how to handle token: %v at token %d", tokens[i+1], i+1)
-			}
-		case token.Keyword:
-			switch t {
-			case "let":
-				n, letstmt, err := consumeLetStmt(i, tokens, c)
-				if err != nil {
-					return 0, BlockStmt{}, err
-				}
-				blockStmt.Stmts = append(blockStmt.Stmts, letstmt)
-				i += n
-			case "mutable":
-				n, mutstmt, err := consumeMutStmt(i, tokens, c)
-				if err != nil {
-					return 0, BlockStmt{}, err
-				}
-				blockStmt.Stmts = append(blockStmt.Stmts, mutstmt)
-				i += n
-			case "return":
-				n, v, err := consumeValue(i+1, tokens, c)
-				if err != nil {
-					return 0, BlockStmt{}, err
-				}
-				blockStmt.Stmts = append(
-					blockStmt.Stmts,
-					ReturnStmt{
-						Val: v,
-					},
-				)
-				i += n
-			case "while":
-				n, v, err := consumeWhileLoop(i, tokens, c)
-				if err != nil {
-					return 0, BlockStmt{}, err
-				}
-				blockStmt.Stmts = append(blockStmt.Stmts, v)
-				i += n
-			case "if":
-				n, v, err := consumeIfStmt(i, tokens, c)
-				if err != nil {
-					return 0, BlockStmt{}, err
-				}
-				i += n
-
-				// This is more complicated than it should be.
-				var firstIf *IfStmt = &v
-				var lastIf *IfStmt = &v
-				for i < len(tokens) && tokens[i+1] == token.Keyword("else") {
-					if i < len(tokens)-2 && tokens[i+2] == token.Keyword("if") {
-						n, nextIf, err := consumeIfStmt(i+2, tokens, c)
-
-						if err != nil {
-							return 0, BlockStmt{}, err
-						}
-						lastIf.Else = BlockStmt{
-							[]Node{
-								&nextIf,
-							},
-						}
-
-						i += n + 2
-						lastIf = &nextIf
-					} else {
-						n, elseB, err := consumeBlock(i+2, tokens, c)
-						if err != nil {
-							return 0, BlockStmt{}, err
-						}
-						lastIf.Else = elseB
-						i += n + 2
-					}
-				}
-				blockStmt.Stmts = append(blockStmt.Stmts, firstIf)
-			case "match":
-				n, v, err := consumeMatchStmt(i, tokens, c)
-				if err != nil {
-					return 0, BlockStmt{}, err
-				}
-				blockStmt.Stmts = append(blockStmt.Stmts, v)
-				i += n
-			default:
-				panic(fmt.Sprintf("Unimplemented keyword: %v at %v", tokens[i], i))
-			}
-		default:
-			return 0, BlockStmt{}, fmt.Errorf("Unhandled token type in block %v for token %v", tokens[i].String(), i)
+		n, stmt, err := consumeStmt(i, tokens, c)
+		if err != nil {
+			return 0, BlockStmt{}, err
 		}
-
+		blockStmt.Stmts = append(blockStmt.Stmts, stmt)
+		i += n - 1
 	}
 	return 0, BlockStmt{}, fmt.Errorf("Unterminated block statement")
 }
@@ -816,11 +648,52 @@ func consumeStmt(start int, tokens []token.Token, c *Context) (int, Node, error)
 				return 0, nil, fmt.Errorf("Call to undefined function: %v", tokens[start])
 			}
 		case token.Char("["):
+			// We're indexing into an array (probably)
+			// use consumeValue to get the ArrayValue for the index
+			// that we're checking.
 			n, v, err := consumeValue(start, tokens, c)
 			if err != nil {
-				return 0, nil, err
+				return 0, BlockStmt{}, err
 			}
-			panic(fmt.Sprintf("%v : %v", n, v))
+
+			// After indexing into an array, the only operation that makes
+			// sense is assignment. consumeValue would have taken care of infix
+			// operations above.
+			if tokens[start+n] != token.Operator("=") {
+				return 0, BlockStmt{}, fmt.Errorf("Invalid variable assignment.")
+			}
+
+			av, ok := v.(ArrayValue)
+			if !ok {
+				return 0, BlockStmt{}, fmt.Errorf("Can not index non-array value")
+			}
+
+			switch basetype := av.Base.Typ.(type) {
+			case ArrayType:
+				// Get the value that's being assigned.
+				valn, val, err := consumeValue(start+n+1, tokens, c)
+				if err != nil {
+					return 0, BlockStmt{}, err
+				}
+				nm := Variable(fmt.Sprintf("%v[%d]", av.Base.Name, av.Index))
+				return n + valn + 1, AssignmentOperator{
+					Variable: VarWithType{nm, basetype.Base, false},
+					Value:    val,
+				}, nil
+			case SliceType:
+				// Get the value that's being assigned.
+				valn, val, err := consumeValue(start+n+1, tokens, c)
+				if err != nil {
+					return 0, BlockStmt{}, err
+				}
+				nm := Variable(fmt.Sprintf("%v[%d]", av.Base.Name, av.Index))
+				return n + valn + 1, AssignmentOperator{
+					Variable: VarWithType{nm, basetype.Base, false},
+					Value:    val,
+				}, nil
+			default:
+				return 0, BlockStmt{}, fmt.Errorf("Array type must be ArrayType or SliceType")
+			}
 		case token.Operator("="):
 			if !c.IsVariable(t.String()) {
 				return 0, nil, fmt.Errorf("Invalid variable for assignment: %v", tokens[start])
@@ -834,12 +707,13 @@ func consumeStmt(start int, tokens []token.Token, c *Context) (int, Node, error)
 				return 0, nil, err
 			}
 
-			return n, AssignmentOperator{
+			// n for the value, one for the token, one for the = sign.
+			return n + 2, AssignmentOperator{
 				Variable: c.Variables[tokens[start].String()],
 				Value:    val,
 			}, nil
 		default:
-			return 0, nil, fmt.Errorf("Don't know how to handle token: %v(%v) at token %d", reflect.TypeOf(tokens[start+1]), tokens[start+1], start+1)
+			return 0, nil, fmt.Errorf("Don't know how to handle token: %v(%v) at token %d [%v]", reflect.TypeOf(tokens[start+1]), tokens[start+1], start+1, tokens[start+1:])
 		}
 	case token.Keyword:
 		switch t {
@@ -849,57 +723,21 @@ func consumeStmt(start int, tokens []token.Token, c *Context) (int, Node, error)
 			return consumeMutStmt(start, tokens, c)
 		case "return":
 			n, nd, err := consumeValue(start+1, tokens, c)
-			return n + 1, ReturnStmt{Val: nd}, err
+			if err != nil {
+				return 0, ReturnStmt{}, err
+			}
+			return n + 1, ReturnStmt{Val: nd}, nil
 		case "while":
 			return consumeWhileLoop(start, tokens, c)
-			/*
-				case "if":
-					n, v, err := consumeIfStmt(start, tokens, c)
-					if err != nil {
-						return 0, BlockStmt{}, err
-					}
-					start += n
-
-					// This is more complicated than it should be.
-					var firstIf *IfStmt = &v
-					var lastIf *IfStmt = &v
-					for i < len(tokens) && tokens[i+1] == token.Keyword("else") {
-						if i < len(tokens)-2 && tokens[i+2] == token.Keyword("if") {
-							n, nextIf, err := consumeIfStmt(i+2, tokens, c)
-								if err != nil {
-								return 0, BlockStmt{}, err
-							}
-							lastIf.Else = BlockStmt{
-								[]Node{
-											&nextIf,
-										},
-									}
-
-									i += n + 2
-									lastIf = &nextIf
-								} else {
-									n, elseB, err := consumeBlock(i+2, tokens, c)
-									if err != nil {
-										return 0, BlockStmt{}, err
-									}
-									lastIf.Else = elseB
-									i += n + 2
-								}
-							}
-							blockStmt.Stmts = append(blockStmt.Stmts, firstIf)
-						case "match":
-							n, v, err := consumeMatchStmt(i, tokens, c)
-							if err != nil {
-								return 0, BlockStmt{}, err
-							}
-							blockStmt.Stmts = append(blockStmt.Stmts, v)
-							i += n
-			*/
+		case "if":
+			return consumeIfStmt(start, tokens, c)
+		case "match":
+			return consumeMatchStmt(start, tokens, c)
 		default:
 			panic(fmt.Sprintf("Unimplemented keyword: %v at %v", tokens[start], start))
 		}
 	default:
-		panic(fmt.Sprintf("Unhandled token type in block %v for token %v", tokens[start].String(), start))
+		panic(fmt.Sprintf("Unhandled token type in block %v for token %v [%v]", tokens[start].String(), start, tokens[start:]))
 	}
 
 }
@@ -1027,7 +865,7 @@ func consumeLetStmt(start int, tokens []token.Token, c *Context) (int, Node, err
 					}
 				}
 				l.Value = v
-				return i + n - start, l, nil
+				return i + n - start + 1, l, nil
 			}
 			return 0, nil, fmt.Errorf("Invalid let statement")
 		case token.Whitespace:
@@ -1111,7 +949,7 @@ func consumeMutStmt(start int, tokens []token.Token, c *Context) (int, Node, err
 				}
 
 				l.InitialValue = v
-				return i + n - start, l, nil
+				return i + n - start + 1, l, nil
 			}
 			return 0, nil, fmt.Errorf("Invalid mutable declaration")
 		case token.Whitespace:

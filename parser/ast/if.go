@@ -40,5 +40,33 @@ func consumeIfStmt(start int, tokens []token.Token, c *Context) (int, IfStmt, er
 	}
 
 	l.Body = block
-	return cn + bn + 1, l, nil
+	var eln int = 0
+	if tokens[start+cn+bn+1] == token.Keyword("else") {
+		en, elseblock, err := consumeElseStmt(start+cn+bn+1, tokens, c)
+		if err != nil {
+			return 0, IfStmt{}, err
+		}
+		l.Else = elseblock
+		eln = en
+	}
+	return cn + bn + eln + 1, l, nil
+}
+
+func consumeElseStmt(start int, tokens []token.Token, c *Context) (int, BlockStmt, error) {
+	switch tokens[start+1] {
+	case token.Keyword("if"):
+		bn, block, err := consumeIfStmt(start+1, tokens, c)
+		if err != nil {
+			return 0, BlockStmt{}, err
+		}
+		return bn + 1, BlockStmt{[]Node{block}}, nil
+	case token.Char("{"):
+		bn, block, err := consumeBlock(start+1, tokens, c)
+		if err != nil {
+			return 0, BlockStmt{}, err
+		}
+		return bn + 1, block, nil
+	default:
+		return 0, BlockStmt{}, fmt.Errorf("Invalid else statement")
+	}
 }

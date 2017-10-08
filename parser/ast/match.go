@@ -90,7 +90,7 @@ func consumeMatchStmt(start int, tokens []token.Token, c *Context) (int, MatchSt
 					return 0, MatchStmt{}, err
 				}
 			}
-			return i - start, l, nil
+			return i + 1 - start, l, nil
 		}
 	}
 	return 0, MatchStmt{}, fmt.Errorf("Invalid match statement")
