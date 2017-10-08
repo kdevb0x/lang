@@ -648,3 +648,11 @@ func ExampleArrayIndex() {
 	// Output: 4
 	// 5
 }
+
+func ExampleIndexAssignment() {
+	if err := RunProgram("indexassignment", sampleprograms.IndexAssignment); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: 4
+	// 5
+}

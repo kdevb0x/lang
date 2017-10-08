@@ -45,11 +45,14 @@ type ArrayValue struct {
 }
 
 func (v ArrayValue) Type() string {
-	bt, ok := v.Base.Typ.(ArrayType)
-	if !ok {
+	switch bt := v.Base.Typ.(type) {
+	case ArrayType:
+		return bt.Base.Type()
+	case SliceType:
+		return bt.Base.Type()
+	default:
 		panic("Attempt to index on non-array")
 	}
-	return bt.Base.Type()
 }
 
 func (v ArrayValue) String() string {

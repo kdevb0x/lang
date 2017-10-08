@@ -3486,3 +3486,101 @@ func TestSliceLength(t *testing.T) {
 	}
 
 }
+
+func TestIndexAssignment(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.IndexAssignment))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Node{
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					LetStmt{
+						Var: VarWithType{
+							"x",
+							SliceType{TypeLiteral("int")},
+							false,
+						},
+						Value: ArrayLiteral{
+							IntLiteral(3),
+							IntLiteral(4),
+							IntLiteral(5),
+						},
+					},
+					MutStmt{
+						Var: VarWithType{
+							"n",
+							TypeLiteral("int"),
+							false,
+						},
+						InitialValue: ArrayValue{
+							Base: VarWithType{"x",
+								SliceType{
+									Base: TypeLiteral("int"),
+								},
+								false,
+							},
+							Index: IntLiteral(1),
+						},
+					},
+					LetStmt{
+						Var: VarWithType{
+							"n2",
+							TypeLiteral("int"),
+							false,
+						},
+						Value: ArrayValue{
+							Base: VarWithType{"x",
+								SliceType{
+									Base: TypeLiteral("int"),
+								},
+								false,
+							},
+							Index: IntLiteral(2),
+						},
+					},
+					FuncCall{
+						Name: "PrintInt",
+						UserArgs: []Value{
+							VarWithType{
+								"n",
+								TypeLiteral("int"),
+								false,
+							},
+						},
+					},
+					FuncCall{
+						Name:     "PrintString",
+						UserArgs: []Value{StringLiteral(`\n`)},
+					},
+					FuncCall{
+						Name: "PrintInt",
+						UserArgs: []Value{
+							VarWithType{
+								"n2",
+								TypeLiteral("int"),
+								false,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("let statement (%d): got %v want %v", i, ast[i], v)
+		}
+	}
+
+}

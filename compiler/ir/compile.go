@@ -103,116 +103,12 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]Opcode
 		case ast.StringLiteral, ast.IntLiteral, ast.BoolLiteral:
 			argRegs = append(argRegs, getRegister(a, context))
 		case ast.ArrayValue:
-			base := getRegister(a.Base, context)
-			// FIXME: Most of this should be moved into evaluateValue
-			switch reg := base.(type) {
-			case LocalValue:
-				switch offset := a.Index.(type) {
-				case ast.IntLiteral:
-					// Special case to avoid the overhead of allocating/moving an extra register for
-					// literals, we inline the multiplication..
-					switch at := a.Base.Typ.(type) {
-					case ast.ArrayType:
-						reg.Info = context.GetTypeInfo(at.Base.Type())
-					case ast.SliceType:
-						reg.Id++
-						reg.Info = context.GetTypeInfo(at.Base.Type())
-					default:
-						panic("Can only index into arrays or slices")
-					}
-					argRegs = append(argRegs, Offset{
-						Offset: IntLiteral(int(offset) * reg.Size()),
-						Base:   reg,
-					})
-				default:
-					// Evaluate the offset and look and store the value in a register.
-					offsetops, offsetr, err := evaluateValue(a.Index, context)
-					if err != nil {
-						return nil, err
-					}
-					ops = append(ops, offsetops...)
-
-					// Convert the offset from index to byte offset
-					realoffsetr := context.NextLocalRegister(ast.VarWithType{"", ast.TypeLiteral("int"), false})
-					var tsize int
-					switch at := a.Base.Typ.(type) {
-					case ast.ArrayType:
-						reg.Info = context.GetTypeInfo(at.Base.Type())
-						tsize = reg.Info.Size
-					case ast.SliceType:
-						reg.Id++
-						reg.Info = context.GetTypeInfo(at.Base.Type())
-						tsize = reg.Info.Size
-					default:
-						panic("Can only index into arrays or slices")
-					}
-
-					ops = append(ops, MUL{
-						Left:  IntLiteral(tsize),
-						Right: offsetr,
-						Dst:   realoffsetr,
-					})
-					argRegs = append(argRegs, Offset{
-						Offset: realoffsetr,
-						Base:   reg,
-					})
-				}
-			case FuncArg:
-				// This is copy/pasted from the LocalValue case above, but if we use a comma separated case
-				// statement Go thinks it doesn't know any type information about reg..
-				switch offset := a.Index.(type) {
-				case ast.IntLiteral:
-					// Special case to avoid the overhead of allocating/moving an extra register for
-					// literals, we inline the multiplication..
-					switch at := a.Base.Typ.(type) {
-					case ast.ArrayType:
-						reg.Info = context.GetTypeInfo(at.Base.Type())
-					case ast.SliceType:
-						reg.Id++
-						reg.Info = context.GetTypeInfo(at.Base.Type())
-					default:
-						panic("Can only index into arrays or slices")
-					}
-					argRegs = append(argRegs, Offset{
-						Offset: IntLiteral(int(offset) * reg.Size()),
-						Base:   reg,
-					})
-				default:
-					// Evaluate the offset and look and store the value in a register.
-					offsetops, offsetr, err := evaluateValue(a.Index, context)
-					if err != nil {
-						return nil, err
-					}
-					ops = append(ops, offsetops...)
-
-					// Convert the offset from index to byte offset
-					realoffsetr := context.NextLocalRegister(ast.VarWithType{"", ast.TypeLiteral("int"), false})
-					var tsize int
-					switch at := a.Base.Typ.(type) {
-					case ast.ArrayType:
-						reg.Info = context.GetTypeInfo(at.Base.Type())
-						tsize = reg.Info.Size
-					case ast.SliceType:
-						reg.Id++
-						reg.Info = context.GetTypeInfo(at.Base.Type())
-						tsize = reg.Info.Size
-					default:
-						panic("Can only index into arrays or slices")
-					}
-
-					ops = append(ops, MUL{
-						Left:  IntLiteral(tsize),
-						Right: offsetr,
-						Dst:   realoffsetr,
-					})
-					argRegs = append(argRegs, Offset{
-						Offset: realoffsetr,
-						Base:   reg,
-					})
-				}
-			default:
-				panic("Array was neither allocated in function nor passed as parameter")
+			newops, r, err := evaluateValue(a, context)
+			if err != nil {
+				return nil, err
 			}
+			ops = append(ops, newops...)
+			argRegs = append(argRegs, r)
 		case ast.VarWithType:
 			switch st := a.Typ.(type) {
 			case ast.SliceType:
@@ -357,7 +253,8 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 				ast.DivOperator, ast.MulOperator, ast.ModOperator,
 				ast.GreaterComparison, ast.GreaterOrEqualComparison,
 				ast.EqualityComparison, ast.NotEqualsComparison,
-				ast.LessThanComparison, ast.LessThanOrEqualComparison:
+				ast.LessThanComparison, ast.LessThanOrEqualComparison,
+				ast.ArrayValue:
 				body, r, err := evaluateValue(s.Value, context)
 				if err != nil {
 					return nil, err
@@ -518,7 +415,8 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 					Src: getRegister(s.InitialValue, context),
 					Dst: reg,
 				})
-			case ast.AdditionOperator, ast.SubtractionOperator, ast.MulOperator, ast.DivOperator, ast.ModOperator:
+			case ast.AdditionOperator, ast.SubtractionOperator, ast.MulOperator, ast.DivOperator, ast.ModOperator,
+				ast.ArrayValue:
 				body, r, err := evaluateValue(s.InitialValue, context)
 				if err != nil {
 					return nil, err
@@ -1067,10 +965,69 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, Register, 
 			Dst: a,
 		})
 		ops = append(ops, Label(cname+"done"))
-
 		return ops, a, nil
+
 	case ast.VarWithType, ast.IntLiteral, ast.BoolLiteral, ast.EnumOption, ast.StringLiteral:
 		return nil, getRegister(s, context), nil
+	case ast.ArrayValue:
+		base := getRegister(s.Base, context)
+		var a Register
+		switch reg := base.(type) {
+		case LocalValue:
+			switch offset := s.Index.(type) {
+			case ast.IntLiteral:
+				// Special case to avoid the overhead of allocating/moving an extra register for
+				// literals, we inline the multiplication..
+				switch at := s.Base.Typ.(type) {
+				case ast.ArrayType:
+					reg.Info = context.GetTypeInfo(at.Base.Type())
+				case ast.SliceType:
+					reg.Id++
+					reg.Info = context.GetTypeInfo(at.Base.Type())
+				default:
+					panic("Can only index into arrays or slices")
+				}
+				return nil, Offset{
+					Offset: IntLiteral(int(offset) * reg.Size()),
+					Base:   reg,
+				}, nil
+			default:
+				// Evaluate the offset and look and store the value in a register.
+				offsetops, offsetr, err := evaluateValue(s.Index, context)
+				if err != nil {
+					return nil, nil, err
+				}
+				ops = append(ops, offsetops...)
+
+				// Convert the offset from index to byte offset
+				realoffsetr := context.NextLocalRegister(ast.VarWithType{"", ast.TypeLiteral("int"), false})
+				var tsize int
+				switch at := s.Base.Typ.(type) {
+				case ast.ArrayType:
+					reg.Info = context.GetTypeInfo(at.Base.Type())
+					tsize = reg.Info.Size
+				case ast.SliceType:
+					reg.Id++
+					reg.Info = context.GetTypeInfo(at.Base.Type())
+					tsize = reg.Info.Size
+				default:
+					panic("Can only index into arrays or slices")
+				}
+
+				ops = append(ops, MUL{
+					Left:  IntLiteral(tsize),
+					Right: offsetr,
+					Dst:   realoffsetr,
+				})
+				a = Offset{
+					Offset: realoffsetr,
+					Base:   reg,
+				}
+			}
+		default:
+			panic("Array was neither allocated in function nor passed as parameter")
+		}
+		return ops, a, nil
 	default:
 		panic(fmt.Errorf("Unhandled value type: %v", reflect.TypeOf(s)))
 	}

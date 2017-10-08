@@ -1979,8 +1979,8 @@ func TestIRSimpleSliceMutation(t *testing.T) {
 		CALL{FName: "PrintString", Args: []Register{StringLiteral(`\n`)}},
 		MOV{
 			Src: IntLiteral(2),
-				Dst:   LocalValue{4, ast.TypeInfo{8, true}},
-				/* FIXME: This should be:
+			Dst: LocalValue{4, ast.TypeInfo{8, true}},
+			/* FIXME: This should be:
 				but they're the same value, so it doesn't really matter for now
 			Dst: Offset{
 				Base:   LocalValue{1, ast.TypeInfo{8, true}},
@@ -2500,6 +2500,62 @@ func TestArrayIndex(t *testing.T) {
 				},
 			},
 		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestIndexAssignment(t *testing.T) {
+	loopNum = 0
+	as, ti, c, err := ast.Parse(sampleprograms.IndexAssignment)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		// let x []int = { 3, 4, 5 }
+		MOV{
+			Src: IntLiteral(3),
+			Dst: LocalValue{0, ast.TypeInfo{8, false}},
+		},
+		// Let statement
+		MOV{
+			Src: IntLiteral(3),
+			Dst: LocalValue{1, ast.TypeInfo{8, true}},
+		},
+		MOV{
+			Src: IntLiteral(4),
+			Dst: LocalValue{2, ast.TypeInfo{8, true}},
+		},
+		MOV{
+			Src: IntLiteral(5),
+			Dst: LocalValue{3, ast.TypeInfo{8, true}},
+		},
+		MOV{
+			Src: Offset{
+				Base:   LocalValue{1, ast.TypeInfo{8, true}},
+				Offset: IntLiteral(8),
+			},
+			Dst: LocalValue{4, ast.TypeInfo{8, true}},
+		},
+		MOV{
+			Src: Offset{
+				Base:   LocalValue{1, ast.TypeInfo{8, true}},
+				Offset: IntLiteral(16),
+			},
+			Dst: LocalValue{5, ast.TypeInfo{8, true}},
+		},
+		CALL{FName: "PrintInt", Args: []Register{
+			LocalValue{4, ast.TypeInfo{8, true}},
+		}},
+		CALL{FName: "PrintString", Args: []Register{StringLiteral(`\n`)}},
+		CALL{FName: "PrintInt", Args: []Register{LocalValue{5, ast.TypeInfo{8, true}}}},
 	}
 
 	if err := compareIR(i.Body, expected); err != nil {
