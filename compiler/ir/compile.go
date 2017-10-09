@@ -361,7 +361,6 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 			if oldval {
 				context.values[s.Var] = reg
 			}
-
 		case ast.ReturnStmt:
 			switch arg := s.Val.(type) {
 			case ast.FuncCall:
@@ -426,7 +425,6 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 					Src: r,
 					Dst: reg,
 				})
-
 			case ast.VarWithType:
 				val := context.Get(v)
 				ops = append(ops, MOV{
@@ -786,17 +784,20 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, Register, 
 		a := context.NextTempRegister()
 		switch s.Left.(type) {
 		case ast.VarWithType, ast.IntLiteral:
-			ops = append(ops, ADD{
+			ops = append(ops, MOV{
 				Src: getRegister(s.Left, context),
 				Dst: a,
 			})
-		case ast.AdditionOperator, ast.SubtractionOperator, ast.MulOperator, ast.DivOperator, ast.ModOperator:
+		case ast.AdditionOperator, ast.SubtractionOperator, ast.MulOperator, ast.DivOperator, ast.ModOperator, ast.ArrayValue:
 			body, r, err := evaluateValue(s.Left, context)
 			if err != nil {
 				return nil, nil, err
 			}
 			ops = append(ops, body...)
-			a = r
+			ops = append(ops, MOV{
+				Src: r,
+				Dst: a,
+			})
 		default:
 			panic(fmt.Sprintf("Unhandled left parameter in addition %v", reflect.TypeOf(s.Left)))
 		}
@@ -806,7 +807,7 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, Register, 
 		case ast.IntLiteral, ast.VarWithType:
 			// FIXME: This should validate type compatability
 			r = getRegister(s.Right, context)
-		case ast.AdditionOperator, ast.SubtractionOperator, ast.MulOperator, ast.DivOperator, ast.ModOperator:
+		case ast.AdditionOperator, ast.SubtractionOperator, ast.MulOperator, ast.DivOperator, ast.ModOperator, ast.ArrayValue:
 			body, r2, err := evaluateValue(s.Right, context)
 			if err != nil {
 				return nil, nil, err
@@ -830,7 +831,7 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, Register, 
 				Src: getRegister(s.Left, context),
 				Dst: a,
 			})
-		case ast.AdditionOperator, ast.SubtractionOperator, ast.MulOperator, ast.DivOperator, ast.ModOperator:
+		case ast.AdditionOperator, ast.SubtractionOperator, ast.MulOperator, ast.DivOperator, ast.ModOperator, ast.ArrayValue:
 			body, r, err := evaluateValue(s.Left, context)
 			if err != nil {
 				return nil, nil, err
@@ -847,7 +848,7 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, Register, 
 				Src: getRegister(s.Right, context),
 				Dst: a,
 			})
-		case ast.AdditionOperator, ast.SubtractionOperator, ast.MulOperator, ast.DivOperator, ast.ModOperator:
+		case ast.AdditionOperator, ast.SubtractionOperator, ast.MulOperator, ast.DivOperator, ast.ModOperator, ast.ArrayValue:
 			body, r, err := evaluateValue(s.Right, context)
 			if err != nil {
 				return nil, nil, err
@@ -894,7 +895,7 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, Register, 
 		switch s.Right.(type) {
 		case ast.IntLiteral, ast.VarWithType:
 			r = getRegister(s.Right, context)
-		case ast.SubtractionOperator, ast.AdditionOperator, ast.MulOperator, ast.DivOperator:
+		case ast.SubtractionOperator, ast.AdditionOperator, ast.MulOperator, ast.DivOperator, ast.ArrayValue:
 			body, reg, err := evaluateValue(s.Right, context)
 			if err != nil {
 				return nil, nil, err
@@ -921,7 +922,7 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, Register, 
 		switch s.Right.(type) {
 		case ast.IntLiteral, ast.VarWithType:
 			r = getRegister(s.Right, context)
-		case ast.SubtractionOperator, ast.AdditionOperator, ast.MulOperator, ast.DivOperator:
+		case ast.SubtractionOperator, ast.AdditionOperator, ast.MulOperator, ast.DivOperator, ast.ArrayValue:
 			body, reg, err := evaluateValue(s.Right, context)
 			if err != nil {
 				return nil, nil, err

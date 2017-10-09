@@ -453,7 +453,6 @@ func TestParseFizzBuzz(t *testing.T) {
 										StringLiteral(`\n`),
 									},
 								},
-
 								AssignmentOperator{
 									Variable: VarWithType{"i", TypeLiteral("int"), false},
 									Value: AdditionOperator{
@@ -3587,7 +3586,6 @@ func TestIndexAssignment(t *testing.T) {
 
 }
 
-/*
 func TestIndexedAddition(t *testing.T) {
 	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.IndexedAddition))
 	if err != nil {
@@ -3633,20 +3631,46 @@ func TestIndexedAddition(t *testing.T) {
 							Index: IntLiteral(1),
 						},
 					},
+					AssignmentOperator{
+						Variable: VarWithType{"n", TypeLiteral("int"), false},
+						Value: AdditionOperator{
+							Left: VarWithType{"n", TypeLiteral("int"), false},
+							Right: ArrayValue{
+								Base: VarWithType{"x",
+									SliceType{
+										Base: TypeLiteral("int"),
+									},
+									false,
+								},
+								Index: IntLiteral(2),
+							},
+						},
+					},
 					LetStmt{
 						Var: VarWithType{
 							"n2",
 							TypeLiteral("int"),
 							false,
 						},
-						Value: ArrayValue{
-							Base: VarWithType{"x",
-								SliceType{
-									Base: TypeLiteral("int"),
+						Value: AdditionOperator{
+							Left: ArrayValue{
+								Base: VarWithType{"x",
+									SliceType{
+										Base: TypeLiteral("int"),
+									},
+									false,
 								},
-								false,
+								Index: IntLiteral(2),
 							},
-							Index: IntLiteral(2),
+							Right: ArrayValue{
+								Base: VarWithType{"x",
+									SliceType{
+										Base: TypeLiteral("int"),
+									},
+									false,
+								},
+								Index: IntLiteral(0),
+							},
 						},
 					},
 					FuncCall{
@@ -3685,4 +3709,3 @@ func TestIndexedAddition(t *testing.T) {
 	}
 
 }
-*/

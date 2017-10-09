@@ -307,7 +307,7 @@ func TestIRGenMutAddition(t *testing.T) {
 			Src: IntLiteral(3),
 			Dst: LocalValue{0, ast.TypeInfo{8, true}},
 		},
-		ADD{
+		MOV{
 			Src: LocalValue{0, ast.TypeInfo{8, true}},
 			Dst: TempValue(0),
 		},
@@ -319,11 +319,11 @@ func TestIRGenMutAddition(t *testing.T) {
 			Src: TempValue(0),
 			Dst: LocalValue{1, ast.TypeInfo{8, true}},
 		},
-		ADD{
+		MOV{
 			Src: LocalValue{0, ast.TypeInfo{8, true}},
 			Dst: TempValue(1),
 		},
-		ADD{
+		MOV{
 			Src: LocalValue{1, ast.TypeInfo{8, true}},
 			Dst: TempValue(2),
 		},
@@ -440,7 +440,7 @@ func TestIRGenSumToTen(t *testing.T) {
 		JLE{
 			ConditionalJump{Label: Label("loop0end"), Src: LocalValue{0, ast.TypeInfo{8, true}}, Dst: IntLiteral(0)},
 		},
-		ADD{
+		MOV{
 			Src: LocalValue{1, ast.TypeInfo{8, true}},
 			Dst: TempValue(0),
 		},
@@ -570,7 +570,7 @@ func TestIRGenSumToTenRecursive(t *testing.T) {
 		JMP{"if1elsedone"},
 		Label("if1else"),
 		Label("if1elsedone"),
-		ADD{
+		MOV{
 			Src: FuncArg{0, ast.TypeInfo{8, true}, false},
 			Dst: TempValue(0),
 		},
@@ -671,7 +671,7 @@ func TestIRGenFizzBuzz(t *testing.T) {
 		Label("if4elsedone"),
 		Label("if3elsedone"),
 		CALL{FName: "PrintString", Args: []Register{StringLiteral(`\n`)}},
-		ADD{Src: LocalValue{1, ast.TypeInfo{8, true}}, Dst: TempValue(3)},
+		MOV{Src: LocalValue{1, ast.TypeInfo{8, true}}, Dst: TempValue(3)},
 		ADD{Src: IntLiteral(1), Dst: TempValue(3)},
 		MOV{Src: TempValue(3), Dst: LocalValue{1, ast.TypeInfo{8, true}}},
 		JL{ConditionalJump{Label: Label("if6else"), Src: LocalValue{1, ast.TypeInfo{8, true}}, Dst: IntLiteral(100)}},
@@ -707,7 +707,7 @@ func TestIRGenSomeMathStatement(t *testing.T) {
 		t.Errorf("Unexpected name: got %v want %v", i.Name, "main")
 	}
 	expected := []Opcode{
-		ADD{
+		MOV{
 			Src: IntLiteral(1),
 			Dst: TempValue(0),
 		},
@@ -750,7 +750,7 @@ func TestIRGenSomeMathStatement(t *testing.T) {
 			Src: TempValue(3),
 			Dst: LocalValue{3, ast.TypeInfo{8, true}},
 		},
-		ADD{
+		MOV{
 			Src: IntLiteral(1),
 			Dst: TempValue(4),
 		},
@@ -1173,7 +1173,7 @@ func TestIRGenFibonacci(t *testing.T) {
 		t.Errorf("Unexpected name: got %v want %v", i.Name, "main")
 	}
 	expected := []Opcode{
-		ADD{
+		MOV{
 			Src: FuncArg{0, ast.TypeInfo{8, false}, false},
 			Dst: TempValue(0),
 		},
@@ -1586,7 +1586,7 @@ func TestIRSimpleAlgorithm(t *testing.T) {
 		JNE{
 			ConditionalJump{Label: Label("if1else"), Src: TempValue(1), Dst: IntLiteral(0)},
 		},
-		ADD{Src: LocalValue{0, ast.TypeInfo{8, true}}, Dst: TempValue(2)},
+		MOV{Src: LocalValue{0, ast.TypeInfo{8, true}}, Dst: TempValue(2)},
 		MUL{
 			Left:  LocalValue{1, ast.TypeInfo{8, true}},
 			Right: IntLiteral(2),
@@ -1597,7 +1597,7 @@ func TestIRSimpleAlgorithm(t *testing.T) {
 		JMP{"if1elsedone"},
 		Label("if1else"),
 		Label("if1elsedone"),
-		ADD{Src: LocalValue{1, ast.TypeInfo{8, true}}, Dst: TempValue(4)},
+		MOV{Src: LocalValue{1, ast.TypeInfo{8, true}}, Dst: TempValue(4)},
 		ADD{Src: IntLiteral(1), Dst: TempValue(4)},
 		MOV{Src: TempValue(4), Dst: LocalValue{1, ast.TypeInfo{8, true}}},
 		JMP{"loop0cond"},
@@ -1778,7 +1778,7 @@ func TestIRReferenceVariable(t *testing.T) {
 			Src: IntLiteral(4),
 			Dst: FuncArg{0, ast.TypeInfo{8, true}, true},
 		},
-		ADD{
+		MOV{
 			Src: FuncArg{0, ast.TypeInfo{8, true}, true},
 			Dst: TempValue(0),
 		},
@@ -2478,7 +2478,7 @@ func TestArrayIndex(t *testing.T) {
 			Args:  []Register{StringLiteral(`\n`)},
 		},
 		// Convert x+1 offset from index into byte offset
-		ADD{
+		MOV{
 			Src: LocalValue{0, ast.TypeInfo{8, true}},
 			Dst: TempValue(0),
 		},
@@ -2549,6 +2549,88 @@ func TestIndexAssignment(t *testing.T) {
 				Base:   LocalValue{1, ast.TypeInfo{8, true}},
 				Offset: IntLiteral(16),
 			},
+			Dst: LocalValue{5, ast.TypeInfo{8, true}},
+		},
+		CALL{FName: "PrintInt", Args: []Register{
+			LocalValue{4, ast.TypeInfo{8, true}},
+		}},
+		CALL{FName: "PrintString", Args: []Register{StringLiteral(`\n`)}},
+		CALL{FName: "PrintInt", Args: []Register{LocalValue{5, ast.TypeInfo{8, true}}}},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestIndexedAddition(t *testing.T) {
+	loopNum = 0
+	as, ti, c, err := ast.Parse(sampleprograms.IndexedAddition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		// let x []int = { 3, 4, 5 }
+		MOV{
+			Src: IntLiteral(3),
+			Dst: LocalValue{0, ast.TypeInfo{8, false}},
+		},
+		// Let statement
+		MOV{
+			Src: IntLiteral(3),
+			Dst: LocalValue{1, ast.TypeInfo{8, true}},
+		},
+		MOV{
+			Src: IntLiteral(4),
+			Dst: LocalValue{2, ast.TypeInfo{8, true}},
+		},
+		MOV{
+			Src: IntLiteral(5),
+			Dst: LocalValue{3, ast.TypeInfo{8, true}},
+		},
+		MOV{
+			Src: Offset{
+				Base:   LocalValue{1, ast.TypeInfo{8, true}},
+				Offset: IntLiteral(8),
+			},
+			Dst: LocalValue{4, ast.TypeInfo{8, true}},
+		},
+		MOV{
+			Src: LocalValue{4, ast.TypeInfo{8, true}},
+			Dst: TempValue(0),
+		},
+		ADD{
+			Src: Offset{
+				Base:   LocalValue{1, ast.TypeInfo{8, true}},
+				Offset: IntLiteral(16),
+			},
+			Dst: TempValue(0),
+		},
+		MOV{
+			Src: TempValue(0),
+			Dst: LocalValue{4, ast.TypeInfo{8, true}},
+		},
+		MOV{
+			Src: Offset{
+				Base:   LocalValue{1, ast.TypeInfo{8, true}},
+				Offset: IntLiteral(16),
+			},
+			Dst: TempValue(1),
+		},
+		ADD{
+			Src: Offset{
+				Base:   LocalValue{1, ast.TypeInfo{8, true}},
+				Offset: IntLiteral(0),
+			},
+			Dst: TempValue(1),
+		},
+		MOV{
+			Src: TempValue(1),
 			Dst: LocalValue{5, ast.TypeInfo{8, true}},
 		},
 		CALL{FName: "PrintInt", Args: []Register{

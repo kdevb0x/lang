@@ -325,8 +325,8 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 					panic(err)
 				}
 
-				v += fmt.Sprintf("\tMOV%v %v, %v\n\t", suffix, a.ToPhysical(val.Offset, false), offset)
 			}
+			v += fmt.Sprintf("\tMOV%v %v, %v\n\t", suffix, a.ToPhysical(val.Offset, false), offset)
 			v += fmt.Sprintf("\tMOV%v %v(%v*1), %v\n\t", suffix, a.ToPhysical(val, returning), offset, src)
 		case ir.TempValue:
 			var err error
@@ -517,6 +517,28 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 				panic(err)
 			}
 			v += fmt.Sprintf("\tMOVQ %v, %v\n\t", a.ToPhysical(val, false), src)
+		case ir.Offset:
+			// First check if the arg is already in a register.
+			r, err := a.getPhysicalRegister(val)
+			if err == nil {
+				src = r
+				break
+			}
+			src, err = a.tempPhysicalRegister(false)
+			if err != nil {
+				panic(err)
+			}
+			suffix := a.opSuffix(val.Size())
+			offset, err := a.getPhysicalRegister(val.Offset)
+			if err != nil {
+				offset, err = a.nextPhysicalRegister(val.Offset, false)
+				if err != nil {
+					panic(err)
+				}
+
+				v += fmt.Sprintf("\tMOV%v %v, %v\n\t", suffix, a.ToPhysical(val.Offset, false), offset)
+			}
+			v += fmt.Sprintf("\tMOV%v %v(%v*1), %v\n\t", suffix, a.ToPhysical(val, false), offset, src)
 		case ir.TempValue:
 			src, err = a.getPhysicalRegister(val)
 		default:

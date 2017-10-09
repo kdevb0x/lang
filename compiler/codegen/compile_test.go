@@ -656,3 +656,11 @@ func ExampleIndexAssignment() {
 	// Output: 4
 	// 5
 }
+
+func ExampleIndexedAddition() {
+	if err := RunProgram("indexaddition", sampleprograms.IndexedAddition); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: 9
+	// 8
+}
