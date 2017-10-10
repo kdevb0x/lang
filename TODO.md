@@ -2,7 +2,7 @@
 about something.)
 
 # Bugfix TODOs
-- `proc main(args []string) ()` should work
+- functions should reserve the correct stack size
 - len should work on all slice types, and arrays, and strings
 
 # New features TODOs

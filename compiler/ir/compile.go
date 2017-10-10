@@ -26,7 +26,15 @@ func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callabl
 	switch n := node.(type) {
 	case ast.ProcDecl:
 		context.funcargs = n.GetArgs()
+		nargs := 0
 		for i, arg := range n.Args {
+			nargs++
+			// Slices get passed as {n, *void}, so claim an extra argument in the
+			// IR, that way code generation will make sure other variables on the
+			// stack start at the right place.
+			if _, ok := arg.Typ.(ast.SliceType); ok {
+				nargs++
+			}
 			context.FuncParamRegister(arg, i)
 		}
 		for _, rv := range n.Return {
@@ -36,9 +44,14 @@ func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callabl
 		if err != nil {
 			return Func{}, nil, err
 		}
-		return Func{Name: n.Name, Body: body, NumArgs: uint(len(n.Args))}, enums, nil
+		return Func{Name: n.Name, Body: body, NumArgs: uint(nargs)}, enums, nil
 	case ast.FuncDecl:
+		nargs := 0
 		for i, arg := range n.Args {
+			nargs++
+			if _, ok := arg.Typ.(ast.SliceType); ok {
+				nargs++
+			}
 			context.FuncParamRegister(arg, i)
 		}
 		for _, rv := range n.Return {
@@ -51,7 +64,7 @@ func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callabl
 		if err != nil {
 			return Func{}, nil, err
 		}
-		return Func{Name: n.Name, Body: body, NumArgs: uint(len(n.Args))}, enums, nil
+		return Func{Name: n.Name, Body: body, NumArgs: uint(nargs)}, enums, nil
 	case ast.SumTypeDefn:
 		e := make(EnumMap)
 		for i, v := range n.Options {
@@ -1001,7 +1014,59 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, Register, 
 				ops = append(ops, offsetops...)
 
 				// Convert the offset from index to byte offset
-				realoffsetr := context.NextLocalRegister(ast.VarWithType{"", ast.TypeLiteral("int"), false})
+				realoffsetr := context.NextTempRegister() //LocalRegister(ast.VarWithType{"", ast.TypeLiteral("int"), false})
+				var tsize int
+				switch at := s.Base.Typ.(type) {
+				case ast.ArrayType:
+					reg.Info = context.GetTypeInfo(at.Base.Type())
+					tsize = reg.Info.Size
+				case ast.SliceType:
+					reg.Id++
+					reg.Info = context.GetTypeInfo(at.Base.Type())
+					tsize = reg.Info.Size
+				default:
+					panic("Can only index into arrays or slices")
+				}
+
+				ops = append(ops, MUL{
+					Left:  IntLiteral(tsize),
+					Right: offsetr,
+					Dst:   realoffsetr,
+				})
+				a = Offset{
+					Offset: realoffsetr,
+					Base:   reg,
+				}
+			}
+		case FuncArg:
+			// Same as above, but Go type switches are stupid and force us to duplicate it.
+			switch offset := s.Index.(type) {
+			case ast.IntLiteral:
+				// Special case to avoid the overhead of allocating/moving an extra register for
+				// literals, we inline the multiplication..
+				switch at := s.Base.Typ.(type) {
+				case ast.ArrayType:
+					reg.Info = context.GetTypeInfo(at.Base.Type())
+				case ast.SliceType:
+					reg.Id++
+					reg.Info = context.GetTypeInfo(at.Base.Type())
+				default:
+					panic("Can only index into arrays or slices")
+				}
+				return nil, Offset{
+					Offset: IntLiteral(int(offset) * reg.Size()),
+					Base:   reg,
+				}, nil
+			default:
+				// Evaluate the offset and look and store the value in a register.
+				offsetops, offsetr, err := evaluateValue(s.Index, context)
+				if err != nil {
+					return nil, nil, err
+				}
+				ops = append(ops, offsetops...)
+
+				// Convert the offset from index to byte offset
+				realoffsetr := context.NextTempRegister() //LocalRegister(ast.VarWithType{"", ast.TypeLiteral("int"), false})
 				var tsize int
 				switch at := s.Base.Typ.(type) {
 				case ast.ArrayType:
@@ -1026,7 +1091,7 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, Register, 
 				}
 			}
 		default:
-			panic("Array was neither allocated in function nor passed as parameter")
+			panic(fmt.Sprintf("Array was neither allocated in function nor passed as parameter: %v", reflect.TypeOf(base)))
 		}
 		return ops, a, nil
 	default:

@@ -2462,14 +2462,14 @@ func TestArrayIndex(t *testing.T) {
 		MUL{
 			Left:  IntLiteral(8),
 			Right: LocalValue{0, ast.TypeInfo{8, true}},
-			Dst:   LocalValue{11, ast.TypeInfo{8, true}},
+			Dst:   TempValue(0),
 		},
 		CALL{
 			FName: "PrintInt",
 			Args: []Register{
 				Offset{
 					Base:   LocalValue{1, ast.TypeInfo{8, true}},
-					Offset: LocalValue{11, ast.TypeInfo{8, true}},
+					Offset: TempValue(0),
 				},
 			},
 		},
@@ -2480,23 +2480,23 @@ func TestArrayIndex(t *testing.T) {
 		// Convert x+1 offset from index into byte offset
 		MOV{
 			Src: LocalValue{0, ast.TypeInfo{8, true}},
-			Dst: TempValue(0),
+			Dst: TempValue(1),
 		},
 		ADD{
 			Src: IntLiteral(1),
-			Dst: TempValue(0),
+			Dst: TempValue(1),
 		},
 		MUL{
 			Left:  IntLiteral(8),
-			Right: TempValue(0),
-			Dst:   LocalValue{12, ast.TypeInfo{8, true}},
+			Right: TempValue(1),
+			Dst:   TempValue(2),
 		},
 		CALL{
 			FName: "PrintInt",
 			Args: []Register{
 				Offset{
 					Base:   LocalValue{6, ast.TypeInfo{8, true}},
-					Offset: LocalValue{12, ast.TypeInfo{8, true}},
+					Offset: TempValue(2),
 				},
 			},
 		},
@@ -2685,8 +2685,204 @@ func TestStringArray(t *testing.T) {
 			},
 		},
 	}
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestPreEcho(t *testing.T) {
+	loopNum = 0
+	as, ti, c, err := ast.Parse(sampleprograms.PreEcho)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		MOV{
+			Src: IntLiteral(3),
+			Dst: LocalValue{0, ast.TypeInfo{8, false}},
+		},
+		MOV{
+			Src: StringLiteral("foo"),
+			Dst: LocalValue{1, ast.TypeInfo{8, false}},
+		},
+		MOV{
+			Src: StringLiteral("bar"),
+			Dst: LocalValue{2, ast.TypeInfo{8, false}},
+		},
+		MOV{
+			Src: StringLiteral("baz"),
+			Dst: LocalValue{3, ast.TypeInfo{8, false}},
+		},
+		MOV{
+			Src: IntLiteral(1),
+			Dst: LocalValue{4, ast.TypeInfo{8, true}},
+		},
+		CALL{
+			FName: "len",
+			Args: []Register{
+				LocalValue{0, ast.TypeInfo{8, false}},
+				Pointer{LocalValue{1, ast.TypeInfo{8, false}}},
+			},
+		},
+		MOV{
+			Src: FuncRetVal{0, ast.TypeInfo{8, false}},
+			Dst: LocalValue{5, ast.TypeInfo{8, false}},
+		},
+		Label("loop0cond"),
+		JGE{
+			ConditionalJump{Label: Label("loop0end"), Src: LocalValue{4, ast.TypeInfo{8, true}}, Dst: LocalValue{5, ast.TypeInfo{8, false}}},
+		},
+		MUL{
+			Left:  IntLiteral(8),
+			Right: LocalValue{4, ast.TypeInfo{8, true}},
+			Dst:   TempValue(0),
+		},
+		CALL{
+			FName: "PrintString",
+			Args: []Register{
+				Offset{
+					Base:   LocalValue{1, ast.TypeInfo{8, false}},
+					Offset: TempValue(0),
+				},
+			},
+		},
+		MOV{
+			Src: LocalValue{4, ast.TypeInfo{8, true}},
+			Dst: TempValue(1),
+		},
+		ADD{
+			Src: IntLiteral(1),
+			Dst: TempValue(1),
+		},
+		MOV{
+			Src: TempValue(1),
+			Dst: LocalValue{4, ast.TypeInfo{8, true}},
+		},
+		JE{
+			ConditionalJump{Label: Label("if1else"), Src: LocalValue{4, ast.TypeInfo{8, true}}, Dst: LocalValue{5, ast.TypeInfo{8, false}}},
+		},
+		CALL{FName: "PrintString", Args: []Register{StringLiteral(" ")}},
+		JMP{"if1elsedone"},
+		Label("if1else"),
+		Label("if1elsedone"),
+		JMP{"loop0cond"},
+		Label("loop0end"),
+		CALL{FName: "PrintString", Args: []Register{StringLiteral(`\n`)}},
+	}
 
 	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestPreEcho2(t *testing.T) {
+	loopNum = 0
+	as, ti, c, err := ast.Parse(sampleprograms.PreEcho2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		MOV{
+			Src: IntLiteral(1),
+			Dst: LocalValue{0, ast.TypeInfo{8, true}},
+		},
+		CALL{
+			FName: "len",
+			Args: []Register{
+				FuncArg{0, ast.TypeInfo{8, false}, false},
+				FuncArg{1, ast.TypeInfo{8, false}, false},
+			},
+		},
+		MOV{
+			Src: FuncRetVal{0, ast.TypeInfo{8, false}},
+			Dst: LocalValue{1, ast.TypeInfo{8, false}},
+		},
+		Label("loop0cond"),
+		JGE{
+			ConditionalJump{Label: Label("loop0end"), Src: LocalValue{0, ast.TypeInfo{8, true}}, Dst: LocalValue{1, ast.TypeInfo{8, false}}},
+		},
+		MUL{
+			Left:  IntLiteral(8),
+			Right: LocalValue{0, ast.TypeInfo{8, true}},
+			Dst:   TempValue(0),
+		},
+		CALL{
+			FName: "PrintString",
+			Args: []Register{
+				Offset{
+					Base:   FuncArg{1, ast.TypeInfo{8, false}, false},
+					Offset: TempValue(0),
+				},
+			},
+		},
+		MOV{
+			Src: LocalValue{0, ast.TypeInfo{8, true}},
+			Dst: TempValue(1),
+		},
+		ADD{
+			Src: IntLiteral(1),
+			Dst: TempValue(1),
+		},
+		MOV{
+			Src: TempValue(1),
+			Dst: LocalValue{0, ast.TypeInfo{8, true}},
+		},
+		JE{
+			ConditionalJump{Label: Label("if1else"), Src: LocalValue{0, ast.TypeInfo{8, true}}, Dst: LocalValue{1, ast.TypeInfo{8, false}}},
+		},
+		CALL{FName: "PrintString", Args: []Register{StringLiteral(" ")}},
+		JMP{"if1elsedone"},
+		Label("if1else"),
+		Label("if1elsedone"),
+		JMP{"loop0cond"},
+		Label("loop0end"),
+		CALL{FName: "PrintString", Args: []Register{StringLiteral(`\n`)}},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	i2, _, err := Generate(as[1], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected = []Opcode{
+		MOV{
+			Src: IntLiteral(3),
+			Dst: LocalValue{0, ast.TypeInfo{8, false}},
+		},
+		MOV{
+			Src: StringLiteral("foo"),
+			Dst: LocalValue{1, ast.TypeInfo{8, false}},
+		},
+		MOV{
+			Src: StringLiteral("bar"),
+			Dst: LocalValue{2, ast.TypeInfo{8, false}},
+		},
+		MOV{
+			Src: StringLiteral("baz"),
+			Dst: LocalValue{3, ast.TypeInfo{8, false}},
+		},
+		CALL{
+			FName: "PrintSlice",
+			Args: []Register{
+				LocalValue{0, ast.TypeInfo{8, false}},
+				Pointer{LocalValue{1, ast.TypeInfo{8, false}}},
+			},
+		},
+	}
+	if err := compareIR(i2.Body, expected); err != nil {
 		t.Fatalf("%v", err)
 	}
 }

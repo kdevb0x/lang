@@ -429,17 +429,24 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 					panic(err)
 				}
 
+				_, isFuncArg := val.Base.(ir.FuncArg)
 				switch val.Offset.(type) {
 				case ir.IntLiteral:
 					baseAddr, err := a.tempPhysicalRegister(false)
 					if err != nil {
 						panic(err)
 					}
-					// Move the base address to a register.
-					v += fmt.Sprintf("\tMOVQ $%v, %v\n\t", src, baseAddr)
+					// Move the base address to a register. If the variable came from a function
+					// argument, it's already a pointer, otherwise we need to convert it to the
+					// address of the first element so that offsets access the right memory location.
+					if isFuncArg {
+						v += fmt.Sprintf("\tMOVQ %v, %v\n\t", src, baseAddr)
+					} else {
+						v += fmt.Sprintf("\tMOVQ $%v, %v\n\t", src, baseAddr)
+					}
 					// Offset
 					v += fmt.Sprintf("\tMOVQ %d(%v), %v\n\t", val.Offset, baseAddr, physArg)
-				case ir.LocalValue, ir.FuncArg:
+				case ir.LocalValue, ir.FuncArg, ir.TempValue:
 					// Get the offset from memory into a register
 					offr, err := a.getPhysicalRegister(val.Offset)
 					if err != nil {
@@ -450,14 +457,19 @@ func (a *Amd64) ConvertInstruction(i int, ops []ir.Opcode) string {
 						v += fmt.Sprintf("\tMOVQ %v, %v\n\t", a.ToPhysical(val.Offset, false), offr)
 					}
 
-					/*baseAddr, err := a.tempPhysicalRegister(false)
+					baseAddr, err := a.tempPhysicalRegister(false)
 					if err != nil {
 						panic(err)
-					}*/
+					}
+					if isFuncArg {
+						v += fmt.Sprintf("\tMOVQ %v, %v\n\t", src, baseAddr)
+					} else {
+						v += fmt.Sprintf("\tMOVQ $%v, %v\n\t", src, baseAddr)
+					}
 					// Move the base address to a register.
 					//v += fmt.Sprintf("\tMOVQ %v, %v\n\t", src, baseAddr)
 					// Offset from base into a physical register
-					v += fmt.Sprintf("\tMOVQ %v(%v*1), %v\n\t", src, offr, physArg)
+					v += fmt.Sprintf("\tMOVQ (%v)(%v*1), %v\n\t", baseAddr, offr, physArg)
 				default:
 					panic(fmt.Sprintf("Unhandled offset type %v", reflect.TypeOf(val.Offset)))
 				}

@@ -36,3 +36,22 @@ proc PrintASlice(A []byte) () {
 	PrintByteSlice(A)
 }
 `
+
+const SliceStringParam = `proc PrintSecond(args []string) () {
+	PrintString(args[1])
+}
+
+proc main() () {
+	let aslice []string = {"foo", "bar", "baz" }
+	PrintSecond(aslice)
+}`
+
+const SliceStringVariableParam = `proc PrintSecond(args []string) () {
+	let i = 1
+	PrintString(args[i])
+}
+
+proc main() () {
+	let aslice []string = {"foo", "bar", "baz" }
+	PrintSecond(aslice)
+}`

@@ -177,6 +177,54 @@ func TestReadSyscall(t *testing.T) {
 	}
 }
 
+// Echo is the simplest program that takes arguments
+func TestEchoProgram(t *testing.T) {
+	// We chdir below, defer a cleanup that resets it after the test finishes.
+	pwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func(pwd string) {
+		os.Chdir(pwd)
+	}(pwd)
+	// Inline the RunProgram call, because we want to cd to the directory so that the foo.txt
+	// file isn't created as garbage in the cwd..
+	dir, err := ioutil.TempDir("", "langtestEcho")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	// There's currently no way to define constants, no bitwise operations, and only decimal
+	// numbers, so modes and flags are hardcoded in decimal.
+	exe, err := BuildProgram(dir, strings.NewReader(sampleprograms.Echo))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := exec.Command(dir+"/"+exe, "foo", "bar")
+
+	content, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := "foo bar\n"
+	if got := string(content); got != expected {
+		t.Errorf("Unexpected value: got %v want %v", got, expected)
+	}
+
+	cmd = exec.Command(dir+"/"+exe, "other", "params")
+
+	content, err = cmd.CombinedOutput()
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected = "other params\n"
+	if got := string(content); got != expected {
+		t.Errorf("Unexpected value: got %v want %v", got, expected)
+	}
+}
+
 func ExampleCompileEmptyMain() {
 	if err := RunProgram("emptymain", sampleprograms.EmptyMain); err != nil {
 		fmt.Println(err.Error())
@@ -610,6 +658,19 @@ func ExampleSliceParam() {
 	// Output: ,7X
 }
 
+func ExampleSliceStringParam() {
+	if err := RunProgram("slicestringparam", sampleprograms.SliceStringParam); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: bar
+}
+
+func ExampleSliceStringVariableParam() {
+	if err := RunProgram("slicestringvariableparam", sampleprograms.SliceStringVariableParam); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: bar
+}
 func ExamplePrintString() {
 	if err := RunProgram("printstring", sampleprograms.PrintString); err != nil {
 		fmt.Println(err.Error())
@@ -671,4 +732,18 @@ func ExampleStringArray() {
 	}
 	// Output: bar
 	// foo
+}
+
+func ExamplePreEcho() {
+	if err := RunProgram("preecho", sampleprograms.PreEcho); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: bar baz
+}
+
+func ExamplePreEcho2() {
+	if err := RunProgram("preecho2", sampleprograms.PreEcho2); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: bar baz
 }

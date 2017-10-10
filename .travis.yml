@@ -7,6 +7,10 @@ os:
     - linux
     - osx
 
+matrix:
+    allow_failures:
+        -  go: master
+
 install:
     # Use git clone instead of go get, because there's no .go files in the main
     - go get -d github.com/driusan/noruntime/runtime
