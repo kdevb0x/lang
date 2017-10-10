@@ -34,3 +34,12 @@ proc main () () {
 	PrintInt(n2[x+1])
 }
 `
+
+const StringArray = `
+proc main () () {
+	let args = { "foo", "bar" }
+	PrintString(args[1])
+	PrintString("\n")
+	PrintString(args[0])
+}
+`

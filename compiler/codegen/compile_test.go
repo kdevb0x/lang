@@ -664,3 +664,11 @@ func ExampleIndexedAddition() {
 	// Output: 9
 	// 8
 }
+
+func ExampleStringArray() {
+	if err := RunProgram("stringarray", sampleprograms.StringArray); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: bar
+	// foo
+}

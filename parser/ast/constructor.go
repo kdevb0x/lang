@@ -271,7 +271,7 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, Callables, error)
 		("int64"):   TypeInfo{8, true},
 		("uint64"):  TypeInfo{8, false},
 		("bool"):    TypeInfo{1, false},
-		("string"):  TypeInfo{0, false},
+		("string"):  TypeInfo{8, false},
 		("sumtype"): TypeInfo{8, false},
 	}
 

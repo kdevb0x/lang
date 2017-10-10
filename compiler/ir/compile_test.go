@@ -152,10 +152,10 @@ func TestIRGenLetStatementShadow(t *testing.T) {
 		},
 		MOV{
 			Src: StringLiteral("hello"),
-			Dst: LocalValue{1, ast.TypeInfo{0, false}},
+			Dst: LocalValue{1, ast.TypeInfo{8, false}},
 		},
 		CALL{FName: "PrintString", Args: []Register{
-			LocalValue{1, ast.TypeInfo{0, false}},
+			LocalValue{1, ast.TypeInfo{8, false}},
 		},
 		},
 	}
@@ -2638,6 +2638,52 @@ func TestIndexedAddition(t *testing.T) {
 		}},
 		CALL{FName: "PrintString", Args: []Register{StringLiteral(`\n`)}},
 		CALL{FName: "PrintInt", Args: []Register{LocalValue{5, ast.TypeInfo{8, true}}}},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestStringArray(t *testing.T) {
+	loopNum = 0
+	as, ti, c, err := ast.Parse(sampleprograms.StringArray)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		MOV{
+			Src: StringLiteral("foo"),
+			Dst: LocalValue{0, ast.TypeInfo{8, false}},
+		},
+		MOV{
+			Src: StringLiteral("bar"),
+			Dst: LocalValue{1, ast.TypeInfo{8, false}},
+		},
+		CALL{
+			FName: "PrintString",
+			Args: []Register{
+				Offset{
+					Base:   LocalValue{0, ast.TypeInfo{8, false}},
+					Offset: IntLiteral(8),
+				},
+			},
+		},
+		CALL{FName: "PrintString", Args: []Register{StringLiteral(`\n`)}},
+		CALL{
+			FName: "PrintString",
+			Args: []Register{
+				Offset{
+					Base:   LocalValue{0, ast.TypeInfo{8, false}},
+					Offset: IntLiteral(0),
+				},
+			},
+		},
 	}
 
 	if err := compareIR(i.Body, expected); err != nil {
