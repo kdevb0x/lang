@@ -22,6 +22,8 @@ func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callabl
 		nil,
 		enums,
 		callables,
+		0,
+		0,
 	}
 	switch n := node.(type) {
 	case ast.ProcDecl:
@@ -44,7 +46,7 @@ func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callabl
 		if err != nil {
 			return Func{}, nil, err
 		}
-		return Func{Name: n.Name, Body: body, NumArgs: uint(nargs)}, enums, nil
+		return Func{Name: n.Name, Body: body, NumArgs: uint(nargs), NumLocals: context.numLocals, LargestFuncCall: context.maxFuncCall}, enums, nil
 	case ast.FuncDecl:
 		nargs := 0
 		for i, arg := range n.Args {
@@ -64,7 +66,7 @@ func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callabl
 		if err != nil {
 			return Func{}, nil, err
 		}
-		return Func{Name: n.Name, Body: body, NumArgs: uint(nargs)}, enums, nil
+		return Func{Name: n.Name, Body: body, NumArgs: uint(nargs), NumLocals: context.numLocals, LargestFuncCall: context.maxFuncCall}, enums, nil
 	case ast.SumTypeDefn:
 		e := make(EnumMap)
 		for i, v := range n.Options {
@@ -84,23 +86,18 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]Opcode
 	var ops []Opcode
 	var argRegs []Register
 	var signature ast.Callable
-	switch fc.Name {
-	case "PrintInt", "PrintString":
-		// FIXME: Handle these properly, rather than this hack that treats the builtins
-		// specially. They should be defined in the callable map created from the ast.
-	default:
-		if s := context.callables[fc.Name]; len(s) > 1 {
-			return nil, fmt.Errorf("Multiple dispatch not yet implemented")
-		} else if len(s) < 1 {
-			return nil, fmt.Errorf("Can not call undefined function %v", fc.Name)
-		} else {
-			signature = s[0]
-		}
+	if s := context.callables[fc.Name]; len(s) > 1 {
+		return nil, fmt.Errorf("Multiple dispatch not yet implemented")
+	} else if len(s) < 1 {
+		return nil, fmt.Errorf("Can not call undefined function %v", fc.Name)
+	} else {
+		signature = s[0]
 	}
 	var funcArgs []ast.VarWithType
 	if signature != nil {
 		funcArgs = signature.GetArgs()
 	}
+
 	for i, arg := range fc.UserArgs {
 		switch a := arg.(type) {
 		case ast.EnumValue:
@@ -166,7 +163,6 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]Opcode
 					lv = Pointer{lv}
 				}
 				argRegs = append(argRegs, lv)
-
 			}
 		case ast.FuncCall:
 			// a function call as a parameter to a function call in
@@ -199,6 +195,13 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]Opcode
 			panic(fmt.Sprintf("Unhandled argument type in FuncCall %v", reflect.TypeOf(a)))
 		}
 	}
+
+	// FIXME: This shouldn't need to reserve this much stack space, but
+	// something gets corrupted somewhere in the standard library if we
+	// don't..
+	//if argSize := uint(len(argRegs)); argSize > context.maxFuncCall {
+	context.maxFuncCall += uint(len(argRegs))
+	//}
 
 	// Perform the call.
 	if fc.Name == "print" {
@@ -1014,7 +1017,7 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, Register, 
 				ops = append(ops, offsetops...)
 
 				// Convert the offset from index to byte offset
-				realoffsetr := context.NextTempRegister() //LocalRegister(ast.VarWithType{"", ast.TypeLiteral("int"), false})
+				realoffsetr := context.NextTempRegister()
 				var tsize int
 				switch at := s.Base.Typ.(type) {
 				case ast.ArrayType:

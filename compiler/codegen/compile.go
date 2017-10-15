@@ -14,7 +14,7 @@ var debug bool = false
 // w.
 func Compile(w io.Writer, f ir.Func) error {
 	printPragmas(w, f)
-	fmt.Fprintf(w, "TEXT %v(SB), 4+16, $%d\n", f.Name, reserveStackSize(f))
+	fmt.Fprintf(w, "TEXT %v(SB), 4+16, $%v\n", f.Name, reserveStackSize(f))
 	data := dataLiterals(w, f)
 	cpu := Amd64{stringLiterals: data, numArgs: f.NumArgs, lvOffsets: make(map[uint]uint)}
 	cpu.clearRegisterMapping()
@@ -124,8 +124,14 @@ func printDataLiteral(w io.Writer, str string) PhysicalRegister {
 	fmt.Fprintf(w, "\tGLOBL %s+0(SB), 8+16, $%d\n", name, len(str)+8)
 	return PhysicalRegister(name)
 }
-func reserveStackSize(f ir.Func) uint {
-	// FIXME: This should be MIN(0, (numArgs-1)*8) + (8*NumLocalVariables)
-	// but ir.Func doesn't know NumVariables
-	return 40
+
+func reserveStackSize(f ir.Func) string {
+	if f.NumLocals == 0 && f.NumArgs == 0 {
+		return fmt.Sprintf("%v", f.LargestFuncCall*8)
+	} else if f.NumLocals == 0 {
+		return fmt.Sprintf("%v-%d", f.LargestFuncCall*8, (f.NumArgs * 8))
+	} else if f.NumArgs == 0 {
+		return fmt.Sprintf("%d", (f.NumLocals*8)+(f.LargestFuncCall*8))
+	}
+	return fmt.Sprintf("%d-%d", (f.NumLocals*8)+(f.LargestFuncCall*8), f.NumArgs*8)
 }

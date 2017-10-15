@@ -90,7 +90,7 @@ print0:
 `
 
 	printstring = `
-TEXT PrintString(SB), 20, $24
+TEXT PrintString(SB), 20, $8-8
 	MOVQ $1, 0(SP) // fd
 	MOVQ str+0(FP), AX
 	MOVQ AX, 8(SP)

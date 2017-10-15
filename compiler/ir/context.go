@@ -8,14 +8,16 @@ import (
 )
 
 type variableLayout struct {
-	values     map[ast.VarWithType]Register
-	tempVars   int
-	tempRegs   uint
-	typeinfo   ast.TypeInformation
-	funcargs   []ast.VarWithType
-	rettypes   []ast.TypeInfo
-	enumvalues EnumMap
-	callables  ast.Callables
+	values      map[ast.VarWithType]Register
+	tempVars    int
+	tempRegs    uint
+	typeinfo    ast.TypeInformation
+	funcargs    []ast.VarWithType
+	rettypes    []ast.TypeInfo
+	enumvalues  EnumMap
+	callables   ast.Callables
+	numLocals   uint
+	maxFuncCall uint
 }
 
 func (c variableLayout) GetTypeInfo(t string) ast.TypeInfo {
@@ -43,6 +45,7 @@ func (c *variableLayout) NextLocalRegister(varname ast.VarWithType) Register {
 	ti := c.typeinfo
 	typ := varname.Type()
 	firstType := strings.Fields(string(typ))[0]
+	c.numLocals++
 
 	if varname.Name == "" {
 		c.tempVars++
@@ -72,6 +75,9 @@ func (c *variableLayout) FuncParamRegister(varname ast.VarWithType, i int) Regis
 // Sets a variable to refer to an existing register, without generating a new
 // one.
 func (c *variableLayout) SetLocalRegister(varname ast.VarWithType, val Register) {
+	if _, ok := c.values[varname]; !ok {
+		c.numLocals++
+	}
 	c.values[varname] = val
 }
 

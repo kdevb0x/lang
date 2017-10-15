@@ -8,9 +8,14 @@ import (
 var debug = false
 
 type Func struct {
-	Name    string
-	Body    []Opcode
-	NumArgs uint
+	Name string
+	Body []Opcode
+
+	// Properties that are needed to reserve the correct stack size in the
+	// generated asm
+	NumArgs         uint
+	NumLocals       uint
+	LargestFuncCall uint
 }
 
 type Register interface {
