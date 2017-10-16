@@ -241,6 +241,9 @@ func TestCatProgram(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(dir)
+	if err := os.Chdir(dir); err != nil {
+		t.Fatal(err)
+	}
 
 	// There's currently no way to define constants, no bitwise operations, and only decimal
 	// numbers, so modes and flags are hardcoded in decimal.
