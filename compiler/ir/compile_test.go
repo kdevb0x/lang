@@ -2886,3 +2886,139 @@ func TestPreEcho2(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 }
+
+func TestUnbufferedCat(t *testing.T) {
+	loopNum = 0
+	as, ti, c, err := ast.Parse(sampleprograms.UnbufferedCat)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		MOV{
+			Src: IntLiteral(1),
+			Dst: LocalValue{0, ast.TypeInfo{8, false}},
+		},
+		MOV{
+			Src: IntLiteral(0),
+			Dst: LocalValue{1, ast.TypeInfo{1, false}},
+		},
+		MOV{
+			Src: IntLiteral(1),
+			Dst: LocalValue{2, ast.TypeInfo{8, true}},
+		},
+		CALL{
+			FName: "len",
+			Args: []Register{
+				FuncArg{0, ast.TypeInfo{8, false}, false},
+				FuncArg{1, ast.TypeInfo{8, false}, false},
+			},
+		},
+		MOV{
+			Src: FuncRetVal{0, ast.TypeInfo{8, false}},
+			Dst: LocalValue{3, ast.TypeInfo{8, false}},
+		},
+		Label("loop0cond"),
+		JGE{
+			ConditionalJump{Label: Label("loop0end"), Src: LocalValue{2, ast.TypeInfo{8, true}}, Dst: LocalValue{3, ast.TypeInfo{8, false}}},
+		},
+		MUL{
+			Left:  IntLiteral(8),
+			Right: LocalValue{2, ast.TypeInfo{8, true}},
+			Dst:   TempValue(0),
+		},
+		CALL{
+			FName: "Open",
+			Args: []Register{
+				Offset{
+					Base:   FuncArg{1, ast.TypeInfo{8, false}, false},
+					Offset: TempValue(0),
+				},
+			},
+		},
+		MOV{
+			Src: FuncRetVal{0, ast.TypeInfo{8, false}},
+			Dst: LocalValue{4, ast.TypeInfo{8, false}},
+		},
+		CALL{
+			FName: "Read",
+			Args: []Register{
+				LocalValue{4, ast.TypeInfo{8, false}},
+				LocalValue{0, ast.TypeInfo{8, false}},
+				Pointer{LocalValue{1, ast.TypeInfo{1, false}}},
+			},
+		},
+		MOV{
+			Src: FuncRetVal{0, ast.TypeInfo{8, false}},
+			Dst: LocalValue{5, ast.TypeInfo{8, false}},
+		},
+		CALL{
+			FName: "PrintByteSlice",
+			Args: []Register{
+				LocalValue{0, ast.TypeInfo{8, false}},
+				Pointer{LocalValue{1, ast.TypeInfo{1, false}}},
+			},
+		},
+		Label("loop1cond"),
+		JLE{
+			ConditionalJump{
+				"loop1end",
+				LocalValue{5, ast.TypeInfo{8, false}},
+				IntLiteral(0),
+			},
+		},
+		CALL{
+			FName: "Read",
+			Args: []Register{
+				LocalValue{4, ast.TypeInfo{8, false}},
+				LocalValue{0, ast.TypeInfo{8, false}},
+				Pointer{LocalValue{1, ast.TypeInfo{1, false}}},
+			},
+		},
+		MOV{
+			Src: FuncRetVal{0, ast.TypeInfo{8, false}},
+			Dst: LocalValue{5, ast.TypeInfo{8, false}},
+		},
+		JLE{
+			ConditionalJump{
+				"if2else",
+				LocalValue{5, ast.TypeInfo{8, false}},
+				IntLiteral(0),
+			},
+		},
+		CALL{
+			FName: "PrintByteSlice",
+			Args: []Register{
+				LocalValue{0, ast.TypeInfo{8, false}},
+				Pointer{LocalValue{1, ast.TypeInfo{1, false}}},
+			},
+		},
+		JMP{"if2elsedone"},
+		Label("if2else"),
+		Label("if2elsedone"),
+		JMP{"loop1cond"},
+		Label("loop1end"),
+		MOV{
+			Src: LocalValue{2, ast.TypeInfo{8, true}},
+			Dst: TempValue(2),
+		},
+		ADD{
+			Src: IntLiteral(1),
+			Dst: TempValue(2),
+		},
+		MOV{
+			Src: TempValue(2),
+			Dst: LocalValue{2, ast.TypeInfo{8, true}},
+		},
+		JMP{"loop0cond"},
+		Label("loop0end"),
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+}

@@ -225,6 +225,59 @@ func TestEchoProgram(t *testing.T) {
 	}
 }
 
+func TestCatProgram(t *testing.T) {
+	// We chdir below, defer a cleanup that resets it after the test finishes.
+	pwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func(pwd string) {
+		os.Chdir(pwd)
+	}(pwd)
+	// Inline the RunProgram call, because we want to cd to the directory so that the foo.txt
+	// file isn't created as garbage in the cwd..
+	dir, err := ioutil.TempDir("", "langtestCat")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	// There's currently no way to define constants, no bitwise operations, and only decimal
+	// numbers, so modes and flags are hardcoded in decimal.
+	exe, err := BuildProgram(dir, strings.NewReader(sampleprograms.UnbufferedCat))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := ioutil.WriteFile("foo.tmp", []byte("Foo"), 0666); err != nil {
+		t.Fatal(err)
+	}
+	if err := ioutil.WriteFile("bar.tmp", []byte("Bar"), 0666); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command(dir+"/"+exe, "foo.tmp", "bar.tmp")
+
+	content, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := "FooBar"
+	if got := string(content); got != expected {
+		t.Errorf("Unexpected value: got %v want %v", got, expected)
+	}
+
+	cmd = exec.Command(dir+"/"+exe, "bar.tmp", "foo.tmp")
+
+	content, err = cmd.CombinedOutput()
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected = "BarFoo"
+	if got := string(content); got != expected {
+		t.Errorf("Unexpected value: got %v want %v", got, expected)
+	}
+}
+
 func ExampleCompileEmptyMain() {
 	if err := RunProgram("emptymain", sampleprograms.EmptyMain); err != nil {
 		fmt.Println(err.Error())

@@ -441,6 +441,32 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 					Src: r,
 					Dst: reg,
 				})
+			case ast.FuncCall:
+				fc, err := callFunc(v, context, false)
+				if err != nil {
+					return nil, err
+				}
+				ops = append(ops, fc...)
+
+				multiwordoffset := 0
+				for i, v := range v.Returns {
+					words := strings.Fields(string(v.Type()))
+					for word := range words {
+						var r Register
+						ti := context.GetTypeInfo(words[word])
+
+						if word == 0 {
+							r = reg
+						} else {
+							r = context.NextLocalRegister(ast.VarWithType{"", ast.TypeLiteral(words[word]), false})
+						}
+						ops = append(ops, MOV{
+							Src: FuncRetVal{uint(i + word + multiwordoffset), ti},
+							Dst: r,
+						})
+					}
+					multiwordoffset += len(words) - 1
+				}
 			case ast.VarWithType:
 				val := context.Get(v)
 				ops = append(ops, MOV{
@@ -508,7 +534,7 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 			}
 		case ast.AssignmentOperator:
 			dst := context.Get(s.Variable)
-			switch s.Value.(type) {
+			switch v := s.Value.(type) {
 			case ast.IntLiteral, ast.BoolLiteral, ast.StringLiteral:
 				ops = append(ops, MOV{
 					Src: getRegister(s.Value, context),
@@ -524,7 +550,34 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 					Src: r,
 					Dst: dst,
 				})
+			case ast.FuncCall:
+				fc, err := callFunc(v, context, false)
+				if err != nil {
+					return nil, err
+				}
+				ops = append(ops, fc...)
 
+				multiwordoffset := 0
+				for i, v := range v.Returns {
+					words := strings.Fields(string(v.Type()))
+					for word := range words {
+						r := context.NextTempRegister()
+						ti := context.GetTypeInfo(words[word])
+
+						if word == 0 {
+							ops = append(ops, MOV{
+								Src: FuncRetVal{uint(i + word + multiwordoffset), ti},
+								Dst: dst,
+							})
+						} else {
+							ops = append(ops, MOV{
+								Src: FuncRetVal{uint(i + word + multiwordoffset), ti},
+								Dst: r,
+							})
+						}
+						multiwordoffset += len(words) - 1
+					}
+				}
 			default:
 				panic(fmt.Sprintf("Statement type assignment not implemented: %v", reflect.TypeOf(s.Value)))
 
