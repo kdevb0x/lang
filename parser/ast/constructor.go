@@ -259,8 +259,8 @@ func stripWhitespace(tokens []token.Token) []token.Token {
 func Construct(tokens []token.Token) ([]Node, TypeInformation, Callables, error) {
 	var nodes []Node
 	ti := TypeInformation{
-		("int"):     TypeInfo{8, true},
-		("uint"):    TypeInfo{8, false},
+		("int"):     TypeInfo{0, true},
+		("uint"):    TypeInfo{0, false},
 		("int8"):    TypeInfo{1, true},
 		("uint8"):   TypeInfo{1, false},
 		("byte"):    TypeInfo{1, false},
@@ -271,8 +271,8 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, Callables, error)
 		("int64"):   TypeInfo{8, true},
 		("uint64"):  TypeInfo{8, false},
 		("bool"):    TypeInfo{1, false},
-		("string"):  TypeInfo{8, false},
-		("sumtype"): TypeInfo{8, false},
+		("string"):  TypeInfo{0, false},
+		("sumtype"): TypeInfo{4, false},
 	}
 
 	c := NewContext()
@@ -402,7 +402,7 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, Callables, error)
 				cur.Options = append(cur.Options, constructor)
 			}
 
-			ti[cur.Name.Type()] = TypeInfo{8, false}
+			ti[cur.Name.Type()] = TypeInfo{0, false}
 
 			i += n
 			nodes = append(nodes, cur)

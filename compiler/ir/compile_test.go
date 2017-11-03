@@ -1240,6 +1240,10 @@ func TestIRGenFibonacci(t *testing.T) {
 			IntLiteral(1),
 		},
 		},
+		MOV{
+			Src: FuncRetVal{0, ast.TypeInfo{8, false}},
+			Dst: LocalValue{0, ast.TypeInfo{8, false}},
+		},
 	}
 	if len(i.Body) != len(expected) {
 		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
@@ -1479,13 +1483,13 @@ func TestIRMatchParam(t *testing.T) {
 	expected := []Opcode{
 		JE{ConditionalJump{
 			Label: "match0v0",
-			Src:   FuncArg{0, ast.TypeInfo{0, false}, false},
+			Src:   FuncArg{0, ast.TypeInfo{8, false}, false},
 			Dst:   IntLiteral(1),
 		},
 		},
 		JE{ConditionalJump{
 			Label: "match0v1",
-			Src:   FuncArg{0, ast.TypeInfo{0, false}, false},
+			Src:   FuncArg{0, ast.TypeInfo{8, false}, false},
 			Dst:   IntLiteral(0),
 		},
 		},

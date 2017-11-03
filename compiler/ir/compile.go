@@ -175,6 +175,9 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]Opcode
 			ops = append(ops, fc...)
 
 			ti := context.typeinfo[a.Returns[0].Type()]
+			if ti.Size == 0 {
+				ti.Size = 8
+			}
 			reg := context.NextLocalRegister(ast.VarWithType{"", ast.TypeLiteral(a.Returns[0].Type()), false})
 			ops = append(ops,
 				MOV{
@@ -563,6 +566,9 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 					for word := range words {
 						r := context.NextTempRegister()
 						ti := context.GetTypeInfo(words[word])
+						if ti.Size == 0 {
+							ti.Size = 8
+						}
 
 						if word == 0 {
 							ops = append(ops, MOV{
@@ -1076,10 +1082,17 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, Register, 
 				case ast.ArrayType:
 					reg.Info = context.GetTypeInfo(at.Base.Type())
 					tsize = reg.Info.Size
+					if tsize == 0 {
+						tsize = 8
+					}
+
 				case ast.SliceType:
 					reg.Id++
 					reg.Info = context.GetTypeInfo(at.Base.Type())
 					tsize = reg.Info.Size
+					if tsize == 0 {
+						tsize = 8
+					}
 				default:
 					panic("Can only index into arrays or slices")
 				}
@@ -1128,10 +1141,16 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, Register, 
 				case ast.ArrayType:
 					reg.Info = context.GetTypeInfo(at.Base.Type())
 					tsize = reg.Info.Size
+					if tsize == 0 {
+						tsize = 8
+					}
 				case ast.SliceType:
 					reg.Id++
 					reg.Info = context.GetTypeInfo(at.Base.Type())
 					tsize = reg.Info.Size
+					if tsize == 0 {
+						tsize = 8
+					}
 				default:
 					panic("Can only index into arrays or slices")
 				}

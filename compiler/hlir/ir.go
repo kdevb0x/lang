@@ -2,14 +2,17 @@ package hlir
 
 import (
 	"fmt"
+
+	"github.com/driusan/lang/parser/ast"
 )
 
-var debug = true
+var debug = false
 
 type Func struct {
-	Name    string
-	Body    []Opcode
-	NumArgs uint
+	Name      string
+	Body      []Opcode
+	NumArgs   uint
+	NumLocals uint
 }
 
 type Register interface{}
@@ -85,10 +88,17 @@ func (sl StringLiteral) String() string {
 type Offset struct {
 	// The register holding the offset from the base in bytes.
 	Offset Register
+	// The size of the type being offset.
+	Scale IntLiteral
 	// The register holding the base address to be offset from.
 	Base Register
+
+	Container ast.VarWithType
 }
 
 func (o Offset) String() string {
-	return fmt.Sprintf("&(%v+%v)", o.Base, o.Offset)
+	if debug {
+		return fmt.Sprintf("&(%v+%v*%v (%v))", o.Base, o.Offset, o.Scale, o.Container)
+	}
+	return fmt.Sprintf("&(%v+%v*%v)", o.Base, o.Offset, o.Scale)
 }

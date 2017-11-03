@@ -4,6 +4,7 @@ about something.)
 # Bugfix TODOs
 - functions should reserve the correct stack size
 - len should work on all slice types, and arrays, and strings
+- add test cases for unsigned comparisons in wasm (all operators)
 
 # New features TODOs
 
@@ -12,6 +13,7 @@ about something.)
 	- refactor builtins into separate standard library package
 - Casting (Syntax: `cast(val) as type`)
 - Compile time evaluation of pure functions with constant arguments
+- Allow let statements in conditions to bind to appropriate scope (ie while (let x = Read()) > 0 { ... }
 
 # Other TODOs
 
@@ -23,7 +25,6 @@ about something.)
 # Syntactic sugar TODOs
 
 - Method invocation syntax. x.foo().bar() should be equivalent to bar(foo(x))
-- Add let x match y {} ... syntax for extracting value from sum type and assigning it to a variable?
 - Add foreach loop or for maybe just normal for loops. (Syntax needs design.)
 
 # Design TODOs
@@ -35,10 +36,7 @@ about something.)
 	- (singly linked) lists?
 	- interfaces?
 	- structs? (are 2 product types necessary if there's already a tuple?)
-	- pointers? (pointers with GC? Just references? Are sum types, generics and a maybe monad enough to not have pointers?)
 	- float? dec64?
-	- remove "int" and force an explicit size?
 - Refactor/rewrite the IR into multiple IRs (at least a forward only/optimizing IR which gets transformed into a better 
   architecture specific IR.)
 	- Add optimizations (ie obvious optimizations: dead code elimination, inlining...)
-	- Add a new WASM architecture IR, in addition to amd64

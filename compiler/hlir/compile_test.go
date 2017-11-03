@@ -107,7 +107,7 @@ func TestIRGenEmptyMain(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, _, err := Generate(ast[0], ti, c, nil)
+	i, _, _, err := Generate(ast[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,7 +125,7 @@ func TestIRGenHelloWorld(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, _, err := Generate(ast[0], ti, c, nil)
+	i, _, _, err := Generate(ast[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,7 +152,7 @@ func TestIRGenLetStatement(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -186,7 +186,7 @@ func TestIRGenLetStatementShadow(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -232,7 +232,7 @@ func TestIRGenTwoProcs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -256,7 +256,7 @@ func TestIRGenTwoProcs(t *testing.T) {
 		}
 	}
 
-	i, _, err = Generate(as[1], ti, c, nil)
+	i, _, _, err = Generate(as[1], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -292,7 +292,7 @@ func TestIRGenOutOfOrder(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -320,7 +320,7 @@ func TestIRGenOutOfOrder(t *testing.T) {
 		}
 	}
 
-	i, _, err = Generate(as[1], ti, c, nil)
+	i, _, _, err = Generate(as[1], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -351,7 +351,7 @@ func TestIRGenMutAddition(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -408,7 +408,7 @@ func TestIRGenSimpleFunc(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -432,7 +432,7 @@ func TestIRGenSimpleFunc(t *testing.T) {
 		}
 	}
 
-	i, _, err = Generate(as[1], ti, c, nil)
+	i, _, _, err = Generate(as[1], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -467,7 +467,7 @@ func TestIRGenSumToTen(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -522,7 +522,7 @@ func TestIRGenSumToTen(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	i, _, err = Generate(as[1], ti, c, nil)
+	i, _, _, err = Generate(as[1], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -560,7 +560,7 @@ func TestIRGenSumToTenRecursive(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -588,7 +588,7 @@ func TestIRGenSumToTenRecursive(t *testing.T) {
 		}
 	}
 
-	i, _, err = Generate(as[1], ti, c, nil)
+	i, _, _, err = Generate(as[1], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -647,7 +647,7 @@ func TestIRGenSumToTenRecursive(t *testing.T) {
 		}
 	}
 
-	i, _, err = Generate(as[2], ti, c, nil)
+	i, _, _, err = Generate(as[2], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -680,7 +680,7 @@ func TestIRGenFizzBuzz(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -837,7 +837,7 @@ func TestIRGenSomeMathStatement(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -989,7 +989,7 @@ func TestIRGenUserType(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, _, err := Generate(as[1], ti, c, nil)
+	i, _, _, err := Generate(as[1], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1023,7 +1023,7 @@ func TestIRGenConcreteTypeUint8(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1057,7 +1057,7 @@ func TestIRGenConcreteTypeInt8(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1091,7 +1091,7 @@ func TestIRGenConcreteTypeUint16(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1125,7 +1125,7 @@ func TestIRGenConcreteTypeInt16(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1159,7 +1159,7 @@ func TestIRGenConcreteTypeUint32(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1193,7 +1193,7 @@ func TestIRGenConcreteTypeInt32(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1227,7 +1227,7 @@ func TestIRGenConcreteTypeUint64(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1261,7 +1261,7 @@ func TestIRGenConcreteTypeInt64(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1295,7 +1295,7 @@ func TestIRGenFibonacci(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1362,7 +1362,7 @@ func TestIRGenFibonacci(t *testing.T) {
 		}
 	}
 
-	i, _, err = Generate(as[1], ti, c, nil)
+	i, _, _, err = Generate(as[1], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1375,6 +1375,10 @@ func TestIRGenFibonacci(t *testing.T) {
 			IntLiteral(1),
 			IntLiteral(1),
 		},
+		},
+		MOV{
+			Src: FuncRetVal(0),
+			Dst: LocalValue(0),
 		},
 	}
 	if len(i.Body) != len(expected) {
@@ -1395,11 +1399,11 @@ func TestIREnumType(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, enums, err := Generate(as[0], ti, c, nil)
+	_, enums, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	i, _, err := Generate(as[1], ti, c, enums)
+	i, _, _, err := Generate(as[1], ti, c, enums)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1472,11 +1476,11 @@ func TestIRGenericEnumType(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, enums, err := Generate(as[0], ti, c, nil)
+	_, enums, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	i, _, err := Generate(as[1], ti, c, enums)
+	i, _, _, err := Generate(as[1], ti, c, enums)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1519,7 +1523,7 @@ func TestIRGenericEnumType(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	i, _, err = Generate(as[2], ti, c, enums)
+	i, _, _, err = Generate(as[2], ti, c, enums)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1658,11 +1662,11 @@ func TestIRMatchParam(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, enums, err := Generate(as[0], ti, c, nil)
+	_, enums, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	i, _, err := Generate(as[1], ti, c, enums)
+	i, _, _, err := Generate(as[1], ti, c, enums)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1717,7 +1721,7 @@ func TestIRMatchParam(t *testing.T) {
 			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
 		}
 	}
-	i, _, err = Generate(as[2], ti, c, enums)
+	i, _, _, err = Generate(as[2], ti, c, enums)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1752,7 +1756,7 @@ func TestIRSimpleAlgorithm(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1848,7 +1852,7 @@ func TestIRSimpleAlgorithm(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	i, _, err = Generate(as[1], ti, c, nil)
+	i, _, _, err = Generate(as[1], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1879,7 +1883,7 @@ func TestIRSimpleArray(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1910,7 +1914,8 @@ func TestIRSimpleArray(t *testing.T) {
 			Args: []Register{
 				Offset{
 					Base:   LocalValue(0),
-					Offset: IntLiteral(3 * 8),
+					Offset: IntLiteral(3),
+					Scale:  IntLiteral(0),
 				},
 			},
 		},
@@ -1926,7 +1931,7 @@ func TestIRArrayMutation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1957,7 +1962,8 @@ func TestIRArrayMutation(t *testing.T) {
 			Args: []Register{
 				Offset{
 					Base:   LocalValue(0),
-					Offset: IntLiteral(24),
+					Offset: IntLiteral(3),
+					Scale:  IntLiteral(0),
 				},
 			},
 		},
@@ -1977,7 +1983,8 @@ func TestIRArrayMutation(t *testing.T) {
 			Args: []Register{
 				Offset{
 					Base:   LocalValue(0),
-					Offset: IntLiteral(24),
+					Offset: IntLiteral(3),
+					Scale:  IntLiteral(0),
 				},
 			},
 		},
@@ -1987,7 +1994,8 @@ func TestIRArrayMutation(t *testing.T) {
 			Args: []Register{
 				Offset{
 					Base:   LocalValue(0),
-					Offset: IntLiteral(16),
+					Offset: IntLiteral(2),
+					Scale:  IntLiteral(0),
 				},
 			},
 		},
@@ -2003,7 +2011,7 @@ func TestIRReferenceVariable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2051,7 +2059,7 @@ func TestIRReferenceVariable(t *testing.T) {
 		CALL{FName: "PrintString", Args: []Register{StringLiteral(`\n`)}},
 		CALL{FName: "PrintInt", Args: []Register{LocalValue(1)}},
 	}
-	i, _, err = Generate(as[1], ti, c, nil)
+	i, _, _, err = Generate(as[1], ti, c, nil)
 
 	if err := compareIR(i.Body, expected); err != nil {
 		t.Fatalf("%v", err)
@@ -2063,7 +2071,7 @@ func TestIRSimpleSlice(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2098,7 +2106,8 @@ func TestIRSimpleSlice(t *testing.T) {
 			FName: "PrintInt",
 			Args: []Register{
 				Offset{
-					Offset: IntLiteral(24),
+					Offset: IntLiteral(3),
+					Scale:  IntLiteral(0),
 					Base:   LocalValue(1),
 				},
 			},
@@ -2115,7 +2124,7 @@ func TestIRSimpleSliceInference(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2149,7 +2158,8 @@ func TestIRSimpleSliceInference(t *testing.T) {
 			FName: "PrintInt",
 			Args: []Register{
 				Offset{
-					Offset: IntLiteral(24),
+					Offset: IntLiteral(3),
+					Scale:  IntLiteral(0),
 					Base:   LocalValue(1),
 				},
 			},
@@ -2166,7 +2176,7 @@ func TestIRSimpleSliceMutation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2201,7 +2211,8 @@ func TestIRSimpleSliceMutation(t *testing.T) {
 			Args: []Register{
 				Offset{
 					Base:   LocalValue(1),
-					Offset: IntLiteral(24),
+					Offset: IntLiteral(3),
+					Scale:  IntLiteral(0),
 				},
 			},
 		},
@@ -2222,7 +2233,8 @@ func TestIRSimpleSliceMutation(t *testing.T) {
 			Args: []Register{
 				Offset{
 					Base:   LocalValue(1),
-					Offset: IntLiteral(24),
+					Offset: IntLiteral(3),
+					Scale:  IntLiteral(0),
 				},
 			},
 		},
@@ -2232,7 +2244,8 @@ func TestIRSimpleSliceMutation(t *testing.T) {
 			Args: []Register{
 				Offset{
 					Base:   LocalValue(1),
-					Offset: IntLiteral(16),
+					Offset: IntLiteral(2),
+					Scale:  IntLiteral(0),
 				},
 			},
 		},
@@ -2249,7 +2262,7 @@ func TestIRSliceParam(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2283,7 +2296,7 @@ func TestIRSliceParam(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	i, _, err = Generate(as[1], ti, c, nil)
+	i, _, _, err = Generate(as[1], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2307,7 +2320,7 @@ func TestIRWriteSyscall(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2339,7 +2352,7 @@ func TestIRReadSyscall(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2420,7 +2433,7 @@ func TestIRIfElseMatch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2507,7 +2520,7 @@ func TestIREcho(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2540,27 +2553,29 @@ func TestIREcho(t *testing.T) {
 				Register: TempValue(0),
 			},
 			Body: []Opcode{
-				MUL{
-					Left:  IntLiteral(8),
-					Right: LocalValue(0),
-					Dst:   TempValue(1),
-				},
 				CALL{
 					FName: "PrintString",
 					Args: []Register{
 						Offset{
 							Base:   FuncArg{1, false},
-							Offset: TempValue(1),
+							Offset: LocalValue(0),
+							Scale:  IntLiteral(0),
+							Container: ast.VarWithType{
+								"args", ast.SliceType{
+									ast.TypeLiteral("string"),
+								},
+								false,
+							},
 						},
 					},
 				},
 				ADD{
 					Left:  LocalValue(0),
 					Right: IntLiteral(1),
-					Dst:   TempValue(2),
+					Dst:   TempValue(1),
 				},
 				MOV{
-					Src: TempValue(2),
+					Src: TempValue(1),
 					Dst: LocalValue(0),
 				},
 				IF{
@@ -2570,13 +2585,12 @@ func TestIREcho(t *testing.T) {
 								NEQ{
 									Left:  LocalValue(0),
 									Right: LocalValue(1),
-									Dst:   TempValue(3),
+									Dst:   TempValue(2),
 								},
 							},
-							Register: TempValue(3),
+							Register: TempValue(2),
 						},
 						Body: []Opcode{
-
 							CALL{
 								FName: "PrintString",
 								Args: []Register{
@@ -2606,7 +2620,7 @@ func TestArrayIndex(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2660,17 +2674,20 @@ func TestArrayIndex(t *testing.T) {
 			Dst: LocalValue(10),
 		},
 		// Convert index from index into byte offset
-		MUL{
-			Left:  IntLiteral(8),
-			Right: LocalValue(0),
-			Dst:   TempValue(0),
-		},
 		CALL{
 			FName: "PrintInt",
 			Args: []Register{
 				Offset{
 					Base:   LocalValue(1),
-					Offset: TempValue(0),
+					Offset: LocalValue(0),
+					Scale:  IntLiteral(0),
+					Container: ast.VarWithType{
+						"n", ast.ArrayType{
+							Base: ast.TypeLiteral("int"),
+							Size: 5,
+						},
+						false,
+					},
 				},
 			},
 		},
@@ -2682,19 +2699,22 @@ func TestArrayIndex(t *testing.T) {
 		ADD{
 			Left:  LocalValue(0),
 			Right: IntLiteral(1),
-			Dst:   TempValue(1),
-		},
-		MUL{
-			Left:  IntLiteral(8),
-			Right: TempValue(1),
-			Dst:   TempValue(2),
+			Dst:   TempValue(0),
 		},
 		CALL{
 			FName: "PrintInt",
 			Args: []Register{
 				Offset{
 					Base:   LocalValue(6),
-					Offset: TempValue(2),
+					Offset: TempValue(0),
+					Scale:  IntLiteral(0),
+					Container: ast.VarWithType{
+						"n2", ast.ArrayType{
+							Base: ast.TypeLiteral("int"),
+							Size: 5,
+						},
+						false,
+					},
 				},
 			},
 		},
@@ -2710,7 +2730,7 @@ func TestIndexAssignment(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2737,14 +2757,16 @@ func TestIndexAssignment(t *testing.T) {
 		MOV{
 			Src: Offset{
 				Base:   LocalValue(1),
-				Offset: IntLiteral(8),
+				Offset: IntLiteral(1),
+				Scale:  IntLiteral(0),
 			},
 			Dst: LocalValue(4),
 		},
 		MOV{
 			Src: Offset{
 				Base:   LocalValue(1),
-				Offset: IntLiteral(16),
+				Offset: IntLiteral(2),
+				Scale:  IntLiteral(0),
 			},
 			Dst: LocalValue(5),
 		},
@@ -2765,7 +2787,7 @@ func TestIndexedAddition(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2792,7 +2814,8 @@ func TestIndexedAddition(t *testing.T) {
 		MOV{
 			Src: Offset{
 				Base:   LocalValue(1),
-				Offset: IntLiteral(8),
+				Offset: IntLiteral(1),
+				Scale:  IntLiteral(0),
 			},
 			Dst: LocalValue(4),
 		},
@@ -2800,7 +2823,8 @@ func TestIndexedAddition(t *testing.T) {
 			Left: LocalValue(4),
 			Right: Offset{
 				Base:   LocalValue(1),
-				Offset: IntLiteral(16),
+				Offset: IntLiteral(2),
+				Scale:  IntLiteral(0),
 			},
 			Dst: TempValue(0),
 		},
@@ -2811,11 +2835,13 @@ func TestIndexedAddition(t *testing.T) {
 		ADD{
 			Left: Offset{
 				Base:   LocalValue(1),
-				Offset: IntLiteral(16),
+				Offset: IntLiteral(2),
+				Scale:  IntLiteral(0),
 			},
 			Right: Offset{
 				Base:   LocalValue(1),
 				Offset: IntLiteral(0),
+				Scale:  IntLiteral(0),
 			},
 			Dst: TempValue(1),
 		},
@@ -2838,7 +2864,7 @@ func TestStringArray(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2857,7 +2883,8 @@ func TestStringArray(t *testing.T) {
 			Args: []Register{
 				Offset{
 					Base:   LocalValue(0),
-					Offset: IntLiteral(8),
+					Offset: IntLiteral(1),
+					Scale:  IntLiteral(0),
 				},
 			},
 		},
@@ -2868,6 +2895,7 @@ func TestStringArray(t *testing.T) {
 				Offset{
 					Base:   LocalValue(0),
 					Offset: IntLiteral(0),
+					Scale:  IntLiteral(0),
 				},
 			},
 		},
@@ -2882,7 +2910,7 @@ func TestPreEcho(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2931,27 +2959,30 @@ func TestPreEcho(t *testing.T) {
 				Register: TempValue(0),
 			},
 			Body: []Opcode{
-				MUL{
-					Left:  IntLiteral(8),
-					Right: LocalValue(4),
-					Dst:   TempValue(1),
-				},
 				CALL{
 					FName: "PrintString",
 					Args: []Register{
 						Offset{
 							Base:   LocalValue(1),
-							Offset: TempValue(1),
+							Scale:  IntLiteral(0),
+							Offset: LocalValue(4),
+							Container: ast.VarWithType{
+								"args",
+								ast.SliceType{
+									ast.TypeLiteral("string"),
+								},
+								false,
+							},
 						},
 					},
 				},
 				ADD{
 					Left:  LocalValue(4),
 					Right: IntLiteral(1),
-					Dst:   TempValue(2),
+					Dst:   TempValue(1),
 				},
 				MOV{
-					Src: TempValue(2),
+					Src: TempValue(1),
 					Dst: LocalValue(4),
 				},
 				IF{
@@ -2961,10 +2992,10 @@ func TestPreEcho(t *testing.T) {
 								NEQ{
 									Left:  LocalValue(4),
 									Right: LocalValue(5),
-									Dst:   TempValue(3),
+									Dst:   TempValue(2),
 								},
 							},
-							Register: TempValue(3),
+							Register: TempValue(2),
 						},
 						Body: []Opcode{
 
@@ -2992,7 +3023,7 @@ func TestPreEcho2(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3025,27 +3056,30 @@ func TestPreEcho2(t *testing.T) {
 				Register: TempValue(0),
 			},
 			Body: []Opcode{
-				MUL{
-					Left:  IntLiteral(8),
-					Right: LocalValue(0),
-					Dst:   TempValue(1),
-				},
 				CALL{
 					FName: "PrintString",
 					Args: []Register{
 						Offset{
 							Base:   FuncArg{1, false},
-							Offset: TempValue(1),
+							Scale:  IntLiteral(0),
+							Offset: LocalValue(0),
+							Container: ast.VarWithType{
+								"args",
+								ast.SliceType{
+									ast.TypeLiteral("string"),
+								},
+								false,
+							},
 						},
 					},
 				},
 				ADD{
 					Left:  LocalValue(0),
 					Right: IntLiteral(1),
-					Dst:   TempValue(2),
+					Dst:   TempValue(1),
 				},
 				MOV{
-					Src: TempValue(2),
+					Src: TempValue(1),
 					Dst: LocalValue(0),
 				},
 				IF{
@@ -3055,10 +3089,10 @@ func TestPreEcho2(t *testing.T) {
 								NEQ{
 									Left:  LocalValue(0),
 									Right: LocalValue(1),
-									Dst:   TempValue(3),
+									Dst:   TempValue(2),
 								},
 							},
-							Register: TempValue(3),
+							Register: TempValue(2),
 						},
 						Body: []Opcode{
 
@@ -3080,7 +3114,7 @@ func TestPreEcho2(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	i2, _, err := Generate(as[1], ti, c, nil)
+	i2, _, _, err := Generate(as[1], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3119,7 +3153,7 @@ func TestUnbufferedCat(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	i, _, err := Generate(as[0], ti, c, nil)
+	i, _, _, err := Generate(as[0], ti, c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3156,17 +3190,20 @@ func TestUnbufferedCat(t *testing.T) {
 				Register: TempValue(0),
 			},
 			Body: []Opcode{
-				MUL{
-					Left:  IntLiteral(8),
-					Right: LocalValue(2),
-					Dst:   TempValue(1),
-				},
 				CALL{
 					FName: "Open",
 					Args: []Register{
 						Offset{
 							Base:   FuncArg{1, false},
-							Offset: TempValue(1),
+							Offset: LocalValue(2),
+							Scale:  IntLiteral(0),
+							Container: ast.VarWithType{
+								"args",
+								ast.SliceType{
+									ast.TypeLiteral("string"),
+								},
+								false,
+							},
 						},
 					},
 				},
@@ -3196,9 +3233,9 @@ func TestUnbufferedCat(t *testing.T) {
 				LOOP{
 					Condition: Condition{
 						Body: []Opcode{
-							GT{Left: LocalValue(5), Right: IntLiteral(0), Dst: TempValue(2)},
+							GT{Left: LocalValue(5), Right: IntLiteral(0), Dst: TempValue(1)},
 						},
-						Register: TempValue(2),
+						Register: TempValue(1),
 					},
 					Body: []Opcode{
 						CALL{
@@ -3217,9 +3254,9 @@ func TestUnbufferedCat(t *testing.T) {
 							ControlFlow: ControlFlow{
 								Condition: Condition{
 									Body: []Opcode{
-										GT{Left: LocalValue(5), Right: IntLiteral(0), Dst: TempValue(3)},
+										GT{Left: LocalValue(5), Right: IntLiteral(0), Dst: TempValue(2)},
 									},
-									Register: TempValue(3),
+									Register: TempValue(2),
 								},
 								Body: []Opcode{
 									CALL{
@@ -3234,9 +3271,9 @@ func TestUnbufferedCat(t *testing.T) {
 						},
 					},
 				},
-				ADD{Left: LocalValue(2), Right: IntLiteral(1), Dst: TempValue(4)},
+				ADD{Left: LocalValue(2), Right: IntLiteral(1), Dst: TempValue(3)},
 				MOV{
-					Src: TempValue(4),
+					Src: TempValue(3),
 					Dst: LocalValue(2),
 				},
 			},

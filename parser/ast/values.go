@@ -134,7 +134,7 @@ func setLeft(node, value Value) Value {
 		v.Left = value
 		return v
 	default:
-		panic(fmt.Sprintf("Unhandled node type in setLeft", reflect.TypeOf(node)))
+		panic(fmt.Sprintf("Unhandled node type in setLeft: %v", reflect.TypeOf(node)))
 	}
 }
 
@@ -174,7 +174,7 @@ func setRight(node, value Value) Value {
 		v.Right = value
 		return v
 	default:
-		panic(fmt.Sprintf("Unhandled node type in setRight", reflect.TypeOf(node)))
+		panic(fmt.Sprintf("Unhandled node type in setRight: %v", reflect.TypeOf(node)))
 	}
 }
 

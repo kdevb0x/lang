@@ -6,15 +6,29 @@ import (
 	"github.com/driusan/lang/parser/ast"
 )
 
+type RegisterData map[Register]RegisterInfo
+
+type RegisterInfo struct {
+	Name     string
+	TypeInfo ast.TypeInfo
+	Variable ast.VarWithType
+
+	// Only valid for slices
+	SliceSize uint
+	Creator   ast.VarWithType
+}
+
 type variableLayout struct {
-	values     map[ast.VarWithType]Register
-	tempVars   int
-	tempRegs   uint
-	typeinfo   ast.TypeInformation
-	funcargs   []ast.VarWithType
-	rettypes   []ast.TypeInfo
-	enumvalues EnumMap
-	callables  ast.Callables
+	values       map[ast.VarWithType]Register
+	tempVars     int
+	tempRegs     uint
+	typeinfo     ast.TypeInformation
+	funcargs     []ast.VarWithType
+	rettypes     []ast.TypeInfo
+	enumvalues   EnumMap
+	callables    ast.Callables
+	numLocals    uint
+	registerInfo RegisterData
 }
 
 func (c variableLayout) GetTypeInfo(t string) ast.TypeInfo {
@@ -23,9 +37,6 @@ func (c variableLayout) GetTypeInfo(t string) ast.TypeInfo {
 		panic("Could not get type info for " + string(t))
 	}
 	return ti
-}
-func (c variableLayout) GetReturnTypeInfo(v uint) ast.TypeInfo {
-	return c.rettypes[v]
 }
 
 func (c *variableLayout) NextTempRegister() Register {
@@ -41,26 +52,42 @@ func (c *variableLayout) NextLocalRegister(varname ast.VarWithType) Register {
 	}
 
 	if varname.Name == "" {
-		c.tempVars++
-		return LocalValue(uint(len(c.values) + c.tempVars - 1))
+		panic("No name for variable")
 	}
 
+	c.numLocals++
 	// If this variable is shadowing another variable, increase tempVars to
 	// make sure the next calls increment the LocalVariable number and don't
 	// reuse the same variable.
 	_, postInc := c.values[varname]
-	c.values[varname] = LocalValue(uint(len(c.values) + c.tempVars))
+	lv := LocalValue(uint(len(c.values) + c.tempVars))
+	c.values[varname] = lv
 	if postInc {
 		c.tempVars++
 	}
-	return c.values[varname]
+	c.registerInfo[lv] = RegisterInfo{
+		string(varname.Name),
+		c.typeinfo[varname.Type()],
+		varname,
+		0,
+		ast.VarWithType{},
+	}
+	return lv
 }
 
 // Reserves a register for a function parameter. This must be done for every
 // parameter, before any LocalRegister calls are made.
 func (c *variableLayout) FuncParamRegister(varname ast.VarWithType, i int) Register {
 	c.tempVars--
-	c.values[varname] = FuncArg{uint(i), varname.Reference}
+	fa := FuncArg{uint(i), varname.Reference}
+	c.values[varname] = fa
+	c.registerInfo[fa] = RegisterInfo{
+		string(varname.Name),
+		c.typeinfo[varname.Type()],
+		varname,
+		0,
+		ast.VarWithType{},
+	}
 	return c.values[varname]
 }
 

@@ -22,6 +22,9 @@ type variableLayout struct {
 
 func (c variableLayout) GetTypeInfo(t string) ast.TypeInfo {
 	ti, ok := c.typeinfo[t]
+	if ti.Size == 0 {
+		ti.Size = 8
+	}
 	if !ok {
 		panic("Could not get type info for " + string(t))
 	}
@@ -42,21 +45,24 @@ func (c *variableLayout) NextLocalRegister(varname ast.VarWithType) Register {
 	if varname.Type() == "" {
 		panic("No type for variable " + varname.Name + ".")
 	}
-	ti := c.typeinfo
 	typ := varname.Type()
 	firstType := strings.Fields(string(typ))[0]
 	c.numLocals++
+	ti := c.typeinfo[firstType]
+	if ti.Size == 0 {
+		ti.Size = 8
+	}
 
 	if varname.Name == "" {
 		c.tempVars++
-		return LocalValue{uint(len(c.values) + c.tempVars - 1), ti[firstType]}
+		return LocalValue{uint(len(c.values) + c.tempVars - 1), ti}
 	}
 
 	// If this variable is shadowing another variable, increase tempVars to
 	// make sure the next calls increment the LocalVariable number and don't
 	// reuse the same variable.
 	_, postInc := c.values[varname]
-	c.values[varname] = LocalValue{uint(len(c.values) + c.tempVars), ti[firstType]}
+	c.values[varname] = LocalValue{uint(len(c.values) + c.tempVars), ti}
 	if postInc {
 		c.tempVars++
 	}
@@ -67,8 +73,11 @@ func (c *variableLayout) NextLocalRegister(varname ast.VarWithType) Register {
 // parameter, before any LocalRegister calls are made.
 func (c *variableLayout) FuncParamRegister(varname ast.VarWithType, i int) Register {
 	c.tempVars--
-	ti := c.typeinfo
-	c.values[varname] = FuncArg{uint(i), ti[varname.Type()], varname.Reference}
+	ti := c.typeinfo[varname.Type()]
+	if ti.Size == 0 {
+		ti.Size = 8
+	}
+	c.values[varname] = FuncArg{uint(i), ti, varname.Reference}
 	return c.values[varname]
 }
 

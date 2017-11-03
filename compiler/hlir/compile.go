@@ -12,7 +12,7 @@ type EnumMap map[string]int
 
 // Compile takes an AST and writes the assembly that it compiles to to
 // w.
-func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callables, enums EnumMap) (Func, EnumMap, error) {
+func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callables, enums EnumMap) (Func, EnumMap, RegisterData, error) {
 	context := &variableLayout{
 		make(map[ast.VarWithType]Register),
 		0,
@@ -22,6 +22,8 @@ func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callabl
 		nil,
 		enums,
 		callables,
+		0,
+		make(RegisterData),
 	}
 	switch n := node.(type) {
 	case ast.ProcDecl:
@@ -38,13 +40,15 @@ func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callabl
 			context.FuncParamRegister(arg, i)
 		}
 		for _, rv := range n.Return {
-			context.rettypes = append(context.rettypes, context.GetTypeInfo(rv.Type()))
+			ti := context.GetTypeInfo(rv.Type())
+			context.rettypes = append(context.rettypes, ti)
+			context.registerInfo[rv] = RegisterInfo{"", ti, rv, 0, rv}
 		}
 		body, err := compileBlock(n.Body, context)
 		if err != nil {
-			return Func{}, nil, err
+			return Func{}, nil, nil, err
 		}
-		return Func{Name: n.Name, Body: body, NumArgs: uint(nargs)}, enums, nil
+		return Func{Name: n.Name, Body: body, NumArgs: uint(nargs), NumLocals: uint(context.numLocals)}, enums, context.registerInfo, nil
 	case ast.FuncDecl:
 		nargs := 0
 		for i, arg := range n.Args {
@@ -57,23 +61,25 @@ func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callabl
 		for _, rv := range n.Return {
 			words := strings.Fields(string(rv.Type()))
 			for _, typePiece := range words {
-				context.rettypes = append(context.rettypes, context.GetTypeInfo(typePiece))
+				ti := context.GetTypeInfo(typePiece)
+				context.rettypes = append(context.rettypes, ti)
+				context.registerInfo[rv] = RegisterInfo{"", ti, rv, 0, rv}
 			}
 		}
 		body, err := compileBlock(n.Body, context)
 		if err != nil {
-			return Func{}, nil, err
+			return Func{}, nil, nil, err
 		}
-		return Func{Name: n.Name, Body: body, NumArgs: uint(nargs)}, enums, nil
+		return Func{Name: n.Name, Body: body, NumArgs: uint(nargs), NumLocals: uint(context.numLocals)}, enums, context.registerInfo, nil
 	case ast.SumTypeDefn:
 		e := make(EnumMap)
 		for i, v := range n.Options {
 			e[v.Constructor] = i
 		}
-		return Func{}, e, nil
+		return Func{}, e, context.registerInfo, nil
 	case ast.TypeDefn:
 		// Do nothing, the types have already been validated
-		return Func{}, enums, fmt.Errorf("No IR to generate for type definitions.")
+		return Func{}, enums, nil, fmt.Errorf("No IR to generate for type definitions.")
 	default:
 		panic(fmt.Sprintf("Unhandled Node type in compiler %v", reflect.TypeOf(n)))
 	}
@@ -142,7 +148,11 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]Opcode
 						})
 					}
 					argRegs = append(argRegs, lv)
-					argRegs = append(argRegs, Pointer{val1})
+					p := Pointer{val1}
+					argRegs = append(argRegs, p)
+					info := context.registerInfo[p]
+					info.Creator = a
+					context.registerInfo[p] = info
 				case FuncArg:
 					argRegs = append(argRegs, FuncArg{
 						Id:        l.Id,
@@ -159,6 +169,10 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]Opcode
 				if funcArgs != nil && funcArgs[i].Reference {
 					lv = Pointer{lv}
 				}
+				info := context.registerInfo[lv]
+				info.Creator = a
+				context.registerInfo[lv] = info
+
 				argRegs = append(argRegs, lv)
 
 			}
@@ -173,7 +187,6 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]Opcode
 			ops = append(ops, fc...)
 
 			reg := context.NextTempRegister()
-			//reg := context.NextLocalRegister(ast.VarWithType{"", ast.TypeLiteral(a.Returns[0].Type()), false})
 			ops = append(ops,
 				MOV{
 					Src: FuncRetVal(0),
@@ -257,6 +270,9 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 						Src: IntLiteral(len(vr)),
 						Dst: reg,
 					})
+					info := context.registerInfo[reg]
+					info.SliceSize = uint(len(s.Value.(ast.ArrayLiteral)))
+					context.registerInfo[reg] = info
 				default:
 					panic("Unhandled register type in slice assignment")
 				}
@@ -321,6 +337,9 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 					Src: IntLiteral(len(s.InitialValue.(ast.ArrayLiteral))),
 					Dst: reg,
 				})
+				info := context.registerInfo[reg]
+				info.SliceSize = uint(len(s.InitialValue.(ast.ArrayLiteral)))
+				context.registerInfo[reg] = info
 			}
 			body, rvs, err := evaluateValue(s.InitialValue, context)
 			if err != nil {
@@ -684,8 +703,10 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, []Register
 				default:
 					panic("Can only index into arrays or slices")
 				}
+
 				return nil, []Register{Offset{
-					Offset: IntLiteral(int(offset) * offsetInfo.Size),
+					Offset: IntLiteral(int(offset)),
+					Scale:  IntLiteral(offsetInfo.Size),
 					Base:   reg,
 				}}, nil
 			default:
@@ -697,7 +718,6 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, []Register
 				ops = append(ops, offsetops...)
 
 				// Convert the offset from index to byte offset
-				realoffsetr := context.NextTempRegister()
 				var offsetInfo ast.TypeInfo
 				switch bt := s.Base.Typ.(type) {
 				case ast.ArrayType:
@@ -709,14 +729,11 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, []Register
 					panic("Can only index into arrays or slices")
 				}
 
-				ops = append(ops, MUL{
-					Left:  IntLiteral(offsetInfo.Size),
-					Right: offsetr[0],
-					Dst:   realoffsetr,
-				})
 				a = Offset{
-					Offset: realoffsetr,
-					Base:   reg,
+					Offset:    offsetr[0],
+					Scale:     IntLiteral(offsetInfo.Size),
+					Base:      reg,
+					Container: s.Base,
 				}
 			}
 		case FuncArg:
@@ -735,9 +752,12 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, []Register
 				default:
 					panic("Can only index into arrays or slices")
 				}
+
 				return nil, []Register{Offset{
-					Offset: IntLiteral(int(offset) * offsetInfo.Size),
-					Base:   reg,
+					Offset:    IntLiteral(offset),
+					Scale:     IntLiteral(offsetInfo.Size),
+					Base:      reg,
+					Container: s.Base,
 				},
 				}, nil
 			default:
@@ -749,7 +769,6 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, []Register
 				ops = append(ops, offsetops...)
 
 				// Convert the offset from index to byte offset
-				realoffsetr := context.NextTempRegister()
 				var offsetInfo ast.TypeInfo
 				switch bt := s.Base.Typ.(type) {
 				case ast.ArrayType:
@@ -761,14 +780,11 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, []Register
 					panic("Can only index into arrays or slices")
 				}
 
-				ops = append(ops, MUL{
-					Left:  IntLiteral(offsetInfo.Size),
-					Right: offsetr[0],
-					Dst:   realoffsetr,
-				})
 				a = Offset{
-					Offset: realoffsetr,
-					Base:   reg,
+					Offset:    offsetr[0],
+					Scale:     IntLiteral(offsetInfo.Size),
+					Base:      reg,
+					Container: s.Base,
 				}
 			}
 		default:
@@ -810,6 +826,26 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, []Register
 
 		dst := context.NextTempRegister()
 		ops = append(ops, LT{
+			Left:  left[0],
+			Right: right[0],
+			Dst:   dst,
+		})
+		return ops, []Register{dst}, nil
+	case ast.LessThanOrEqualComparison:
+		body, left, err := evaluateValue(s.Left, context)
+		if err != nil {
+			return nil, nil, err
+		}
+		ops = append(ops, body...)
+
+		body, right, err := evaluateValue(s.Right, context)
+		if err != nil {
+			return nil, nil, err
+		}
+		ops = append(ops, body...)
+
+		dst := context.NextTempRegister()
+		ops = append(ops, LTE{
 			Left:  left[0],
 			Right: right[0],
 			Dst:   dst,

@@ -11,6 +11,6 @@ const Fibonacci = `proc fib_rec(n uint64, n1 uint64) (uint64) {
 }
 
 proc main() () {
-	fib_rec(1, 1)
+	let _ = fib_rec(1, 1)
 }
 `

@@ -1,4 +1,5 @@
 // +build dragonfly linux darwin
+
 package codegen
 
 const (
