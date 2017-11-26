@@ -10,9 +10,12 @@ import (
 
 type EnumMap map[string]int
 
+var callNum uint
+
 // Compile takes an AST and writes the assembly that it compiles to to
 // w.
 func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callables, enums EnumMap) (Func, EnumMap, RegisterData, error) {
+	callNum = 0
 	context := &variableLayout{
 		make(map[ast.VarWithType]Register),
 		0,
@@ -29,20 +32,55 @@ func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callabl
 	case ast.ProcDecl:
 		context.funcargs = n.GetArgs()
 		nargs := 0
-		for i, arg := range n.Args {
-			nargs++
-			// Slices get passed as {n, *void}, so claim an extra argument in the
-			// IR, that way code generation will make sure other variables on the
-			// stack start at the right place.
-			if _, ok := arg.Typ.(ast.SliceType); ok {
+		for _, arg := range n.Args {
+			switch arg.Typ.(type) {
+			case ast.SliceType:
+				// Slices get passed as {n, *void}, so claim an extra argument in the
+				// IR, that way code generation will make sure other variables on the
+				// stack start at the right place.
+				// The second argument is a pointer, which is fixed at a word size.
+				context.FuncParamRegister(arg, nargs)
+				context.registerInfo[FuncArg{uint(nargs), arg.Reference}] = RegisterInfo{
+					"",
+					ast.TypeInfo{0, false},
+					arg,
+					0,
+					arg,
+				}
 				nargs++
+				context.registerInfo[FuncArg{uint(nargs), arg.Reference}] = RegisterInfo{
+					"",
+					ast.TypeInfo{8, false},
+					arg,
+					0,
+					arg,
+				}
+				nargs++
+			default:
+				context.FuncParamRegister(arg, nargs)
+				words := strings.Fields(string(arg.Type()))
+				for _, typePiece := range words {
+					context.registerInfo[FuncArg{uint(nargs), arg.Reference}] = RegisterInfo{
+						"",
+						context.GetTypeInfo(typePiece),
+						arg,
+						0,
+						arg,
+					}
+					nargs++
+				}
 			}
-			context.FuncParamRegister(arg, i)
 		}
+
+		rn := FuncRetVal(0)
 		for _, rv := range n.Return {
-			ti := context.GetTypeInfo(rv.Type())
-			context.rettypes = append(context.rettypes, ti)
-			context.registerInfo[rv] = RegisterInfo{"", ti, rv, 0, rv}
+			words := strings.Fields(string(rv.Type()))
+			for _, typePiece := range words {
+				ti := context.GetTypeInfo(typePiece)
+				context.rettypes = append(context.rettypes, ti)
+				context.registerInfo[FuncRetVal(rn)] = RegisterInfo{"", ti, rv, 0, rv}
+				rn++
+			}
 		}
 		body, err := compileBlock(n.Body, context)
 		if err != nil {
@@ -51,19 +89,54 @@ func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callabl
 		return Func{Name: n.Name, Body: body, NumArgs: uint(nargs), NumLocals: uint(context.numLocals)}, enums, context.registerInfo, nil
 	case ast.FuncDecl:
 		nargs := 0
-		for i, arg := range n.Args {
-			nargs++
-			if _, ok := arg.Typ.(ast.SliceType); ok {
+		for _, arg := range n.Args {
+			switch arg.Typ.(type) {
+			case ast.SliceType:
+				// Slices get passed as {n, *void}, so claim an extra argument in the
+				// IR, that way code generation will make sure other variables on the
+				// stack start at the right place.
+				// The second argument is a pointer, which is fixed at a word size.
+				context.FuncParamRegister(arg, nargs)
+				context.registerInfo[FuncArg{uint(nargs), arg.Reference}] = RegisterInfo{
+					"",
+					ast.TypeInfo{0, false},
+					arg,
+					0,
+					arg,
+				}
 				nargs++
+				context.registerInfo[FuncArg{uint(nargs), arg.Reference}] = RegisterInfo{
+					"",
+					ast.TypeInfo{8, false},
+					arg,
+					0,
+					arg,
+				}
+				nargs++
+			default:
+				context.FuncParamRegister(arg, nargs)
+				words := strings.Fields(string(arg.Type()))
+				for _, typePiece := range words {
+					context.registerInfo[FuncArg{uint(nargs), arg.Reference}] = RegisterInfo{
+						"",
+						context.GetTypeInfo(typePiece),
+						arg,
+						0,
+						arg,
+					}
+					nargs++
+				}
 			}
-			context.FuncParamRegister(arg, i)
 		}
+
+		rn := FuncRetVal(0)
 		for _, rv := range n.Return {
 			words := strings.Fields(string(rv.Type()))
 			for _, typePiece := range words {
 				ti := context.GetTypeInfo(typePiece)
 				context.rettypes = append(context.rettypes, ti)
-				context.registerInfo[rv] = RegisterInfo{"", ti, rv, 0, rv}
+				context.registerInfo[FuncRetVal(rn)] = RegisterInfo{"", ti, rv, 0, rv}
+				rn++
 			}
 		}
 		body, err := compileBlock(n.Body, context)
@@ -186,14 +259,10 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]Opcode
 			}
 			ops = append(ops, fc...)
 
-			reg := context.NextTempRegister()
-			ops = append(ops,
-				MOV{
-					Src: FuncRetVal(0),
-					Dst: reg,
-				},
-			)
-			argRegs = append(argRegs, reg)
+			// callNum is 1 higher than the last function call, because
+			// the last thing that happens is the variable gets incremented
+			// so that the next time it's called it's accurate..
+			argRegs = append(argRegs, LastFuncCallRetVal{callNum - 1, 0})
 		case ast.AdditionOperator, ast.SubtractionOperator, ast.MulOperator, ast.DivOperator, ast.ModOperator:
 			arg, r, err := evaluateValue(a, context)
 
@@ -207,6 +276,17 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]Opcode
 		}
 	}
 
+	rv := 0
+	for _, ret := range signature.ReturnTuple() {
+		words := strings.Fields(string(ret.Type()))
+		for _, word := range words {
+			ti := context.GetTypeInfo(word)
+			v := LastFuncCallRetVal{callNum, uint(rv)}
+			context.registerInfo[v] = RegisterInfo{"", ti, ret, 0, ret}
+		}
+		rv++
+	}
+	callNum++
 	ops = append(ops, CALL{FName: FName(fc.Name), Args: argRegs, TailCall: tailcall})
 	return ops, nil
 }
@@ -313,6 +393,15 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 					newvar := s.Var
 					newvar.Name = s.Var.Name + ast.Variable(fmt.Sprintf("%s[%d]", s.Var.Name, i))
 					reg := context.NextLocalRegister(newvar)
+
+					// Copy the type info from the return value to the implicitly created
+					// new LocalValue register
+					if i >= 1 {
+						ri := context.registerInfo[r]
+						ri.Name = string(newvar.Name)
+						ri.Variable = newvar
+						context.registerInfo[reg] = ri
+					}
 					ops = append(ops, MOV{
 						Src: r,
 						Dst: reg,
@@ -373,6 +462,15 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 			default:
 				for i, r := range rvs {
 					reg := context.NextLocalRegister(s.Var)
+					if i >= 1 {
+						ri := context.registerInfo[r]
+						ri.Variable = s.Var
+						context.registerInfo[reg] = ri
+					}
+					// Copy the type info from the return value to the implicitly created
+					// new LocalValue register
+					//ri := context.registerInfo[r]
+					//context.registerInfo[reg] = ri
 					ops = append(ops, MOV{
 						Src: r,
 						Dst: reg,
@@ -921,8 +1019,11 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, []Register
 		i := 0
 		for _, v := range s.Returns {
 			words := strings.Fields(string(v.Type()))
-			for range words {
-				regs = append(regs, FuncRetVal(i))
+			for _, word := range words {
+				ti := context.GetTypeInfo(word)
+				reg := LastFuncCallRetVal{callNum - 1, uint(i)}
+				context.registerInfo[reg] = RegisterInfo{"", ti, v, 0, v}
+				regs = append(regs, reg)
 				i++
 			}
 		}

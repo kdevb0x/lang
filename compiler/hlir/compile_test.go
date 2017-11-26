@@ -265,13 +265,9 @@ func TestIRGenTwoProcs(t *testing.T) {
 	}
 	expected = []Opcode{
 		CALL{FName: "foo"},
-		MOV{
-			Src: FuncRetVal(0),
-			Dst: TempValue(0),
-		},
 		CALL{FName: "PrintInt",
 			Args: []Register{
-				TempValue(0),
+				LastFuncCallRetVal{0, 0},
 			},
 		},
 	}
@@ -301,12 +297,8 @@ func TestIRGenOutOfOrder(t *testing.T) {
 	}
 	expected := []Opcode{
 		CALL{FName: "foo", Args: []Register{}},
-		MOV{
-			Src: FuncRetVal(0),
-			Dst: TempValue(0),
-		},
 		CALL{FName: "PrintInt", Args: []Register{
-			TempValue(0),
+			LastFuncCallRetVal{0, 0},
 		},
 		},
 	}
@@ -441,12 +433,8 @@ func TestIRGenSimpleFunc(t *testing.T) {
 	}
 	expected = []Opcode{
 		CALL{FName: "foo", Args: []Register{}},
-		MOV{
-			Src: FuncRetVal(0),
-			Dst: TempValue(0),
-		},
 		CALL{FName: "PrintInt", Args: []Register{
-			TempValue(0),
+			LastFuncCallRetVal{0, 0},
 		},
 		},
 	}
@@ -534,12 +522,8 @@ func TestIRGenSumToTen(t *testing.T) {
 			IntLiteral(10),
 		},
 		},
-		MOV{
-			Src: FuncRetVal(0),
-			Dst: TempValue(0),
-		},
 		CALL{FName: "PrintInt", Args: []Register{
-			TempValue(0),
+			LastFuncCallRetVal{0, 0},
 		},
 		},
 	}
@@ -656,9 +640,8 @@ func TestIRGenSumToTenRecursive(t *testing.T) {
 	}
 	expected = []Opcode{
 		CALL{FName: "sum", Args: []Register{IntLiteral(10)}},
-		MOV{Src: FuncRetVal(0), Dst: TempValue(0)},
 		CALL{FName: "PrintInt", Args: []Register{
-			TempValue(0),
+			LastFuncCallRetVal{0, 0},
 		},
 		},
 	}
@@ -1377,7 +1360,7 @@ func TestIRGenFibonacci(t *testing.T) {
 		},
 		},
 		MOV{
-			Src: FuncRetVal(0),
+			Src: LastFuncCallRetVal{0, 0},
 			Dst: LocalValue(0),
 		},
 	}
@@ -1523,7 +1506,7 @@ func TestIRGenericEnumType(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	i, _, _, err = Generate(as[2], ti, c, enums)
+	i, _, rd, err := Generate(as[2], ti, c, enums)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1533,11 +1516,11 @@ func TestIRGenericEnumType(t *testing.T) {
 		},
 		},
 		MOV{
-			Src: FuncRetVal(0),
+			Src: LastFuncCallRetVal{0, 0},
 			Dst: LocalValue(0),
 		},
 		MOV{
-			Src: FuncRetVal(1),
+			Src: LastFuncCallRetVal{0, 1},
 			Dst: LocalValue(1),
 		},
 		JumpTable{
@@ -1594,11 +1577,11 @@ func TestIRGenericEnumType(t *testing.T) {
 		},
 		},
 		MOV{
-			Src: FuncRetVal(0),
+			Src: LastFuncCallRetVal{4, 0},
 			Dst: LocalValue(2),
 		},
 		MOV{
-			Src: FuncRetVal(1),
+			Src: LastFuncCallRetVal{4, 1},
 			Dst: LocalValue(3),
 		},
 		JumpTable{
@@ -1654,6 +1637,14 @@ func TestIRGenericEnumType(t *testing.T) {
 
 	if err := compareIR(i.Body, expected); err != nil {
 		t.Fatalf("%v", err)
+	}
+
+	lv1, ok := rd[LocalValue(1)]
+	if !ok {
+		t.Fatal("No type information for LocalValue(1)")
+	}
+	if ti := lv1.TypeInfo; ti != (ast.TypeInfo{0, true}) {
+		t.Fatalf("Unexpected type info for LocalValue(1): got %v want %v", ti, ast.TypeInfo{0, true})
 	}
 }
 
@@ -1731,12 +1722,102 @@ func TestIRMatchParam(t *testing.T) {
 			IntLiteral(5),
 		},
 		},
-		MOV{
-			Src: FuncRetVal(0),
-			Dst: TempValue(0),
+		CALL{FName: "PrintInt", Args: []Register{
+			LastFuncCallRetVal{0, 0},
+		},
+		},
+	}
+	if len(i.Body) != len(expected) {
+		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
+	}
+
+	for j := range expected {
+		if !compareOp(expected[j], i.Body[j]) {
+			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
+		}
+	}
+}
+
+func TestIRMatchParam2(t *testing.T) {
+	as, ti, c, err := ast.Parse(sampleprograms.MatchParam2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, enums, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, _, err := Generate(as[1], ti, c, enums)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Opcode{
+		CALL{FName: "PrintString", Args: []Register{
+			StringLiteral("x"),
+		},
+		},
+		JumpTable{
+			ControlFlow{
+				Condition: Condition{
+					Body: []Opcode{
+						EQ{
+							Left:  FuncArg{0, false},
+							Right: IntLiteral(1),
+							Dst:   TempValue(0),
+						},
+					},
+					Register: TempValue(0),
+				},
+				Body: []Opcode{
+					MOV{
+						Src: FuncArg{1, false},
+						Dst: FuncRetVal(0),
+					},
+					RET{},
+				},
+			},
+			ControlFlow{
+				Condition: Condition{
+					Body: []Opcode{
+						EQ{
+							Left:  FuncArg{0, false},
+							Right: IntLiteral(0),
+							Dst:   TempValue(1),
+						},
+					},
+					Register: TempValue(1),
+				},
+				Body: []Opcode{
+					MOV{
+						Src: IntLiteral(0),
+						Dst: FuncRetVal(0),
+					},
+					RET{},
+				},
+			},
+		},
+	}
+	if len(i.Body) != len(expected) {
+		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
+	}
+
+	for j := range expected {
+		if !compareOp(expected[j], i.Body[j]) {
+			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
+		}
+	}
+	i, _, _, err = Generate(as[2], ti, c, enums)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected = []Opcode{
+		CALL{FName: "foo", Args: []Register{
+			IntLiteral(1),
+			IntLiteral(5),
+		},
 		},
 		CALL{FName: "PrintInt", Args: []Register{
-			TempValue(0),
+			LastFuncCallRetVal{0, 0},
 		},
 		},
 	}
@@ -1862,12 +1943,8 @@ func TestIRSimpleAlgorithm(t *testing.T) {
 			IntLiteral(10),
 		},
 		},
-		MOV{
-			Src: FuncRetVal(0),
-			Dst: TempValue(0),
-		},
 		CALL{FName: "PrintInt", Args: []Register{
-			TempValue(0),
+			LastFuncCallRetVal{0, 0},
 		},
 		},
 	}
@@ -2052,7 +2129,7 @@ func TestIRReferenceVariable(t *testing.T) {
 			},
 		},
 		MOV{
-			Src: FuncRetVal(0),
+			Src: LastFuncCallRetVal{2, 0},
 			Dst: LocalValue(1),
 		},
 		CALL{FName: "PrintInt", Args: []Register{LocalValue(0)}},
@@ -2365,7 +2442,7 @@ func TestIRReadSyscall(t *testing.T) {
 			},
 		},
 		MOV{
-			Src: FuncRetVal(0),
+			Src: LastFuncCallRetVal{0, 0},
 			Dst: LocalValue(0),
 		},
 		MOV{
@@ -2405,7 +2482,7 @@ func TestIRReadSyscall(t *testing.T) {
 			},
 		},
 		MOV{
-			Src: FuncRetVal(0),
+			Src: LastFuncCallRetVal{1, 0},
 			Dst: LocalValue(8),
 		},
 		CALL{
@@ -2538,7 +2615,7 @@ func TestIREcho(t *testing.T) {
 			},
 		},
 		MOV{
-			Src: FuncRetVal(0),
+			Src: LastFuncCallRetVal{0, 0},
 			Dst: LocalValue(1),
 		},
 		LOOP{
@@ -2944,7 +3021,7 @@ func TestPreEcho(t *testing.T) {
 			},
 		},
 		MOV{
-			Src: FuncRetVal(0),
+			Src: LastFuncCallRetVal{0, 0},
 			Dst: LocalValue(5),
 		},
 		LOOP{
@@ -3041,7 +3118,7 @@ func TestPreEcho2(t *testing.T) {
 			},
 		},
 		MOV{
-			Src: FuncRetVal(0),
+			Src: LastFuncCallRetVal{0, 0},
 			Dst: LocalValue(1),
 		},
 		LOOP{
@@ -3179,7 +3256,7 @@ func TestUnbufferedCat(t *testing.T) {
 			},
 		},
 		MOV{
-			Src: FuncRetVal(0),
+			Src: LastFuncCallRetVal{0, 0},
 			Dst: LocalValue(3),
 		},
 		LOOP{
@@ -3208,7 +3285,7 @@ func TestUnbufferedCat(t *testing.T) {
 					},
 				},
 				MOV{
-					Src: FuncRetVal(0),
+					Src: LastFuncCallRetVal{1, 0},
 					Dst: LocalValue(4),
 				},
 				CALL{
@@ -3220,7 +3297,7 @@ func TestUnbufferedCat(t *testing.T) {
 					},
 				},
 				MOV{
-					Src: FuncRetVal(0),
+					Src: LastFuncCallRetVal{2, 0},
 					Dst: LocalValue(5),
 				},
 				CALL{
@@ -3247,7 +3324,7 @@ func TestUnbufferedCat(t *testing.T) {
 							},
 						},
 						MOV{
-							Src: FuncRetVal(0),
+							Src: LastFuncCallRetVal{4, 0},
 							Dst: LocalValue(5),
 						},
 						IF{

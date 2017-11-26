@@ -7,7 +7,8 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/driusan/lang/compiler/ir"
+	"github.com/driusan/lang/compiler/hlir"
+	"github.com/driusan/lang/compiler/mlir"
 	"github.com/driusan/lang/parser/ast"
 	"github.com/driusan/lang/parser/token"
 )
@@ -17,6 +18,7 @@ import (
 //
 // Returns the name of the executable created in d or an error
 func BuildProgram(d string, src io.Reader) (string, error) {
+	mlir.Debug = false
 	// FIXME: This should be a library, not hardcoded string consts.
 	// FIXME: Make other architecture entrypoints..
 	f, err := os.Create(d + "/_main.s")
@@ -54,11 +56,11 @@ func BuildProgram(d string, src io.Reader) (string, error) {
 
 	// Identify required type information before code generation
 	// for the functions.
-	enums := make(ir.EnumMap)
+	enums := make(hlir.EnumMap)
 	for _, v := range prog {
 		switch v.(type) {
 		case ast.SumTypeDefn:
-			_, opts, err := ir.Generate(v, ti, c, enums)
+			_, opts, err := mlir.Generate(v, ti, c, enums)
 			if err != nil {
 				return "", err
 			}
@@ -75,7 +77,7 @@ func BuildProgram(d string, src io.Reader) (string, error) {
 	for _, v := range prog {
 		switch v.(type) {
 		case ast.FuncDecl, ast.ProcDecl:
-			fnc, _, err := ir.Generate(v, ti, c, enums)
+			fnc, _, err := mlir.Generate(v, ti, c, enums)
 			if err != nil {
 				return "", err
 			}

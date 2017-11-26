@@ -162,32 +162,44 @@ func (c *Context) GetSignature(fname string) Signature {
 
 	}
 
+	rn := hlir.FuncRetVal(0)
 	for arg, v := range callable[0].ReturnTuple() {
 		words := strings.Fields(string(v.Type()))
 		if len(words) > 1 || arg > 1 {
 			c.needsGlobal = true
 			c.curFuncRetNeedsMem = true
-		}
-		info, ok := c.registerData[v]
-		if !ok {
-			panic("Could not get return type info")
-		}
-		var t VarType
-		if info.TypeInfo.Size > 4 {
-			t = i64
+			ret = append(ret, Variable{
+				i32,
+				Result,
+				string(v.Name),
+			})
+			rn++
 		} else {
-			t = i32
+			for range words {
+				info, ok := c.registerData[rn]
+				if !ok {
+					fmt.Printf("Known types: %v\n", c.registerData)
+					panic(fmt.Sprintf("Could not get return type info for %v", v))
+				}
+				var t VarType
+				if info.TypeInfo.Size > 4 {
+					t = i64
+				} else {
+					t = i32
+				}
+				ret = append(ret, Variable{
+					t,
+					Result,
+					string(v.Name),
+				})
+				rn++
+			}
 		}
-		ret = append(ret, Variable{
-			t,
-			Result,
-			string(v.Name),
-		})
 	}
 	return ret
 }
 
-func (c *Context) addMemoryVar(v hlir.LocalValue) {
+func (c *Context) addMemoryVar(v hlir.Register) {
 	c.curFuncMemVariables[v] = c.curFuncMaxMem
 	md, ok := c.registerData[v]
 	if !ok {

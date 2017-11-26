@@ -5,15 +5,14 @@ import (
 	"io"
 	"strings"
 
-	"github.com/driusan/lang/compiler/ir"
+	"github.com/driusan/lang/compiler/mlir"
 )
 
 var debug bool = false
 
 // Compile takes an AST and writes the assembly that it compiles to to
 // w.
-func Compile(w io.Writer, f ir.Func) error {
-	printPragmas(w, f)
+func Compile(w io.Writer, f mlir.Func) error {
 	fmt.Fprintf(w, "TEXT %v(SB), 4+16, $%v\n", f.Name, reserveStackSize(f))
 	data := dataLiterals(w, f)
 	cpu := Amd64{stringLiterals: data, numArgs: f.NumArgs, lvOffsets: make(map[uint]uint)}
@@ -24,7 +23,7 @@ func Compile(w io.Writer, f ir.Func) error {
 		regs := op.Registers()
 		for _, r := range regs {
 			switch lv := r.(type) {
-			case ir.LocalValue:
+			case mlir.LocalValue:
 				_, ok := cpu.lvOffsets[lv.Id]
 				if !ok {
 					cpu.lvOffsets[lv.Id] = offset
@@ -42,7 +41,7 @@ func Compile(w io.Writer, f ir.Func) error {
 			fmt.Fprintf(w, "\t%s\n", cpu.ConvertInstruction(i, f.Body))
 		}
 	}
-	if len(f.Body) == 0 || f.Body[len(f.Body)-1] != (ir.RET{}) {
+	if len(f.Body) == 0 || f.Body[len(f.Body)-1] != (mlir.RET{}) {
 		fmt.Fprintf(w, "\tRET\n")
 	}
 
@@ -62,25 +61,12 @@ func (pr PhysicalRegister) IsRealRegister() bool {
 
 var stringNum uint
 
-func printPragmas(w io.Writer, f ir.Func) {
-	return /*
-		for _, op := range f.Body {
-			if op1, ok := op.(ir.CALL); ok && op1.FName == "printf" {
-				fmt.Fprintf(w, "#pragma lib \"libstdio.a\"\n")
-				fmt.Fprintf(w, "#pragma lib \"libc.a\"\n\n")
-				return
-			}
-		}
-		fmt.Fprintf(w, "#pragma lib \"libc.a\"\n\n")
-		return
-	*/
-}
-func dataLiterals(w io.Writer, f ir.Func) map[ir.StringLiteral]PhysicalRegister {
-	v := make(map[ir.StringLiteral]PhysicalRegister)
+func dataLiterals(w io.Writer, f mlir.Func) map[mlir.StringLiteral]PhysicalRegister {
+	v := make(map[mlir.StringLiteral]PhysicalRegister)
 	for _, op := range f.Body {
 		rs := op.Registers()
 		for _, r := range rs {
-			if s, ok := r.(ir.StringLiteral); ok {
+			if s, ok := r.(mlir.StringLiteral); ok {
 				name := printDataLiteral(w, string(s))
 				v[s] = name
 			}
@@ -125,9 +111,9 @@ func printDataLiteral(w io.Writer, str string) PhysicalRegister {
 	return PhysicalRegister(name)
 }
 
-func reserveStackSize(f ir.Func) string {
+func reserveStackSize(f mlir.Func) string {
 	if f.NumLocals == 0 && f.NumArgs == 0 {
-		return fmt.Sprintf("%v", f.LargestFuncCall*8)
+		return fmt.Sprintf("%v", (f.LargestFuncCall)*8)
 	} else if f.NumLocals == 0 {
 		return fmt.Sprintf("%v-%d", f.LargestFuncCall*8, (f.NumArgs * 8))
 	} else if f.NumArgs == 0 {

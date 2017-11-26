@@ -1,11 +1,11 @@
-package ir
+package mlir
 
 import (
 	"fmt"
 	"github.com/driusan/lang/parser/ast"
 )
 
-var debug = false
+var Debug = false
 
 type Func struct {
 	Name string
@@ -51,7 +51,7 @@ type FuncRetVal struct {
 }
 
 func (fa FuncRetVal) String() string {
-	if debug {
+	if Debug {
 		return fmt.Sprintf("FR%d (%v)", fa.Id, fa.Info)
 	}
 	return fmt.Sprintf("FR%d", fa.Id)
@@ -74,7 +74,7 @@ type FuncArg struct {
 }
 
 func (fa FuncArg) String() string {
-	if debug {
+	if Debug {
 		return fmt.Sprintf("P%d (%v)", fa.Id, fa.Info)
 	}
 	return fmt.Sprintf("P%d", fa.Id)
@@ -103,7 +103,7 @@ type LocalValue struct {
 }
 
 func (lv LocalValue) String() string {
-	if debug {
+	if Debug {
 		return fmt.Sprintf("LV%d (%v)", lv.Id, lv.Info)
 	}
 	return fmt.Sprintf("LV%d", lv.Id)
@@ -180,8 +180,10 @@ func (l StringLiteral) Signed() bool {
 // An Offset denotes a memory location which is offset from a base address.
 // This is primarily for indexing into slices or arrays.
 type Offset struct {
-	// The register holding the offset from the base in bytes.
+	// The register holding the offset from the base.
 	Offset Register
+	// The size in bytes to scale the offset by
+	Scale uint
 	// The register holding the base address to be offset from.
 	Base Register
 }
@@ -195,5 +197,5 @@ func (o Offset) Size() int {
 }
 
 func (o Offset) String() string {
-	return fmt.Sprintf("&(%v+%v)", o.Base, o.Offset)
+	return fmt.Sprintf("&(%v+%v*%v)", o.Base, o.Offset, o.Scale)
 }

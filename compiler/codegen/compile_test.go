@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/driusan/lang/compiler/ir"
+	"github.com/driusan/lang/compiler/mlir"
 	"github.com/driusan/lang/parser/ast"
 	"github.com/driusan/lang/parser/sampleprograms"
 )
@@ -42,7 +42,7 @@ func TestCompileHelloWorld(t *testing.T) {
 	}
 
 	var w bytes.Buffer
-	fnc, _, err := ir.Generate(prgAst[0], types, callables, nil)
+	fnc, _, err := mlir.Generate(prgAst[0], types, callables, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,6 +180,7 @@ func TestReadSyscall(t *testing.T) {
 // Echo is the simplest program that takes arguments
 func TestEchoProgram(t *testing.T) {
 	// We chdir below, defer a cleanup that resets it after the test finishes.
+	mlir.Debug = false
 	pwd, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
@@ -226,6 +227,7 @@ func TestEchoProgram(t *testing.T) {
 }
 
 func TestCatProgram(t *testing.T) {
+	mlir.Debug = false
 	// We chdir below, defer a cleanup that resets it after the test finishes.
 	pwd, err := os.Getwd()
 	if err != nil {

@@ -152,6 +152,19 @@ func Generate(hlfnc hlir.Func, ctx *Context) (Func, error) {
 				default:
 					panic(fmt.Sprintf("Unhandled pointer type: %v", reflect.TypeOf(info.Creator.Typ)))
 				}
+			case hlir.LastFuncCallRetVal:
+
+				if v.RetNum == 1 {
+					// This is a multireturn function, and we've encountered the second return, so
+					// add both the first and second arguments as memory variables
+					ctx.curFuncMemVariables[v] = 4
+					v.RetNum = 0
+					ctx.curFuncMemVariables[v] = 0
+				} else if v.RetNum > 1 {
+					// For anything after the second, assume 0 and 1 are already there, so just
+					// add this one.
+					ctx.curFuncMemVariables[v] = 4 * v.RetNum
+				}
 			}
 		}
 	}
@@ -803,6 +816,17 @@ func getValue(reg hlir.Register, ctx *Context) []Instruction {
 	case hlir.Pointer:
 		ctx.needsGlobal = true
 		return getValue(v.Register, ctx)
+	case hlir.LastFuncCallRetVal:
+		memoffset, memvar := ctx.curFuncMemVariables[v]
+		if memvar {
+			ret := []Instruction{GetGlobal(0)}
+			if memoffset != 0 {
+				ret = append(ret, I32Const(memoffset), I32Add{})
+			}
+			ret = append(ret, I32Load{})
+			return ret
+		}
+		return nil
 	default:
 		panic(fmt.Sprintf("Unhandled register type: %v", reflect.TypeOf(v)))
 	}

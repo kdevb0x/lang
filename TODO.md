@@ -2,7 +2,6 @@
 about something.)
 
 # Bugfix TODOs
-- functions should reserve the correct stack size
 - len should work on all slice types, and arrays, and strings
 - add test cases for unsigned comparisons in wasm (all operators)
 
@@ -14,6 +13,24 @@ about something.)
 - Casting (Syntax: `cast(val) as type`)
 - Compile time evaluation of pure functions with constant arguments
 - Allow let statements in conditions to bind to appropriate scope (ie while (let x = Read()) > 0 { ... }
+
+# HLIR Optimization TODOs
+- Add optimization pass
+- Arithmetic simplification for constants
+- Comparison simplification for constants
+- Constant propagation
+- Eliminate unused instructions / blocks
+	- Dst unused:
+		- MOV
+		- ADD, SUB, DIV, MUL, MOD
+		- EQ, NEQ, GEQ, GT, LT, LTE
+	- if(false) { .. } else { ..2 } => ..2
+	- if(true) { .. } else { ..2} => ..
+	- while(false) { .. } => eliminate
+- Pure function evaluation for constant arguments
+- Inline functions
+	- Small functions
+	- Functions with at least 1 constant argument
 
 # Other TODOs
 
@@ -37,6 +54,3 @@ about something.)
 	- interfaces?
 	- structs? (are 2 product types necessary if there's already a tuple?)
 	- float? dec64?
-- Refactor/rewrite the IR into multiple IRs (at least a forward only/optimizing IR which gets transformed into a better 
-  architecture specific IR.)
-	- Add optimizations (ie obvious optimizations: dead code elimination, inlining...)

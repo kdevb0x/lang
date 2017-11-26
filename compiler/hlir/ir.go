@@ -19,7 +19,6 @@ type Register interface{}
 
 // Registers for arguments to be passed to the
 // next function call.
-
 type FuncCallArg uint
 
 func (fa FuncCallArg) String() string {
@@ -27,10 +26,21 @@ func (fa FuncCallArg) String() string {
 	// return fmt.Sprintf("FA%d (%v)", fa.Id, fa.Info)
 }
 
+// Denotes the return value of this function.
 type FuncRetVal uint
 
 func (fa FuncRetVal) String() string {
 	return fmt.Sprintf("FR%d", fa)
+}
+
+// Denotes the return of the last function call.
+type LastFuncCallRetVal struct {
+	CallNum uint
+	RetNum  uint
+}
+
+func (fa LastFuncCallRetVal) String() string {
+	return fmt.Sprintf("CV(%d,%d)", fa.CallNum, fa.RetNum)
 }
 
 // Arguments to this function.

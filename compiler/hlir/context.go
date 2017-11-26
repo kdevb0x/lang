@@ -119,6 +119,7 @@ func (c variableLayout) SafeGet(varname ast.VarWithType) (Register, bool) {
 func (c variableLayout) GetEnumIndex(v string) int {
 	val, ok := c.enumvalues[v]
 	if !ok {
+		fmt.Printf("%v\n", c.enumvalues)
 		panic(fmt.Sprintf("Attempt to retrieve invalid enum option %v: ", v))
 	}
 	return val
