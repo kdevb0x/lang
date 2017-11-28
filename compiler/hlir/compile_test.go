@@ -3348,11 +3348,60 @@ func TestUnbufferedCat(t *testing.T) {
 						},
 					},
 				},
+				CALL{
+					FName: "Close",
+					Args: []Register{
+						LocalValue(4),
+					},
+				},
 				ADD{Left: LocalValue(2), Right: IntLiteral(1), Dst: TempValue(3)},
 				MOV{
 					Src: TempValue(3),
 					Dst: LocalValue(2),
 				},
+			},
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestPrecedence(t *testing.T) {
+	as, ti, c, err := ast.Parse(sampleprograms.Precedence)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		ADD{
+			Left:  IntLiteral(1),
+			Right: IntLiteral(2),
+			Dst:   TempValue(0),
+		},
+		SUB{
+			Left:  IntLiteral(3),
+			Right: IntLiteral(4),
+			Dst:   TempValue(1),
+		},
+		MUL{
+			Left:  TempValue(0),
+			Right: TempValue(1),
+			Dst:   TempValue(2),
+		},
+		MOV{
+			Src: TempValue(2),
+			Dst: LocalValue(0),
+		},
+		CALL{
+			FName: "PrintInt",
+			Args: []Register{
+				LocalValue(0),
 			},
 		},
 	}

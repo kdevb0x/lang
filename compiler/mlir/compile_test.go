@@ -3002,6 +3002,12 @@ func TestUnbufferedCat(t *testing.T) {
 		Label("if2elsedone"),
 		JMP{"loop1cond"},
 		Label("loop1end"),
+		CALL{
+			FName: "Close",
+			Args: []Register{
+				LocalValue{4, ast.TypeInfo{8, false}},
+			},
+		},
 		MOV{
 			Src: LocalValue{2, ast.TypeInfo{8, true}},
 			Dst: TempValue(3),

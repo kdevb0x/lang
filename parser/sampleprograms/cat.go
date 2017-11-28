@@ -1,7 +1,7 @@
 package sampleprograms
 
 // Cat implements the unix "cat" command.
-// This implementation always uses an 8 byte buffer,
+// This implementation always uses an 1 byte buffer,
 // primarily because the only way to declare a slice is
 // currently with an array literal and there's no equivalent
 // of malloc() or make(). This should be updated once it's
@@ -21,8 +21,24 @@ const UnbufferedCat = `proc main (args []string) () {
 				PrintByteSlice(buf)
 			}
 		}
+		Close(file)
 
 		i = i + 1
+	}
+}
+`
+
+// UnbufferedCat2 is the same as UnbufferedCat, but uses
+// let statement bindings in the while condition.
+const UnbufferedCat2 = `proc main (args []string) () {
+	mutable buf []byte = {0}
+
+	let i = -1
+	while (let i = i + 1) < len(args) {
+		let file = Open(args[i])
+		while (let n = Read(file, buf)) > 0 {
+			PrintByteSlice(buf)
+		}
 	}
 }
 `

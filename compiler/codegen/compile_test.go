@@ -805,3 +805,10 @@ func ExamplePreEcho2() {
 	}
 	// Output: bar baz
 }
+
+func ExamplePrecedence() {
+	if err := RunProgram("preecho2", sampleprograms.Precedence); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: -3
+}

@@ -1,5 +1,6 @@
 package sampleprograms
 
+// SomeMath does arbitrary math operations to ensure that they work.
 const SomeMath = `proc main() () {
 	let add int = 1 + 2
 	let sub int = 1 - 2
@@ -22,5 +23,15 @@ const SomeMath = `proc main() () {
 	PrintString("Complex: ")
 	PrintInt(x)
 	PrintString("\n")
+}
+`
+
+// Precedence tests that brackets properly adjust the precedence inside of arithmetic
+// values.
+//
+// It should Print "-3"
+const Precedence = `proc main() () {
+	let x = (1 + 2) * (3 - 4)
+	PrintInt(x)
 }
 `

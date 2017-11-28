@@ -1052,6 +1052,9 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, []Register
 			regs[i] = r[0]
 		}
 		return ops, regs, nil
+	case ast.Brackets:
+		// The precedence was already handled while building the ast
+		return evaluateValue(s.Val, context)
 	default:
 		panic(fmt.Errorf("Unhandled value type: %v", reflect.TypeOf(s)))
 	}

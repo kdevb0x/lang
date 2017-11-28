@@ -7,8 +7,6 @@ import (
 	"strconv"
 )
 
-// FIXME: This whole consumeValue flow is badly designed.
-// This is going to have to be completely reworked.
 func isInfixOperator(pos int, tokens []token.Token) bool {
 	if pos >= len(tokens) {
 		return false
@@ -21,13 +19,15 @@ func isInfixOperator(pos int, tokens []token.Token) bool {
 			return true
 		}
 	case token.Char:
-		return t == "["
+		return t == "[" //|| t == "("
 	}
 	return false
 }
 
 func operatorPrecedence(op Value) int {
 	switch op.(type) {
+	case Brackets:
+		return 99
 	case ArrayValue, FuncCall:
 		return 6
 	case MulOperator, DivOperator, ModOperator:
@@ -199,12 +199,12 @@ func invertPrecedence(node Value) Value {
 
 	var isLit bool
 	switch op3.(type) {
-	case IntLiteral, BoolLiteral, VarWithType:
+	case IntLiteral, BoolLiteral, VarWithType, Brackets:
 		isLit = true
 	}
 
 	switch op2.(type) {
-	case IntLiteral, BoolLiteral, VarWithType:
+	case IntLiteral, BoolLiteral, VarWithType, Brackets:
 		isLit = true
 	}
 	if isLit || operatorPrecedence(op3) > operatorPrecedence(op2) {
@@ -321,40 +321,13 @@ func consumeValue(start int, tokens []token.Token, c *Context) (int, Value, erro
 				return 0, nil, fmt.Errorf(`Use of undefined variable "%v".`, t)
 			}
 
-			for isInfixOperator(i+1, tokens) {
-				switch tokens[i+1] {
-				case token.Operator("+"), token.Operator("-"),
-					token.Operator("*"), token.Operator("/"),
-					token.Operator("%"),
-					token.Operator("<"), token.Operator("<="),
-					token.Operator("=="), token.Operator("!="),
-					token.Operator(">"), token.Operator(">="):
-					n, right, err := consumeValue(i+2, tokens, c)
-					if err != nil {
-						return 0, nil, err
-					}
-
-					partial = createOperatorNode(tokens[i+1], partial, right)
-					i += n + 1
-				case token.Char("["):
-					n, index, err := consumeValue(i+2, tokens, c)
-					if err != nil {
-						return 0, nil, err
-					}
-					if tokens[i+2+n] != token.Char("]") {
-						return 0, nil, fmt.Errorf("Invalid index")
-					}
-					base, ok := partial.(VarWithType)
-					if !ok {
-						return 0, nil, fmt.Errorf("Can only index on variables")
-					}
-					partial = ArrayValue{base /* idx */, index}
-					i += n + 2
-				case token.Operator("="):
-					return i + 1 - start, partial, nil
-				default:
-					panic(fmt.Sprintf("Unhandled infix operator %v at %v", tokens[i+1].String(), i))
+			for isInfixOperator(i+1, tokens) && tokens[i+1] != token.Operator("=") {
+				n, v, err := consumeInfix(i+1, tokens, c, partial)
+				if err != nil {
+					return 0, nil, err
 				}
+				partial = v
+				i += n + 1
 			}
 			return i + 1 - start, partial, nil
 		case token.Whitespace:
@@ -384,6 +357,22 @@ func consumeValue(start int, tokens []token.Token, c *Context) (int, Value, erro
 				return tn + 2, al, err
 			case token.Char(`[`):
 				return 0, nil, fmt.Errorf("Indexing not yet implemented")
+			case token.Char(`(`):
+				tn, partial, err := consumeBrackets(i, tokens, c)
+				if err != nil {
+					return 0, nil, err
+				}
+				i += tn
+
+				for isInfixOperator(i+1, tokens) && tokens[i+1] != token.Operator("=") {
+					n, v, err := consumeInfix(i+1, tokens, c, partial)
+					if err != nil {
+						return 0, nil, err
+					}
+					partial = v
+					i += n + 1
+				}
+				return i + 1 - start, partial, nil
 			default:
 				return 0, nil, fmt.Errorf("Invalid character at %v", tokens[i])
 			}
@@ -437,4 +426,54 @@ func consumeCommaSeparatedValues(start int, tokens []token.Token, c *Context) (i
 
 	}
 	return len(tokens) - start, v, nil
+}
+
+func consumeInfix(start int, tokens []token.Token, c *Context, left Value) (int, Value, error) {
+	switch tokens[start] {
+	case token.Operator("+"), token.Operator("-"),
+		token.Operator("*"), token.Operator("/"),
+		token.Operator("%"),
+		token.Operator("<"), token.Operator("<="),
+		token.Operator("=="), token.Operator("!="),
+		token.Operator(">"), token.Operator(">="):
+		n, right, err := consumeValue(start+1, tokens, c)
+		if err != nil {
+			return 0, nil, err
+		}
+
+		return n, createOperatorNode(tokens[start], left, right), nil
+	case token.Char("["):
+		n, index, err := consumeValue(start+1, tokens, c)
+		if err != nil {
+			return 0, nil, err
+		}
+		if tokens[start+1+n] != token.Char("]") {
+			return 0, nil, fmt.Errorf("Invalid index")
+		}
+		base, ok := left.(VarWithType)
+		if !ok {
+			return 0, nil, fmt.Errorf("Can only index on variables")
+		}
+		return n + 1, ArrayValue{base, index}, nil
+	case token.Operator("="):
+		return 0, left, nil
+	default:
+		panic(fmt.Sprintf("Unhandled infix operator %v at %v", tokens[start].String(), start))
+	}
+}
+
+func consumeBrackets(start int, tokens []token.Token, c *Context) (int, Value, error) {
+	switch tokens[start] {
+	case token.Char("("):
+		n, val, err := consumeValue(start+1, tokens, c)
+		if err != nil {
+			return 0, nil, err
+		}
+		if tokens[start+1+n] != token.Char(")") {
+			return 0, nil, fmt.Errorf("Unbalanced parenthesis at %d", start)
+		}
+		return n + 1, Brackets{Val: val}, nil
+	default:
+		return 0, nil, fmt.Errorf("Brackets must start with a bracket")
+	}
 }

@@ -251,7 +251,7 @@ func TestConsumeValue(t *testing.T) {
 		c := NewContext()
 		n, value, err := consumeValue(0, tokens, &c)
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("Case %d:  %v", i, err)
 		}
 
 		if !compare(value, tc.Expected) {

@@ -2,12 +2,14 @@ package ast
 
 import (
 	"fmt"
-	//	"os"
+	"os"
 	"reflect"
 	"strings"
 
 	"github.com/driusan/lang/parser/token"
 )
+
+var debug = false
 
 type Context struct {
 	Variables   map[string]VarWithType
@@ -278,12 +280,11 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, Callables, error)
 	c := NewContext()
 
 	tokens = stripWhitespace(tokens)
-	// For debugging only.
-	/*
+	if debug {
 		for i := 0; i < len(tokens); i++ {
 			fmt.Fprintf(os.Stderr, "%d: '%v'\n", i, tokens[i].String())
 		}
-	*/
+	}
 
 	callables := make(Callables)
 	for k, v := range c.Functions {

@@ -4109,3 +4109,46 @@ func TestSliceLength2(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestPrecedence(t *testing.T) {
+	module, err := Parse(sampleprograms.Precedence)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := Module{
+		Imports: []Import{
+			{"stdlib", "PrintInt", Func{
+				Name: "PrintInt",
+				Signature: Signature{
+					Variable{i32, Param, ""},
+				},
+			},
+			},
+		},
+		Funcs: []Func{
+			Func{
+				Name: "main",
+				Signature: Signature{
+					Variable{i32, Local, "LV0"},
+				},
+				Body: []Instruction{
+					I32Const(1),
+					I32Const(2),
+					I32Add{},
+					I32Const(3),
+					I32Const(4),
+					I32Sub{},
+					I32Mul{},
+					SetLocal(0),
+					GetLocal(0),
+					Call{"PrintInt"},
+				},
+			},
+		},
+	}
+
+	if err := compareModule(module, expected); err != nil {
+		t.Fatal(err)
+	}
+}

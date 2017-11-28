@@ -58,7 +58,6 @@ func consumeCondition(start int, tokens []token.Token, c *Context) (int, BoolVal
 			return n, val, nil
 		}
 		return 0, nil, fmt.Errorf("%s is not a boolean variable", val)
-
 	default:
 		return 0, nil, fmt.Errorf("Unsupported comparison %s", reflect.TypeOf(val))
 	}

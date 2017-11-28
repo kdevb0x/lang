@@ -3707,5 +3707,99 @@ func TestIndexedAddition(t *testing.T) {
 			t.Errorf("let statement (%d): got %v want %v", i, ast[i], v)
 		}
 	}
-
 }
+
+func TestPrecedence(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.Precedence))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatalf("%v: %v", err, tokens)
+	}
+	expected := []Node{
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					LetStmt{
+						Var: VarWithType{
+							"x",
+							TypeLiteral("int"),
+							false,
+						},
+						Value: MulOperator{
+							Left: Brackets{
+								AdditionOperator{
+									Left:  IntLiteral(1),
+									Right: IntLiteral(2),
+								},
+							},
+							Right: Brackets{
+								SubtractionOperator{
+									Left:  IntLiteral(3),
+									Right: IntLiteral(4),
+								},
+							},
+						},
+					},
+					FuncCall{
+						Name: "PrintInt",
+						UserArgs: []Value{
+							VarWithType{"x", TypeLiteral("int"), false},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("got %v want %v", ast[i], v)
+		}
+	}
+}
+
+/*
+func TestLetCondition(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.LetCondition))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Node{
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					LetStmt{
+						Var: VarWithType{
+							"i",
+							TypeLiteral("int"),
+							false,
+						},
+						Value: IntLiteral(0),
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("got %v want %v", ast[i], v)
+		}
+	}
+}
+*/

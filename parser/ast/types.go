@@ -317,3 +317,18 @@ func (tl TypeLiteral) Type() string {
 func (tl TypeLiteral) Node() Node {
 	return tl
 }
+
+type Brackets struct {
+	Val Value
+}
+
+func (b Brackets) Value() interface{} {
+	return b.Val
+}
+func (b Brackets) Node() Node {
+	return b
+}
+
+func (b Brackets) Type() string {
+	return b.Val.Type()
+}
