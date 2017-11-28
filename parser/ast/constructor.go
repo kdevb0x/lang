@@ -796,7 +796,7 @@ argLoop:
 	return argStart - start - 1, f, nil
 }
 
-func consumeLetStmt(start int, tokens []token.Token, c *Context) (int, Node, error) {
+func consumeLetStmt(start int, tokens []token.Token, c *Context) (int, Value, error) {
 	l := LetStmt{}
 
 	defer func() {
@@ -865,7 +865,7 @@ func consumeLetStmt(start int, tokens []token.Token, c *Context) (int, Node, err
 						return 0, nil, fmt.Errorf(`Incompatible assignment for variable "%v": can not assign %v to %v.`, l.Var.Name, v.Type(), l.Type())
 					}
 				}
-				l.Value = v
+				l.Val = v
 				return i + n - start + 1, l, nil
 			}
 			return 0, nil, fmt.Errorf("Invalid let statement")

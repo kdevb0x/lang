@@ -130,8 +130,8 @@ func (m MutStmt) Type() string {
 }
 
 type LetStmt struct {
-	Var   VarWithType
-	Value Value
+	Var VarWithType
+	Val Value
 }
 
 func (s LetStmt) Node() Node {
@@ -143,7 +143,11 @@ func (l LetStmt) Type() string {
 }
 
 func (ls LetStmt) String() string {
-	return fmt.Sprintf("LetStmt{%v, Value: %v}", ls.Var, ls.Value)
+	return fmt.Sprintf("LetStmt{%v, Value: %v}", ls.Var, ls.Val)
+}
+
+func (ls LetStmt) Value() interface{} {
+	return ls.Val.Value()
 }
 
 type BlockStmt struct {
@@ -331,4 +335,7 @@ func (b Brackets) Node() Node {
 
 func (b Brackets) Type() string {
 	return b.Val.Type()
+}
+func (b Brackets) String() string {
+	return fmt.Sprintf("Brackets{%v}", b.Val)
 }

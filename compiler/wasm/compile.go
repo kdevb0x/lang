@@ -530,10 +530,16 @@ func evaluateOp(opi hlir.Opcode, ctx *Context) ([]Instruction, error) {
 		ops = append(ops, End{})
 		return ops, nil
 	case hlir.LOOP:
-		ops := []Instruction{
-			Block{},
-			Loop{},
+		ops := []Instruction{Block{}}
+		for _, op := range op.Initializer {
+			initop, err := evaluateOp(op, ctx)
+			if err != nil {
+				return nil, err
+			}
+			ops = append(ops, initop...)
 		}
+
+		ops = append(ops, Loop{})
 		for _, cond := range op.Condition.Body {
 			condops, err := evaluateOp(cond, ctx)
 			if err != nil {

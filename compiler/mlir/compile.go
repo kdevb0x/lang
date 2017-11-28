@@ -126,6 +126,9 @@ func (ctx *Context) convertOp(op hlir.Opcode, conditionLabel Label, jt jumpType)
 		cond := Label(fmt.Sprintf("loop%dcond", branchNum))
 		end := Label(fmt.Sprintf("loop%dend", branchNum))
 		branchNum++
+		for _, op := range o.Initializer {
+			ops = append(ops, ctx.convertOp(op, end, notComparison)...)
+		}
 		ops = append(ops, cond)
 		for _, op := range o.Condition.Body {
 			ops = append(ops, ctx.convertOp(op, end, jumpFailure)...)

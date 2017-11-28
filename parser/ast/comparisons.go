@@ -73,6 +73,10 @@ func (c GreaterComparison) Type() string {
 	return "bool"
 }
 
+func (c GreaterComparison) String() string {
+	return fmt.Sprintf("GreaterComparison{%v, %v}", c.Left, c.Right)
+}
+
 type GreaterOrEqualComparison struct {
 	Left, Right Value
 }
@@ -137,4 +141,8 @@ func (gc LessThanComparison) BoolValue() bool {
 
 func (c LessThanComparison) Type() string {
 	return "bool"
+}
+
+func (c LessThanComparison) String() string {
+	return fmt.Sprintf("LessThanComparison{%v, %v}", c.Left, c.Right)
 }

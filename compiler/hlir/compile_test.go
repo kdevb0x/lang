@@ -56,6 +56,9 @@ func compareOp(a, b Opcode) bool {
 		if err := compareIR(a1.Body, b1.Body); err != nil {
 			return false
 		}
+		if err := compareIR(a1.Initializer, b1.Initializer); err != nil {
+			return false
+		}
 		return true
 	case Condition:
 		b1, ok := b.(Condition)
@@ -3402,6 +3405,255 @@ func TestPrecedence(t *testing.T) {
 			FName: "PrintInt",
 			Args: []Register{
 				LocalValue(0),
+			},
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestLetCondition(t *testing.T) {
+	as, ti, c, err := ast.Parse(sampleprograms.LetCondition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		MOV{
+			Src: IntLiteral(0),
+			Dst: LocalValue(0),
+		},
+		IF{
+			ControlFlow: ControlFlow{
+				Condition: Condition{
+					Body: []Opcode{
+						ADD{
+							Left:  LocalValue(0),
+							Right: IntLiteral(1),
+							Dst:   TempValue(0),
+						},
+						MOV{
+							Src: TempValue(0),
+							Dst: LocalValue(1),
+						},
+						EQ{
+							Left:  LocalValue(1),
+							Right: IntLiteral(1),
+							Dst:   TempValue(1),
+						},
+					},
+					Register: TempValue(1),
+				},
+				Body: []Opcode{
+					CALL{
+						FName: "PrintInt",
+						Args: []Register{
+							LocalValue(1),
+						},
+					},
+				},
+			},
+			ElseBody: []Opcode{
+				CALL{
+					FName: "PrintInt",
+					Args: []Register{
+						IntLiteral(-1),
+					},
+				},
+			},
+		},
+		IF{
+			ControlFlow: ControlFlow{
+				Condition: Condition{
+					Body: []Opcode{
+						ADD{
+							Left:  LocalValue(0),
+							Right: IntLiteral(1),
+							Dst:   TempValue(2),
+						},
+						MOV{
+							Src: TempValue(2),
+							Dst: LocalValue(2),
+						},
+						NEQ{
+							Left:  LocalValue(2),
+							Right: IntLiteral(1),
+							Dst:   TempValue(3),
+						},
+					},
+					Register: TempValue(3),
+				},
+				Body: []Opcode{
+					CALL{
+						FName: "PrintInt",
+						Args: []Register{
+							LocalValue(2),
+						},
+					},
+				},
+			},
+			ElseBody: []Opcode{
+				CALL{
+					FName: "PrintInt",
+					Args: []Register{
+						IntLiteral(-1),
+					},
+				},
+			},
+		},
+		LOOP{
+			Initializer: []Opcode{
+				MOV{
+					Src: LocalValue(0),
+					Dst: LocalValue(3),
+				},
+			},
+			Condition: Condition{
+				Body: []Opcode{
+					ADD{
+						Left:  LocalValue(3),
+						Right: IntLiteral(1),
+						Dst:   TempValue(4),
+					},
+					MOV{
+						Src: TempValue(4),
+						Dst: LocalValue(3),
+					},
+					LT{LocalValue(3), IntLiteral(3), TempValue(5)},
+				},
+				Register: TempValue(5),
+			},
+			Body: []Opcode{
+				CALL{
+					FName: "PrintInt",
+					Args: []Register{
+						LocalValue(3),
+					},
+				},
+			},
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestUnbufferedCat2(t *testing.T) {
+	as, ti, c, err := ast.Parse(sampleprograms.UnbufferedCat2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		MOV{
+			Src: IntLiteral(1),
+			Dst: LocalValue(0),
+		},
+		MOV{
+			Src: IntLiteral(0),
+			Dst: LocalValue(1),
+		},
+		MOV{
+			Src: IntLiteral(0),
+			Dst: LocalValue(2),
+		},
+		LOOP{
+			Initializer: []Opcode{
+				MOV{
+					Src: LocalValue(2),
+					Dst: LocalValue(3),
+				},
+			},
+			Condition: Condition{
+				Body: []Opcode{
+					ADD{
+						Left:  LocalValue(3),
+						Right: IntLiteral(1),
+						Dst:   TempValue(0),
+					},
+					MOV{
+						Src: TempValue(0),
+						Dst: LocalValue(3),
+					},
+					CALL{
+						FName: "len",
+						Args: []Register{
+							FuncArg{0, false},
+							FuncArg{1, false},
+						},
+					},
+					LT{Left: LocalValue(3), Right: LastFuncCallRetVal{0, 0}, Dst: TempValue(1)},
+				},
+				Register: TempValue(1),
+			},
+			Body: []Opcode{
+				CALL{
+					FName: "Open",
+					Args: []Register{
+						Offset{
+							Base:   FuncArg{1, false},
+							Offset: LocalValue(3),
+							Scale:  IntLiteral(0),
+							Container: ast.VarWithType{
+								"args",
+								ast.SliceType{
+									ast.TypeLiteral("string"),
+								},
+								false,
+							},
+						},
+					},
+				},
+				MOV{
+					Src: LastFuncCallRetVal{1, 0},
+					Dst: LocalValue(4),
+				},
+				LOOP{
+					Condition: Condition{
+						Body: []Opcode{
+							CALL{
+								FName: "Read",
+								Args: []Register{
+									LocalValue(4),
+									LocalValue(0),
+									Pointer{LocalValue(1)},
+								},
+							},
+							MOV{
+								Src: LastFuncCallRetVal{2, 0},
+								Dst: LocalValue(5),
+							},
+							GT{Left: LocalValue(5), Right: IntLiteral(0), Dst: TempValue(2)},
+						},
+						Register: TempValue(2),
+					},
+					Body: []Opcode{
+						CALL{
+							FName: "PrintByteSlice",
+							Args: []Register{
+								LocalValue(0),
+								Pointer{LocalValue(1)},
+							},
+						},
+					},
+				},
+				CALL{
+					FName: "Close",
+					Args: []Register{
+						LocalValue(4),
+					},
+				},
 			},
 		},
 	}

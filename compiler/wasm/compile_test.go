@@ -4152,3 +4152,87 @@ func TestPrecedence(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestLetCondition(t *testing.T) {
+	module, err := Parse(sampleprograms.LetCondition)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := Module{
+		Imports: []Import{
+			{"stdlib", "PrintInt", Func{
+				Name: "PrintInt",
+				Signature: Signature{
+					Variable{i32, Param, ""},
+				},
+			},
+			},
+		},
+		Funcs: []Func{
+			Func{
+				Name: "main",
+				Signature: Signature{
+					Variable{i32, Local, "LV0"},
+					Variable{i32, Local, "LV1"},
+					Variable{i32, Local, "LV2"},
+					Variable{i32, Local, "LV3"},
+				},
+				Body: []Instruction{
+					I32Const(0),
+					SetLocal(0),
+					GetLocal(0),
+					I32Const(1),
+					I32Add{},
+					SetLocal(1),
+					GetLocal(1),
+					I32Const(1),
+					I32EQ{},
+					If{},
+					GetLocal(1),
+					Call{"PrintInt"},
+					Else{},
+					I32Const(-1),
+					Call{"PrintInt"},
+					End{},
+					GetLocal(0),
+					I32Const(1),
+					I32Add{},
+					SetLocal(2),
+					GetLocal(2),
+					I32Const(1),
+					I32NE{},
+					If{},
+					GetLocal(2),
+					Call{"PrintInt"},
+					Else{},
+					I32Const(-1),
+					Call{"PrintInt"},
+					End{},
+					Block{},
+					GetLocal(0),
+					SetLocal(3),
+					Loop{},
+					GetLocal(3),
+					I32Const(1),
+					I32Add{},
+					SetLocal(3),
+					GetLocal(3),
+					I32Const(3),
+					I32LT_S{},
+					I32EQZ{},
+					BrIf(1), // Break out of the block if the condition isn't met
+					GetLocal(3),
+					Call{"PrintInt"},
+					Br(0),
+					End{},
+					End{},
+				},
+			},
+		},
+	}
+
+	if err := compareModule(module, expected); err != nil {
+		t.Fatal(err)
+	}
+}

@@ -29,6 +29,8 @@ type variableLayout struct {
 	callables    ast.Callables
 	numLocals    uint
 	registerInfo RegisterData
+	loopCond     bool
+	loop         *LOOP
 }
 
 func (c variableLayout) GetTypeInfo(t string) ast.TypeInfo {
@@ -123,4 +125,12 @@ func (c variableLayout) GetEnumIndex(v string) int {
 		panic(fmt.Sprintf("Attempt to retrieve invalid enum option %v: ", v))
 	}
 	return val
+}
+
+func (c variableLayout) CloneValues() map[ast.VarWithType]Register {
+	v := make(map[ast.VarWithType]Register)
+	for k, vl := range c.values {
+		v[k] = vl
+	}
+	return v
 }

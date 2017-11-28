@@ -33,12 +33,13 @@ const UnbufferedCat = `proc main (args []string) () {
 const UnbufferedCat2 = `proc main (args []string) () {
 	mutable buf []byte = {0}
 
-	let i = -1
+	let i = 0
 	while (let i = i + 1) < len(args) {
 		let file = Open(args[i])
 		while (let n = Read(file, buf)) > 0 {
 			PrintByteSlice(buf)
 		}
+		Close(file)
 	}
 }
 `

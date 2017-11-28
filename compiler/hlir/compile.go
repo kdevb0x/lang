@@ -27,6 +27,8 @@ func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callabl
 		callables,
 		0,
 		make(RegisterData),
+		false,
+		nil,
 	}
 	switch n := node.(type) {
 	case ast.ProcDecl:
@@ -335,7 +337,7 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 			// evaluateValue only deals with the literal and doesn't know if it's in a slice
 			// or array context.
 			if _, ok := s.Var.Typ.(ast.SliceType); ok {
-				switch vr := s.Value.(type) {
+				switch vr := s.Val.(type) {
 				case ast.VarWithType:
 					// A let statement being assigned to a variable doesn't need any IR, it just
 					// needs to make sure that the reference points to the right place.
@@ -351,13 +353,13 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 						Dst: reg,
 					})
 					info := context.registerInfo[reg]
-					info.SliceSize = uint(len(s.Value.(ast.ArrayLiteral)))
+					info.SliceSize = uint(len(s.Val.(ast.ArrayLiteral)))
 					context.registerInfo[reg] = info
 				default:
 					panic("Unhandled register type in slice assignment")
 				}
 			}
-			body, rvs, err := evaluateValue(s.Value, context)
+			body, rvs, err := evaluateValue(s.Val, context)
 			if err != nil {
 				return nil, err
 			}
@@ -552,6 +554,7 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 				})
 			}
 		case ast.IfStmt:
+			oldvalues := context.CloneValues()
 			if _, ok := s.Condition.(ast.BoolValue); !ok {
 				return nil, fmt.Errorf("If condition must be a boolean")
 			}
@@ -575,21 +578,26 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 				},
 				ElseBody: elseops,
 			})
+			context.values = oldvalues
 		case ast.WhileLoop:
+			context.loopCond = true
+			l := LOOP{}
+			context.loop = &l
 			cbody, c, err := evaluateValue(s.Condition, context)
 			if err != nil {
 				return nil, err
 			}
+			context.loopCond = false
+			context.loop = nil
 
 			lbody, err := compileBlock(s.Body, context)
 			if err != nil {
 				return nil, err
 			}
-			ops = append(ops, LOOP{
-				Condition{Body: cbody, Register: c[0]},
-				lbody,
-			})
 
+			l.Condition = Condition{Body: cbody, Register: c[0]}
+			l.Body = lbody
+			ops = append(ops, l)
 		case ast.MatchStmt:
 			var jt JumpTable
 			body, condleft, err := evaluateValue(s.Condition, context)
@@ -1055,6 +1063,40 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, []Register
 	case ast.Brackets:
 		// The precedence was already handled while building the ast
 		return evaluateValue(s.Val, context)
+	case ast.LetStmt:
+		// Shadowing of let statements inside of value contexts works slightly differently between
+		// loops and all other contexts.
+		// In a loop context, the right hand side needs to refer to the variable being shadowed outside
+		// of the loop on the first iteration, and the value from the last iteration on every other
+		// iteration. In any non-loop context, it always refers to the value being shadowed when it's
+		// on the right hand side.
+		//
+		// We handle this by allocating the LocalValue before evaluating the value inside of a loop
+		// context, but if it's a loop adding an initializer which initializes the new LocalValue
+		// to the value being shadowed before the first iteration. Outside of a loop context, we
+		// just wait to allocate the new LocalValue until after evaluating the Value so that
+		// the shadowing rules work normally.
+		var lv Register
+		if context.loopCond {
+			oldval, ok := context.SafeGet(s.Var)
+			if ok {
+				lv = context.NextLocalRegister(s.Var)
+				context.loop.Initializer = append(
+					context.loop.Initializer,
+					MOV{Src: oldval, Dst: lv},
+				)
+			}
+		}
+		ops, r, err := evaluateValue(s.Val, context)
+		if err != nil {
+			return nil, nil, err
+		}
+		if !context.loopCond || lv == nil {
+			lv = context.NextLocalRegister(s.Var)
+		}
+
+		ops = append(ops, MOV{Src: r[0], Dst: lv})
+		return ops, []Register{lv}, nil
 	default:
 		panic(fmt.Errorf("Unhandled value type: %v", reflect.TypeOf(s)))
 	}

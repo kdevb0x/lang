@@ -141,7 +141,8 @@ func (o MOD) String() string {
 
 type ControlFlow struct {
 	Condition
-	Body []Opcode
+	Initializer []Opcode
+	Body        []Opcode
 }
 
 func (o ControlFlow) Registers() []Register {
@@ -218,7 +219,7 @@ func (c Condition) ModifiedRegisters() []Register {
 type LOOP ControlFlow
 
 func (o LOOP) String() string {
-	return fmt.Sprintf("LOOP %v (%s)\n", o.Condition, o.Body)
+	return fmt.Sprintf("LOOP (%v); %v (%s)\n", o.Initializer, o.Condition, o.Body)
 }
 
 func (o LOOP) Registers() []Register {
