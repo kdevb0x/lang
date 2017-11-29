@@ -65,7 +65,6 @@ func (c Char) IsValid() bool {
 
 func (t Char) String() string {
 	return string(t)
-	// return "Char(" + string(t) + ")"
 }
 
 type String string

@@ -30,6 +30,9 @@ const UnbufferedCat = `proc main (args []string) () {
 
 // UnbufferedCat2 is the same as UnbufferedCat, but uses
 // let statement bindings in the while condition.
+//
+// (The syntax for this was not implemented when the UnbufferedCat
+// test was first written.)
 const UnbufferedCat2 = `proc main (args []string) () {
 	mutable buf []byte = {0}
 
@@ -40,6 +43,24 @@ const UnbufferedCat2 = `proc main (args []string) () {
 			PrintByteSlice(buf)
 		}
 		Close(file)
+	}
+}
+`
+
+// UnbufferedCat3 is the same as UnbufferedCat2, but uses
+// method invocation syntax too.
+//
+// (The method invocation syntax was implemented after let bindings.)
+const UnbufferedCat3 = `proc main (args []string) () {
+	mutable buf []byte = {0}
+
+	let i = 0
+	while (let i = i + 1) < args.len() {
+		let file = Open(args[i])
+		while (let n = file.Read(buf)) > 0 {
+			PrintByteSlice(buf)
+		}
+		file.Close()
 	}
 }
 `

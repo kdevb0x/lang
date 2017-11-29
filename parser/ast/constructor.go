@@ -640,7 +640,7 @@ func consumeStmt(start int, tokens []token.Token, c *Context) (int, Node, error)
 		switch tokens[start+1] {
 		case token.Char("("):
 			if c.IsFunction(tokens[start].String()) {
-				n, fc, err := consumeFuncCall(start, tokens, c)
+				n, fc, err := consumeFuncCall(start, tokens, c, nil)
 				if err == nil {
 					return n + 1, fc, nil
 				}
@@ -648,6 +648,12 @@ func consumeStmt(start int, tokens []token.Token, c *Context) (int, Node, error)
 			} else {
 				return 0, nil, fmt.Errorf("Call to undefined function: %v", tokens[start])
 			}
+		case token.Char("."):
+			n, fc, err := consumeFuncCall(start+2, tokens, c, []Value{c.Variables[tokens[start].String()]})
+			if err != nil {
+				return 0, nil, err
+			}
+			return n + 3, fc, nil
 		case token.Char("["):
 			// We're indexing into an array (probably)
 			// use consumeValue to get the ArrayValue for the index
@@ -742,10 +748,11 @@ func consumeStmt(start int, tokens []token.Token, c *Context) (int, Node, error)
 	}
 
 }
-func consumeFuncCall(start int, tokens []token.Token, c *Context) (int, FuncCall, error) {
+func consumeFuncCall(start int, tokens []token.Token, c *Context, mvals []Value) (int, FuncCall, error) {
 	name := tokens[start].String()
 	f := FuncCall{
-		Name: name,
+		Name:     name,
+		UserArgs: mvals,
 	}
 
 	decl, ok := c.Functions[name]
@@ -764,7 +771,7 @@ func consumeFuncCall(start int, tokens []token.Token, c *Context) (int, FuncCall
 	f.Returns = decl.ReturnTuple()
 
 	if tokens[start+1] == token.Char("(") && tokens[start+2] == token.Char(")") {
-		if len(args) == 0 {
+		if len(args) == len(mvals) {
 			return 2, f, nil
 		}
 		return 0, FuncCall{}, fmt.Errorf("Unexpected number of parameters to %v: got 0 want %v.", tokens[start], len(args))

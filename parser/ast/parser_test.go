@@ -4066,3 +4066,224 @@ func TestUnbufferedCat2(t *testing.T) {
 		}
 	}
 }
+
+func TestMethodSyntax(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.MethodSyntax))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Node{
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					LetStmt{
+						Var: VarWithType{"foo",
+							TypeLiteral("int"),
+							false,
+						},
+						Val: IntLiteral(3),
+					},
+					LetStmt{
+						Var: VarWithType{"y",
+							TypeLiteral("int"),
+							false,
+						},
+						Val: FuncCall{
+							Name: "add",
+							UserArgs: []Value{
+								FuncCall{
+									Name: "add3",
+									UserArgs: []Value{
+										VarWithType{"foo",
+											TypeLiteral("int"),
+											false,
+										},
+									},
+								},
+								IntLiteral(4),
+							},
+						},
+					},
+					FuncCall{
+						Name: "PrintInt",
+						UserArgs: []Value{
+							VarWithType{
+								"y",
+								TypeLiteral("int"),
+								false,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("got %v want %v", ast[i], v)
+		}
+	}
+}
+
+func TestUnbufferedCat3(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.UnbufferedCat3))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Node{
+		ProcDecl{
+			Name: "main",
+			Args: []VarWithType{
+				VarWithType{
+					"args",
+					SliceType{TypeLiteral("string")},
+					false,
+				},
+			},
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					MutStmt{
+						Var: VarWithType{"buf",
+							SliceType{
+								Base: TypeLiteral("byte"),
+							},
+							false,
+						},
+						InitialValue: ArrayLiteral{
+							IntLiteral(0),
+						},
+					},
+					LetStmt{
+						Var: VarWithType{"i",
+							TypeLiteral("int"),
+							false,
+						},
+						Val: IntLiteral(0),
+					},
+					WhileLoop{
+						Condition: LessThanComparison{
+							Left: Brackets{
+								LetStmt{
+									Var: VarWithType{"i", TypeLiteral("int"), false},
+									Val: AdditionOperator{
+										Left:  VarWithType{"i", TypeLiteral("int"), false},
+										Right: IntLiteral(1),
+									},
+								},
+							},
+							Right: FuncCall{
+								Name: "len",
+								UserArgs: []Value{
+									VarWithType{
+										"args",
+										SliceType{
+											Base: TypeLiteral("string"),
+										},
+										false,
+									},
+								},
+							},
+						},
+						Body: BlockStmt{
+							[]Node{
+								LetStmt{
+									Var: VarWithType{"file", TypeLiteral("uint64"), false},
+									Val: FuncCall{
+										Name: "Open",
+										UserArgs: []Value{
+											ArrayValue{
+												Base: VarWithType{
+													"args",
+													SliceType{
+														Base: TypeLiteral("string"),
+													},
+													false,
+												},
+												Index: VarWithType{"i", TypeLiteral("int"), false},
+											},
+										},
+									},
+								},
+								WhileLoop{
+									Condition: GreaterComparison{
+										Left: Brackets{
+											LetStmt{
+												Var: VarWithType{"n", TypeLiteral("uint64"), false},
+												Val: FuncCall{
+													Name: "Read",
+													UserArgs: []Value{
+														VarWithType{
+															"file",
+															TypeLiteral("uint64"),
+															false,
+														},
+														VarWithType{
+															"buf",
+															SliceType{
+																Base: TypeLiteral("byte"),
+															},
+															false,
+														},
+													},
+												},
+											},
+										},
+										Right: IntLiteral(0),
+									},
+									Body: BlockStmt{
+										[]Node{
+											FuncCall{
+												Name: "PrintByteSlice",
+												UserArgs: []Value{
+													VarWithType{
+														"buf",
+														SliceType{
+															Base: TypeLiteral("byte"),
+														},
+														false,
+													},
+												},
+											},
+										},
+									},
+								},
+								FuncCall{
+									Name: "Close",
+									UserArgs: []Value{
+										VarWithType{
+											"file",
+											TypeLiteral("uint64"),
+											false,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("got %v want %v", ast[i], v)
+		}
+	}
+}

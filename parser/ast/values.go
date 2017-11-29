@@ -19,7 +19,7 @@ func isInfixOperator(pos int, tokens []token.Token) bool {
 			return true
 		}
 	case token.Char:
-		return t == "[" //|| t == "("
+		return t == "[" || t == "."
 	}
 	return false
 }
@@ -309,7 +309,7 @@ func consumeValue(start int, tokens []token.Token, c *Context) (int, Value, erro
 				partial = ev
 			} else if c.IsFunction(t.String()) {
 				// if it's a function, call it.
-				n, fc, err := consumeFuncCall(i, tokens, c)
+				n, fc, err := consumeFuncCall(i, tokens, c, nil)
 				if err != nil {
 					return 0, nil, err
 				}
@@ -462,6 +462,12 @@ func consumeInfix(start int, tokens []token.Token, c *Context, left Value) (int,
 		return n + 1, ArrayValue{base, index}, nil
 	case token.Operator("="):
 		return 0, left, nil
+	case token.Char("."):
+		nm, fc, err := consumeFuncCall(start+1, tokens, c, []Value{left})
+		if err != nil {
+			return 0, nil, err
+		}
+		return nm + 1, fc, nil
 	default:
 		panic(fmt.Sprintf("Unhandled infix operator %v at %v", tokens[start].String(), start))
 	}

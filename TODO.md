@@ -3,6 +3,8 @@ about something.)
 
 # Bugfix TODOs
 - len should work on all slice types, and arrays, and strings
+- can not return []byte -- claims "invalid argument"
+- can not assign to index outside of let or mutable stmt? (ie. can not mutate mutable slices)
 
 # New features TODOs
 
@@ -38,7 +40,6 @@ about something.)
 
 # Syntactic sugar TODOs
 
-- Method invocation syntax. x.foo().bar() should be equivalent to bar(foo(x))
 - Add foreach loop or for maybe just normal for loops? (Syntax needs design.)
 
 # Design TODOs
@@ -54,7 +55,8 @@ about something.)
 
 # Tests TODO
 - Add better tests for invalid shadowing or assignments inside conditionals
-	- no mutable statement or assignment in conditional
-	- ensure variables declared in condition doesn't outlive scope
+	- do not allow mutable statement or assignment in conditional
+	- ensure variables declared in condition don't outlive scope
 - Add test cases for unsigned comparisons in wasm (all operators)
 - Add better test cases tail call optimization (esp. with different stack sizes)
+- Need better tests for invalid types.. ie typos like "let digits []buf = .." fail for the wrong reasons..

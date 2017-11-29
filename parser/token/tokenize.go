@@ -20,7 +20,7 @@ func addToken(cur []Token, val string) []Token {
 	case "proc", "func", "mutable", "let", "while", "if", "else", "return", "type",
 		"data", "match", "case":
 		return append(cur, Keyword(val))
-	case "(", ")", "{", "}", `"`, `,`, ":":
+	case "(", ")", "{", "}", `"`, `,`, ":", ".":
 		return append(cur, Char(val))
 	case "+", "-", "*", "/", "%",
 		"<=", "<", "==", ">", ">=", "=", "!=",
@@ -95,7 +95,7 @@ func Tokenize(r io.RuneScanner) ([]Token, error) {
 				currentToken = ""
 				currentContext = DefaultContext
 				continue
-			case '(', ')', '{', '}', '"', ',', ':', '[', ']':
+			case '(', ')', '{', '}', '"', ',', ':', '[', ']', '.':
 				if currentToken != "" {
 					tokens = addToken(tokens, currentToken)
 				}
