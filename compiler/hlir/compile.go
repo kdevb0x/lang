@@ -528,30 +528,73 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 			}
 			ops = append(ops, RET{})
 		case ast.AssignmentOperator:
-			dst := context.Get(s.Variable)
-			body, rvs, err := evaluateValue(s.Value, context)
-			if err != nil {
-				return nil, err
-			}
-			ops = append(ops, body...)
+			switch v := s.Variable.(type) {
+			case ast.VarWithType:
+				dst := context.Get(v)
+				body, rvs, err := evaluateValue(s.Value, context)
+				if err != nil {
+					return nil, err
+				}
+				ops = append(ops, body...)
 
-			for i, r := range rvs {
-				var dstReg Register
-				switch d := dst.(type) {
-				case LocalValue:
-					dstReg = d + LocalValue(i)
-				case FuncArg:
-					newReg := d
-					newReg.Id += uint(i)
-					dstReg = newReg
-				default:
-					panic(fmt.Sprintf("Unhandled register type in assignment %v", reflect.TypeOf(dst)))
+				for i, r := range rvs {
+					var dstReg Register
+					switch d := dst.(type) {
+					case LocalValue:
+						dstReg = d + LocalValue(i)
+					case FuncArg:
+						newReg := d
+						newReg.Id += uint(i)
+						dstReg = newReg
+					default:
+						panic(fmt.Sprintf("Unhandled register type in assignment %v", reflect.TypeOf(dst)))
+					}
+
+					ops = append(ops, MOV{
+						Src: r,
+						Dst: dstReg,
+					})
+				}
+			case ast.ArrayValue:
+				var base Register
+				var typeInfo ast.TypeInfo
+				switch bt := v.Base.Typ.(type) {
+				case ast.ArrayType:
+					base = context.Get(v.Base)
+					typeInfo = context.GetTypeInfo(bt.Base.Type())
+				case ast.SliceType:
+					base = context.Get(v.Base)
+					bl := base.(LocalValue)
+					bl++
+					base = bl
+					typeInfo = context.GetTypeInfo(bt.Base.Type())
+				}
+				ibody, index, err := evaluateValue(v.Index, context)
+				if err != nil {
+					return nil, err
+				}
+				if len(index) != 1 {
+					return nil, fmt.Errorf("Must have exactly one value for index.")
+				}
+				vbody, rvs, err := evaluateValue(s.Value, context)
+				if err != nil {
+					return nil, err
 				}
 
+				ops = append(ops, ibody...)
+				ops = append(ops, vbody...)
+
 				ops = append(ops, MOV{
-					Src: r,
-					Dst: dstReg,
+					Src: rvs[0],
+					Dst: Offset{
+						Base:      base,
+						Offset:    index[0],
+						Scale:     IntLiteral(typeInfo.Size),
+						Container: v.Base,
+					},
 				})
+			default:
+				panic(fmt.Sprintf("Unhandled assignment type: %v", reflect.TypeOf(s.Variable)))
 			}
 		case ast.IfStmt:
 			oldvalues := context.CloneValues()
@@ -811,9 +854,10 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, []Register
 				}
 
 				return nil, []Register{Offset{
-					Offset: IntLiteral(int(offset)),
-					Scale:  IntLiteral(offsetInfo.Size),
-					Base:   reg,
+					Offset:    IntLiteral(int(offset)),
+					Scale:     IntLiteral(offsetInfo.Size),
+					Base:      reg,
+					Container: s.Base,
 				}}, nil
 			default:
 				// Evaluate the offset and look and store the value in a register.

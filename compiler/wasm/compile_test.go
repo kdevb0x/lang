@@ -4236,3 +4236,381 @@ func TestLetCondition(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestMethodSyntax(t *testing.T) {
+	module, err := Parse(sampleprograms.MethodSyntax)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := Module{
+		Imports: []Import{
+			{"stdlib", "PrintInt", Func{
+				Name: "PrintInt",
+				Signature: Signature{
+					Variable{i32, Param, ""},
+				},
+			},
+			},
+		},
+		Funcs: []Func{
+			Func{
+				Name: "main",
+				Signature: Signature{
+					Variable{i32, Local, "LV0"},
+					Variable{i32, Local, "LV1"},
+				},
+				Body: []Instruction{
+					I32Const(3),
+					SetLocal(0),
+					GetLocal(0),
+					Call{"add3"},
+					I32Const(4),
+					Call{"add"},
+					SetLocal(1),
+					GetLocal(1),
+					Call{"PrintInt"},
+				},
+			},
+			Func{
+				Name: "add3",
+				Signature: Signature{
+					Variable{i32, Param, "val"},
+					Variable{i32, Result, ""},
+				},
+				Body: []Instruction{
+					GetLocal(0),
+					I32Const(3),
+					I32Add{},
+					Return{},
+				},
+			},
+			Func{
+				Name: "add",
+				Signature: Signature{
+					Variable{i32, Param, "x"},
+					Variable{i32, Param, "y"},
+					Variable{i32, Result, ""},
+				},
+				Body: []Instruction{
+					GetLocal(0),
+					GetLocal(1),
+					I32Add{},
+					Return{},
+				},
+			},
+		},
+	}
+
+	if err := compareModule(module, expected); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAssignmentToConstantIndex(t *testing.T) {
+	module, err := Parse(sampleprograms.AssignmentToConstantIndex)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := Module{
+		Imports: []Import{
+			{"stdlib", "PrintInt", Func{
+				Name: "PrintInt",
+				Signature: Signature{
+					Variable{i32, Param, ""},
+				},
+			},
+			},
+		},
+		Funcs: []Func{
+			Func{
+				Name: "main",
+				Signature: Signature{
+					Variable{i32, Local, "LV0"},
+					Variable{i32, Local, "LV1"},
+					Variable{i32, Local, "LV2"},
+				},
+				Body: []Instruction{
+					I32Const(3),
+					SetLocal(0),
+					I32Const(4),
+					SetLocal(1),
+					I32Const(5),
+					SetLocal(2),
+					I32Const(6),
+					SetLocal(1),
+					GetLocal(0),
+					Call{"PrintInt"},
+					GetLocal(1),
+					Call{"PrintInt"},
+					GetLocal(2),
+					Call{"PrintInt"},
+				},
+			},
+		},
+	}
+
+	if err := compareModule(module, expected); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAssignmentToVariableIndex(t *testing.T) {
+	module, err := Parse(sampleprograms.AssignmentToVariableIndex)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := Module{
+		Imports: []Import{
+			{"stdlib", "PrintInt", Func{
+				Name: "PrintInt",
+				Signature: Signature{
+					Variable{i32, Param, ""},
+				},
+			},
+			},
+		},
+		Memory: Memory{Name: "mem", Size: 1},
+		Globals: []Global{
+			Global{
+				Mutable:      true,
+				Type:         i32,
+				InitialValue: 0,
+			},
+		},
+		Funcs: []Func{
+			Func{
+				Name: "main",
+				Signature: Signature{
+					Variable{i32, Local, "LV4"},
+				},
+				Body: []Instruction{
+					// mutable x = { 1, 3, 4, 5}
+					GetGlobal(0),
+					I32Const(1),
+					I32Store{},
+
+					GetGlobal(0),
+					I32Const(4),
+					I32Add{},
+					I32Const(3),
+					I32Store{},
+
+					GetGlobal(0),
+					I32Const(8),
+					I32Add{},
+					I32Const(4),
+					I32Store{},
+
+					GetGlobal(0),
+					I32Const(12),
+					I32Add{}, // op 15
+					I32Const(5),
+					I32Store{},
+
+					// let y = x[0]
+					GetGlobal(0),
+					I32Load{},
+					SetLocal(0), // op 20
+
+					// x[y] = 6
+					GetGlobal(0),
+					GetLocal(0),
+					I32Const(4),
+					I32Mul{},
+					I32Add{},
+					I32Const(6),
+					I32Store{},
+
+					// PrintInt(x[y])
+					GetLocal(0),
+					I32Const(4),
+					I32Mul{},
+					GetGlobal(0),
+					I32Add{},
+					I32Load{},
+					Call{"PrintInt"},
+
+					// PrintInt(x[y+1])
+					GetLocal(0),
+					I32Const(1),
+					I32Add{},
+					// convert from index to byte offset
+					I32Const(4),
+					I32Mul{},
+					GetGlobal(0),
+
+					// index from x and load
+					I32Add{},
+					I32Load{},
+					Call{"PrintInt"},
+				},
+			},
+		},
+	}
+
+	if err := compareModule(module, expected); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAssignmentToSliceConstantIndex(t *testing.T) {
+	module, err := Parse(sampleprograms.AssignmentToSliceConstantIndex)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := Module{
+		Imports: []Import{
+			{"stdlib", "PrintInt", Func{
+				Name: "PrintInt",
+				Signature: Signature{
+					Variable{i32, Param, ""},
+				},
+			},
+			},
+		},
+		Funcs: []Func{
+			Func{
+				Name: "main",
+				Signature: Signature{
+					Variable{i32, Local, "LV0"},
+					Variable{i32, Local, "LV1"},
+					Variable{i32, Local, "LV2"},
+					Variable{i32, Local, "LV3"},
+				},
+				Body: []Instruction{
+					I32Const(3),
+					SetLocal(0),
+					I32Const(3),
+					SetLocal(1),
+					I32Const(4),
+					SetLocal(2),
+					I32Const(5),
+					SetLocal(3),
+					I32Const(6),
+					SetLocal(2),
+					GetLocal(1),
+					Call{"PrintInt"},
+					GetLocal(2),
+					Call{"PrintInt"},
+					GetLocal(3),
+					Call{"PrintInt"},
+				},
+			},
+		},
+	}
+
+	if err := compareModule(module, expected); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAssignmentToSliceVariableIndex(t *testing.T) {
+	module, err := Parse(sampleprograms.AssignmentToSliceVariableIndex)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := Module{
+		Imports: []Import{
+			{"stdlib", "PrintInt", Func{
+				Name: "PrintInt",
+				Signature: Signature{
+					Variable{i32, Param, ""},
+				},
+			},
+			},
+		},
+		Memory: Memory{Name: "mem", Size: 1},
+		Globals: []Global{
+			Global{
+				Mutable:      true,
+				Type:         i32,
+				InitialValue: 0,
+			},
+		},
+		Funcs: []Func{
+			Func{
+				Name: "main",
+				Signature: Signature{
+					Variable{i32, Local, "LV5"},
+				},
+				Body: []Instruction{
+					// mutable x []byte = { 1, 3, 4, 5}
+					GetGlobal(0),
+					I32Const(4),
+					I32Store{},
+
+					GetGlobal(0),
+					I32Const(4),
+					I32Add{},
+					I32Const(1),
+					I32Store8{},
+
+					GetGlobal(0),
+					I32Const(5),
+					I32Add{},
+					I32Const(3),
+					I32Store8{},
+
+					GetGlobal(0),
+					I32Const(6),
+					I32Add{},
+					I32Const(4),
+					I32Store8{},
+
+					GetGlobal(0),
+					I32Const(7),
+					I32Add{},
+					I32Const(5),
+					I32Store8{},
+
+					// let y = x[0]
+					GetGlobal(0),
+					I32Const(4),
+					I32Add{},
+					I32Load8U{},
+					SetLocal(0),
+
+					// x[y] = 6
+					GetGlobal(0),
+					I32Const(4),
+					I32Add{},
+					GetLocal(0),
+					I32Add{},
+					I32Const(6),
+					I32Store8{},
+
+					// PrintInt(x[y])
+					GetLocal(0),
+					GetGlobal(0),
+					I32Const(4),
+					I32Add{},
+					I32Add{},
+					I32Load8U{},
+					Call{"PrintInt"},
+
+					// PrintInt(x[y+1])
+					GetLocal(0),
+					I32Const(1),
+					I32Add{},
+					GetGlobal(0),
+					I32Const(4),
+					I32Add{},
+
+					// index from x and load
+					I32Add{},
+					I32Load8U{},
+					Call{"PrintInt"},
+				},
+			},
+		},
+	}
+
+	if err := compareModule(module, expected); err != nil {
+		t.Fatal(err)
+	}
+}

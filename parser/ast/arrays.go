@@ -66,6 +66,10 @@ func (v ArrayValue) Value() interface{} {
 	return v
 }
 
+func (v ArrayValue) CanAssign() bool {
+	return true
+}
+
 type SliceType struct {
 	Base Type
 }

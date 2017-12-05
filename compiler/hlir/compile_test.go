@@ -1996,6 +1996,13 @@ func TestIRSimpleArray(t *testing.T) {
 					Base:   LocalValue(0),
 					Offset: IntLiteral(3),
 					Scale:  IntLiteral(0),
+					Container: ast.VarWithType{
+						"n", ast.ArrayType{
+							ast.TypeLiteral("int"),
+							5,
+						},
+						false,
+					},
 				},
 			},
 		},
@@ -2044,19 +2051,31 @@ func TestIRArrayMutation(t *testing.T) {
 					Base:   LocalValue(0),
 					Offset: IntLiteral(3),
 					Scale:  IntLiteral(0),
+					Container: ast.VarWithType{
+						"n", ast.ArrayType{
+							ast.TypeLiteral("int"),
+							5,
+						},
+						false,
+					},
 				},
 			},
 		},
 		CALL{FName: "PrintString", Args: []Register{StringLiteral(`\n`)}},
 		MOV{
 			Src: IntLiteral(2),
-			Dst: LocalValue(3),
-			// FIXME: This should be
-			//	Dst:Offset{
-			//		Base: LocalValue{0, ast.TypeInfo{8, true}},
-			//		Offset: IntLiteral(24),
-			//	},
-			// But for now they evaluate to the same address ..
+			Dst: Offset{
+				Base:   LocalValue(0),
+				Offset: IntLiteral(3),
+				Scale:  0,
+				Container: ast.VarWithType{
+					"n", ast.ArrayType{
+						ast.TypeLiteral("int"),
+						5,
+					},
+					false,
+				},
+			},
 		},
 		CALL{
 			FName: "PrintInt",
@@ -2065,6 +2084,13 @@ func TestIRArrayMutation(t *testing.T) {
 					Base:   LocalValue(0),
 					Offset: IntLiteral(3),
 					Scale:  IntLiteral(0),
+					Container: ast.VarWithType{
+						"n", ast.ArrayType{
+							ast.TypeLiteral("int"),
+							5,
+						},
+						false,
+					},
 				},
 			},
 		},
@@ -2076,6 +2102,13 @@ func TestIRArrayMutation(t *testing.T) {
 					Base:   LocalValue(0),
 					Offset: IntLiteral(2),
 					Scale:  IntLiteral(0),
+					Container: ast.VarWithType{
+						"n", ast.ArrayType{
+							ast.TypeLiteral("int"),
+							5,
+						},
+						false,
+					},
 				},
 			},
 		},
@@ -2189,6 +2222,12 @@ func TestIRSimpleSlice(t *testing.T) {
 					Offset: IntLiteral(3),
 					Scale:  IntLiteral(0),
 					Base:   LocalValue(1),
+					Container: ast.VarWithType{
+						"n", ast.SliceType{
+							ast.TypeLiteral("int"),
+						},
+						false,
+					},
 				},
 			},
 		},
@@ -2241,6 +2280,12 @@ func TestIRSimpleSliceInference(t *testing.T) {
 					Offset: IntLiteral(3),
 					Scale:  IntLiteral(0),
 					Base:   LocalValue(1),
+					Container: ast.VarWithType{
+						"n2", ast.SliceType{
+							ast.TypeLiteral("int"),
+						},
+						false,
+					},
 				},
 			},
 		},
@@ -2293,20 +2338,29 @@ func TestIRSimpleSliceMutation(t *testing.T) {
 					Base:   LocalValue(1),
 					Offset: IntLiteral(3),
 					Scale:  IntLiteral(0),
+					Container: ast.VarWithType{
+						"n", ast.SliceType{
+							ast.TypeLiteral("int"),
+						},
+						false,
+					},
 				},
 			},
 		},
 		CALL{FName: "PrintString", Args: []Register{StringLiteral(`\n`)}},
 		MOV{
 			Src: IntLiteral(2),
-			Dst: LocalValue(4),
-			// FIXME: This should be:
-			//	but they're the same value, so it doesn't really matter for now
-			//
-			//Dst: Offset{
-			//		Base:   LocalValue{1, ast.TypeInfo{8, true}},
-			//		Offset: IntLiteral(24),
-			//	},
+			Dst: Offset{
+				Base:   LocalValue(1),
+				Offset: IntLiteral(3),
+				Scale:  0,
+				Container: ast.VarWithType{
+					"n", ast.SliceType{
+						ast.TypeLiteral("int"),
+					},
+					false,
+				},
+			},
 		},
 		CALL{
 			FName: "PrintInt",
@@ -2315,6 +2369,12 @@ func TestIRSimpleSliceMutation(t *testing.T) {
 					Base:   LocalValue(1),
 					Offset: IntLiteral(3),
 					Scale:  IntLiteral(0),
+					Container: ast.VarWithType{
+						"n", ast.SliceType{
+							ast.TypeLiteral("int"),
+						},
+						false,
+					},
 				},
 			},
 		},
@@ -2326,6 +2386,12 @@ func TestIRSimpleSliceMutation(t *testing.T) {
 					Base:   LocalValue(1),
 					Offset: IntLiteral(2),
 					Scale:  IntLiteral(0),
+					Container: ast.VarWithType{
+						"n", ast.SliceType{
+							ast.TypeLiteral("int"),
+						},
+						false,
+					},
 				},
 			},
 		},
@@ -2839,6 +2905,12 @@ func TestIndexAssignment(t *testing.T) {
 				Base:   LocalValue(1),
 				Offset: IntLiteral(1),
 				Scale:  IntLiteral(0),
+				Container: ast.VarWithType{
+					"x", ast.SliceType{
+						ast.TypeLiteral("int"),
+					},
+					false,
+				},
 			},
 			Dst: LocalValue(4),
 		},
@@ -2847,6 +2919,12 @@ func TestIndexAssignment(t *testing.T) {
 				Base:   LocalValue(1),
 				Offset: IntLiteral(2),
 				Scale:  IntLiteral(0),
+				Container: ast.VarWithType{
+					"x", ast.SliceType{
+						ast.TypeLiteral("int"),
+					},
+					false,
+				},
 			},
 			Dst: LocalValue(5),
 		},
@@ -2896,6 +2974,12 @@ func TestIndexedAddition(t *testing.T) {
 				Base:   LocalValue(1),
 				Offset: IntLiteral(1),
 				Scale:  IntLiteral(0),
+				Container: ast.VarWithType{
+					"x", ast.SliceType{
+						ast.TypeLiteral("int"),
+					},
+					false,
+				},
 			},
 			Dst: LocalValue(4),
 		},
@@ -2905,6 +2989,12 @@ func TestIndexedAddition(t *testing.T) {
 				Base:   LocalValue(1),
 				Offset: IntLiteral(2),
 				Scale:  IntLiteral(0),
+				Container: ast.VarWithType{
+					"x", ast.SliceType{
+						ast.TypeLiteral("int"),
+					},
+					false,
+				},
 			},
 			Dst: TempValue(0),
 		},
@@ -2917,11 +3007,23 @@ func TestIndexedAddition(t *testing.T) {
 				Base:   LocalValue(1),
 				Offset: IntLiteral(2),
 				Scale:  IntLiteral(0),
+				Container: ast.VarWithType{
+					"x", ast.SliceType{
+						ast.TypeLiteral("int"),
+					},
+					false,
+				},
 			},
 			Right: Offset{
 				Base:   LocalValue(1),
 				Offset: IntLiteral(0),
 				Scale:  IntLiteral(0),
+				Container: ast.VarWithType{
+					"x", ast.SliceType{
+						ast.TypeLiteral("int"),
+					},
+					false,
+				},
 			},
 			Dst: TempValue(1),
 		},
@@ -2965,6 +3067,13 @@ func TestStringArray(t *testing.T) {
 					Base:   LocalValue(0),
 					Offset: IntLiteral(1),
 					Scale:  IntLiteral(0),
+					Container: ast.VarWithType{
+						"args", ast.ArrayType{
+							ast.TypeLiteral("string"),
+							2,
+						},
+						false,
+					},
 				},
 			},
 		},
@@ -2976,6 +3085,13 @@ func TestStringArray(t *testing.T) {
 					Base:   LocalValue(0),
 					Offset: IntLiteral(0),
 					Scale:  IntLiteral(0),
+					Container: ast.VarWithType{
+						"args", ast.ArrayType{
+							ast.TypeLiteral("string"),
+							2,
+						},
+						false,
+					},
 				},
 			},
 		},
@@ -3545,6 +3661,22 @@ func TestLetCondition(t *testing.T) {
 	}
 }
 
+func TestSliceStringVariableParam(t *testing.T) {
+	as, ti, c, err := ast.Parse(sampleprograms.SliceStringVariableParam)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	f, _, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.NumArgs != 2 {
+		t.Error("Got %d arguments, expected 2. Slices take up 2 argument slots.")
+	}
+}
+
 func TestUnbufferedCat2(t *testing.T) {
 	as, ti, c, err := ast.Parse(sampleprograms.UnbufferedCat2)
 	if err != nil {
@@ -3652,6 +3784,212 @@ func TestUnbufferedCat2(t *testing.T) {
 					FName: "Close",
 					Args: []Register{
 						LocalValue(4),
+					},
+				},
+			},
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestAssignmentToVariableIndex(t *testing.T) {
+	as, ti, c, err := ast.Parse(sampleprograms.AssignmentToVariableIndex)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		MOV{ // mutable x = { 1, 3, 4, 5 }
+			Src: IntLiteral(1),
+			Dst: LocalValue(0),
+		},
+		MOV{
+			Src: IntLiteral(3),
+			Dst: LocalValue(1),
+		},
+		MOV{
+			Src: IntLiteral(4),
+			Dst: LocalValue(2),
+		},
+		MOV{
+			Src: IntLiteral(5),
+			Dst: LocalValue(3),
+		},
+		MOV{ // let y = x[0]
+			Src: Offset{
+				Base:   LocalValue(0),
+				Offset: IntLiteral(0),
+				Scale:  IntLiteral(0),
+				Container: ast.VarWithType{
+					"x", ast.ArrayType{
+						Base: ast.TypeLiteral("int"),
+						Size: 4,
+					},
+					false,
+				},
+			},
+			Dst: LocalValue(4),
+		},
+		MOV{ // x[y] = 6
+			Src: IntLiteral(6),
+			Dst: Offset{
+				Base:   LocalValue(0),
+				Offset: LocalValue(4),
+				Scale:  IntLiteral(0),
+				Container: ast.VarWithType{
+					"x", ast.ArrayType{
+						Base: ast.TypeLiteral("int"),
+						Size: 4,
+					},
+					false,
+				},
+			},
+		},
+		CALL{
+			FName: "PrintInt",
+			Args: []Register{
+				Offset{
+					Base:   LocalValue(0),
+					Offset: LocalValue(4),
+					Scale:  IntLiteral(0),
+					Container: ast.VarWithType{
+						"x", ast.ArrayType{
+							Base: ast.TypeLiteral("int"),
+							Size: 4,
+						},
+						false,
+					},
+				},
+			},
+		},
+		ADD{
+			Left:  LocalValue(4),
+			Right: IntLiteral(1),
+			Dst:   TempValue(0),
+		},
+		CALL{
+			FName: "PrintInt",
+			Args: []Register{
+				Offset{
+					Base:   LocalValue(0),
+					Offset: TempValue(0),
+					Scale:  IntLiteral(0),
+					Container: ast.VarWithType{
+						"x", ast.ArrayType{
+							Base: ast.TypeLiteral("int"),
+							Size: 4,
+						},
+						false,
+					},
+				},
+			},
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestAssignmentToSliceVariableIndex(t *testing.T) {
+	as, ti, c, err := ast.Parse(sampleprograms.AssignmentToSliceVariableIndex)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		MOV{ // mutable x = { 1, 3, 4, 5 }
+			Src: IntLiteral(4),
+			Dst: LocalValue(0),
+		},
+		MOV{ // mutable x = { 1, 3, 4, 5 }
+			Src: IntLiteral(1),
+			Dst: LocalValue(1),
+		},
+		MOV{
+			Src: IntLiteral(3),
+			Dst: LocalValue(2),
+		},
+		MOV{
+			Src: IntLiteral(4),
+			Dst: LocalValue(3),
+		},
+		MOV{
+			Src: IntLiteral(5),
+			Dst: LocalValue(4),
+		},
+		MOV{ // let y = x[0]
+			Src: Offset{
+				Base:   LocalValue(1),
+				Offset: IntLiteral(0),
+				Scale:  IntLiteral(1),
+				Container: ast.VarWithType{
+					"x", ast.SliceType{
+						Base: ast.TypeLiteral("byte"),
+					},
+					false,
+				},
+			},
+			Dst: LocalValue(5),
+		},
+		MOV{ // x[y] = 6
+			Src: IntLiteral(6),
+			Dst: Offset{
+				Base:   LocalValue(1),
+				Offset: LocalValue(5),
+				Scale:  IntLiteral(1),
+				Container: ast.VarWithType{
+					"x", ast.SliceType{
+						Base: ast.TypeLiteral("byte"),
+					},
+					false,
+				},
+			},
+		},
+		CALL{
+			FName: "PrintInt",
+			Args: []Register{
+				Offset{
+					Base:   LocalValue(1),
+					Offset: LocalValue(5),
+					Scale:  IntLiteral(1),
+					Container: ast.VarWithType{
+						"x", ast.SliceType{
+							Base: ast.TypeLiteral("byte"),
+						},
+						false,
+					},
+				},
+			},
+		},
+		ADD{
+			Left:  LocalValue(5),
+			Right: IntLiteral(1),
+			Dst:   TempValue(0),
+		},
+		CALL{
+			FName: "PrintInt",
+			Args: []Register{
+				Offset{
+					Base:   LocalValue(1),
+					Offset: TempValue(0),
+					Scale:  IntLiteral(1),
+					Container: ast.VarWithType{
+						"x", ast.SliceType{
+							Base: ast.TypeLiteral("byte"),
+						},
+						false,
 					},
 				},
 			},

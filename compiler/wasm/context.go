@@ -75,7 +75,7 @@ func (c *Context) GetLiteral(s string) int {
 func (c Context) LocalIndex(l hlir.LocalValue) uint {
 	idx, ok := c.curFuncLocalVariables[l]
 	if !ok {
-		panic(fmt.Sprintf("Unknown LocalValue: %v", l))
+		panic(fmt.Sprintf("Unknown LocalValue: %v (Known local variables: %v Known mem variables: %v)", l, c.curFuncLocalVariables, c.curFuncMemVariables))
 	}
 	return idx
 }
@@ -102,7 +102,16 @@ func (c *Context) GetNumArgs(fname string) uint {
 		panic("Multiple dispatch not implemented")
 	}
 
-	return uint(len(callable[0].GetArgs()))
+	args := callable[0].GetArgs()
+	nargs := uint(len(args))
+	for _, a := range args {
+		switch a.Typ.(type) {
+		case ast.SliceType:
+			nargs++
+		}
+	}
+
+	return nargs
 }
 
 func (c *Context) GetNumReturns(fname string) uint {
@@ -200,10 +209,13 @@ func (c *Context) GetSignature(fname string) Signature {
 }
 
 func (c *Context) addMemoryVar(v hlir.Register) {
+	if _, ok := c.curFuncMemVariables[v]; ok {
+		return
+	}
 	c.curFuncMemVariables[v] = c.curFuncMaxMem
 	md, ok := c.registerData[v]
 	if !ok {
-		panic("Unknown register")
+		panic(fmt.Sprintf("Unknown register: %v", v))
 	}
 	if md.TypeInfo.Size != 0 {
 		c.curFuncMaxMem += uint(md.TypeInfo.Size)

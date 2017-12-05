@@ -6,7 +6,7 @@ import (
 	"github.com/driusan/lang/parser/ast"
 )
 
-var debug = false
+var debug = true
 
 type Func struct {
 	Name      string

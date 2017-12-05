@@ -2874,8 +2874,17 @@ func TestArrayMutation(t *testing.T) {
 						},
 					},
 					AssignmentOperator{
-						Variable: VarWithType{"n[3]", TypeLiteral("int"), false},
-						Value:    IntLiteral(2),
+						Variable: ArrayValue{
+							Base: VarWithType{"n",
+								ArrayType{
+									Base: TypeLiteral("int"),
+									Size: IntLiteral(5),
+								},
+								false,
+							},
+							Index: IntLiteral(3),
+						},
+						Value: IntLiteral(2),
 					},
 					FuncCall{
 						Name: "PrintInt",
@@ -3211,8 +3220,16 @@ func TestSliceMutation(t *testing.T) {
 						},
 					},
 					AssignmentOperator{
-						Variable: VarWithType{"n[3]", TypeLiteral("int"), false},
-						Value:    IntLiteral(2),
+						Variable: ArrayValue{
+							Base: VarWithType{"n",
+								SliceType{
+									Base: TypeLiteral("int"),
+								},
+								false,
+							},
+							Index: IntLiteral(3),
+						},
+						Value: IntLiteral(2),
 					},
 					FuncCall{
 						Name: "PrintInt",
@@ -4272,6 +4289,210 @@ func TestUnbufferedCat3(t *testing.T) {
 											false,
 										},
 									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("got %v want %v", ast[i], v)
+		}
+	}
+}
+
+func TestAssignmentToVariableIndex(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.AssignmentToVariableIndex))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Node{
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+
+				[]Node{
+					MutStmt{
+						Var: VarWithType{"x",
+							ArrayType{
+								Base: TypeLiteral("int"),
+								Size: IntLiteral(4),
+							},
+							false,
+						},
+						InitialValue: ArrayLiteral{
+							IntLiteral(1),
+							IntLiteral(3),
+							IntLiteral(4),
+							IntLiteral(5),
+						},
+					},
+					LetStmt{
+						Var: VarWithType{"y", TypeLiteral("int"), false},
+						Val: ArrayValue{
+							Base: VarWithType{"x",
+								ArrayType{
+									Base: TypeLiteral("int"),
+									Size: IntLiteral(4),
+								},
+								false,
+							},
+							Index: IntLiteral(0),
+						},
+					},
+					AssignmentOperator{
+						Variable: ArrayValue{
+							Base: VarWithType{"x",
+								ArrayType{
+									Base: TypeLiteral("int"),
+									Size: IntLiteral(4),
+								},
+								false,
+							},
+							Index: VarWithType{"y", TypeLiteral("int"), false},
+						},
+						Value: IntLiteral(6),
+					},
+					FuncCall{
+						Name: "PrintInt",
+						UserArgs: []Value{
+							ArrayValue{
+								Base: VarWithType{"x",
+									ArrayType{
+										Base: TypeLiteral("int"),
+										Size: IntLiteral(4),
+									},
+									false,
+								},
+								Index: VarWithType{"y", TypeLiteral("int"), false},
+							},
+						},
+					},
+					FuncCall{
+						Name: "PrintInt",
+						UserArgs: []Value{
+							ArrayValue{
+								Base: VarWithType{"x",
+									ArrayType{
+										Base: TypeLiteral("int"),
+										Size: IntLiteral(4),
+									},
+									false,
+								},
+								Index: AdditionOperator{
+									Left:  VarWithType{"y", TypeLiteral("int"), false},
+									Right: IntLiteral(1),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("got %v want %v", ast[i], v)
+		}
+	}
+}
+func TestAssignmentToSliceVariableIndex(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.AssignmentToSliceVariableIndex))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Node{
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+
+				[]Node{
+					MutStmt{
+						Var: VarWithType{"x",
+							SliceType{
+								Base: TypeLiteral("byte"),
+							},
+							false,
+						},
+						InitialValue: ArrayLiteral{
+							IntLiteral(1),
+							IntLiteral(3),
+							IntLiteral(4),
+							IntLiteral(5),
+						},
+					},
+					LetStmt{
+						Var: VarWithType{"y", TypeLiteral("byte"), false},
+						Val: ArrayValue{
+							Base: VarWithType{"x",
+								SliceType{
+									Base: TypeLiteral("byte"),
+								},
+								false,
+							},
+							Index: IntLiteral(0),
+						},
+					},
+					AssignmentOperator{
+						Variable: ArrayValue{
+							Base: VarWithType{"x",
+								SliceType{
+									Base: TypeLiteral("byte"),
+								},
+								false,
+							},
+							Index: VarWithType{"y", TypeLiteral("byte"), false},
+						},
+						Value: IntLiteral(6),
+					},
+					FuncCall{
+						Name: "PrintInt",
+						UserArgs: []Value{
+							ArrayValue{
+								Base: VarWithType{"x",
+									SliceType{
+										Base: TypeLiteral("byte"),
+									},
+									false,
+								},
+								Index: VarWithType{"y", TypeLiteral("byte"), false},
+							},
+						},
+					},
+					FuncCall{
+						Name: "PrintInt",
+						UserArgs: []Value{
+							ArrayValue{
+								Base: VarWithType{"x",
+									SliceType{
+										Base: TypeLiteral("byte"),
+									},
+									false,
+								},
+								Index: AdditionOperator{
+									Left:  VarWithType{"y", TypeLiteral("byte"), false},
+									Right: IntLiteral(1),
 								},
 							},
 						},

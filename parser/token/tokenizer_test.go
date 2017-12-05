@@ -526,7 +526,7 @@ func TestSingleCharInput(t *testing.T) {
 	}
 
 	if len(tk) != 1 {
-		t.Fatal("Unexpected number of tokens. Got: %v", tk)
+		t.Fatalf("Unexpected number of tokens. Got: %v", tk)
 	}
 	for i, tok := range expected {
 		if tok != tk[i] {

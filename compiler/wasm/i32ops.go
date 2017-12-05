@@ -183,3 +183,23 @@ func (i I32Load) TextFormat(ctx Context) string {
 func (i I32Load) String() string {
 	return "i32.load"
 }
+
+type I32Load8U struct{}
+
+func (i I32Load8U) TextFormat(ctx Context) string {
+	return i.String()
+}
+
+func (i I32Load8U) String() string {
+	return "i32.load8_u"
+}
+
+type I32Load8S struct{}
+
+func (i I32Load8S) TextFormat(ctx Context) string {
+	return i.String()
+}
+
+func (i I32Load8S) String() string {
+	return "i32.load8_s"
+}

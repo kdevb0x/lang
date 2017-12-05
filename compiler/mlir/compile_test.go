@@ -1796,13 +1796,11 @@ func TestIRArrayMutation(t *testing.T) {
 		CALL{FName: "PrintString", Args: []Register{StringLiteral(`\n`)}},
 		MOV{
 			Src: IntLiteral(2),
-			Dst: LocalValue{3, ast.TypeInfo{8, true}},
-			// FIXME: This should be
-			//	Dst:Offset{
-			//		Base: LocalValue{0, ast.TypeInfo{8, true}},
-			//		Offset: IntLiteral(24),
-			//	},
-			// But for now they evaluate to the same address ..
+			Dst: Offset{
+				Base:   LocalValue{0, ast.TypeInfo{8, true}},
+				Offset: IntLiteral(3),
+				Scale:  8,
+			},
 		},
 		CALL{
 			FName: "PrintInt",
@@ -2052,13 +2050,11 @@ func TestIRSimpleSliceMutation(t *testing.T) {
 		CALL{FName: "PrintString", Args: []Register{StringLiteral(`\n`)}},
 		MOV{
 			Src: IntLiteral(2),
-			Dst: LocalValue{4, ast.TypeInfo{8, true}},
-			// FIXME: This should be:
-			//	Dst: Offset{
-			//		Base:   LocalValue{1, ast.TypeInfo{8, true}},
-			//		Offset: IntLiteral(24),
-			//		but they're the same value, so it doesn't really matter for now
-			//},
+			Dst: Offset{
+				Base:   LocalValue{1, ast.TypeInfo{8, true}},
+				Offset: IntLiteral(3),
+				Scale:  8,
+			},
 		},
 		CALL{
 			FName: "PrintInt",
@@ -3130,6 +3126,166 @@ func TestUnbufferedCat2(t *testing.T) {
 		},
 		JMP{"loop0cond"},
 		Label("loop0end"),
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestAssignmentToVariableIndex(t *testing.T) {
+	as, ti, c, err := ast.Parse(sampleprograms.AssignmentToVariableIndex)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		MOV{ // mutable x = { 1, 3, 4, 5 }
+			Src: IntLiteral(1),
+			Dst: LocalValue{0, ast.TypeInfo{8, true}},
+		},
+		MOV{
+			Src: IntLiteral(3),
+			Dst: LocalValue{1, ast.TypeInfo{8, true}},
+		},
+		MOV{
+			Src: IntLiteral(4),
+			Dst: LocalValue{2, ast.TypeInfo{8, true}},
+		},
+		MOV{
+			Src: IntLiteral(5),
+			Dst: LocalValue{3, ast.TypeInfo{8, true}},
+		},
+		MOV{ // let y = x[0]
+			Src: Offset{
+				Base:   LocalValue{0, ast.TypeInfo{8, true}},
+				Offset: IntLiteral(0),
+				Scale:  8,
+			},
+			Dst: LocalValue{4, ast.TypeInfo{8, true}},
+		},
+		MOV{ // x[y] = 6
+			Src: IntLiteral(6),
+			Dst: Offset{
+				Base:   LocalValue{0, ast.TypeInfo{8, true}},
+				Offset: LocalValue{4, ast.TypeInfo{8, true}},
+				Scale:  8,
+			},
+		},
+		CALL{
+			FName: "PrintInt",
+			Args: []Register{
+				Offset{
+					Base:   LocalValue{0, ast.TypeInfo{8, true}},
+					Offset: LocalValue{4, ast.TypeInfo{8, true}},
+					Scale:  8,
+				},
+			},
+		},
+		MOV{
+			Src: LocalValue{4, ast.TypeInfo{8, true}},
+			Dst: TempValue(0),
+		},
+		ADD{
+			Src: IntLiteral(1),
+			Dst: TempValue(0),
+		},
+		CALL{
+			FName: "PrintInt",
+			Args: []Register{
+				Offset{
+					Base:   LocalValue{0, ast.TypeInfo{8, true}},
+					Offset: TempValue(0),
+					Scale:  8,
+				},
+			},
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestAssignmentToSliceVariableIndex(t *testing.T) {
+	as, ti, c, err := ast.Parse(sampleprograms.AssignmentToSliceVariableIndex)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		MOV{ // mutable x []byte = { 1, 3, 4, 5 }
+			Src: IntLiteral(4),
+			Dst: LocalValue{0, ast.TypeInfo{8, false}},
+		},
+		MOV{
+			Src: IntLiteral(1),
+			Dst: LocalValue{1, ast.TypeInfo{1, false}},
+		},
+		MOV{
+			Src: IntLiteral(3),
+			Dst: LocalValue{2, ast.TypeInfo{1, false}},
+		},
+		MOV{
+			Src: IntLiteral(4),
+			Dst: LocalValue{3, ast.TypeInfo{1, false}},
+		},
+		MOV{
+			Src: IntLiteral(5),
+			Dst: LocalValue{4, ast.TypeInfo{1, false}},
+		},
+		MOV{ // let y = x[0]
+			Src: Offset{
+				Base:   LocalValue{1, ast.TypeInfo{1, false}},
+				Offset: IntLiteral(0),
+				Scale:  1,
+			},
+			Dst: LocalValue{5, ast.TypeInfo{1, false}},
+		},
+		MOV{ // x[y] = 6
+			Src: IntLiteral(6),
+			Dst: Offset{
+				Base:   LocalValue{1, ast.TypeInfo{1, false}},
+				Offset: LocalValue{5, ast.TypeInfo{1, false}},
+				Scale:  1,
+			},
+		},
+		CALL{
+			FName: "PrintInt",
+			Args: []Register{
+				Offset{
+					Base:   LocalValue{1, ast.TypeInfo{1, false}},
+					Offset: LocalValue{5, ast.TypeInfo{1, false}},
+					Scale:  1,
+				},
+			},
+		},
+		MOV{
+			Src: LocalValue{5, ast.TypeInfo{1, false}},
+			Dst: TempValue(0),
+		},
+		ADD{
+			Src: IntLiteral(1),
+			Dst: TempValue(0),
+		},
+		CALL{
+			FName: "PrintInt",
+			Args: []Register{
+				Offset{
+					Base:   LocalValue{1, ast.TypeInfo{1, false}},
+					Offset: TempValue(0),
+					Scale:  1,
+				},
+			},
+		},
 	}
 
 	if err := compareIR(i.Body, expected); err != nil {

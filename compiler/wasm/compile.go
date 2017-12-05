@@ -114,22 +114,20 @@ func Generate(hlfnc hlir.Func, ctx *Context) (Func, error) {
 							ctx.addMemoryVar(lv)
 						}
 					case ast.SliceType:
-						// The Slice takes up 2 parameters, so adjust it here near the
-						// start
-						ctx.curFuncNumArgs++
-						size := regs[idx]
-						toconvert, ok := ctx.registerData[size]
-						if !ok {
-							continue
+						switch b := v.Base.(type) {
+						case hlir.LocalValue:
+							toconvert, ok := ctx.registerData[b-1]
+							if !ok {
+								panic("Could not get size of local slice")
+							}
+							for i := uint(b - 1); i <= toconvert.SliceSize; i++ {
+								lv := v.Base.(hlir.LocalValue)
+								lv += hlir.LocalValue(i - 1)
+								ctx.addMemoryVar(lv)
+							}
 						}
-						for i := uint(1); i <= toconvert.SliceSize; i++ {
-							lv := size.(hlir.LocalValue)
-							lv += hlir.LocalValue(i)
-							ctx.addMemoryVar(lv)
-						}
-
 					default:
-						panic(fmt.Sprintf("Unhandle offset base type: %v", reflect.TypeOf(base)))
+						panic(fmt.Sprintf("Unhandle offset base type: %v for base: %v", reflect.TypeOf(base), reg))
 					}
 				}
 			case hlir.Pointer:
@@ -183,6 +181,9 @@ func Generate(hlfnc hlir.Func, ctx *Context) (Func, error) {
 		if !ok {
 			// Not a memory variable, so add it to the signature and add a map to the WASM
 			// local index.
+			if _, ok := ctx.curFuncLocalVariables[lv]; ok {
+				continue
+			}
 			ctx.curFuncLocalVariables[lv] = uint(len(ctx.curFuncLocalVariables)) + ctx.curFuncNumArgs
 			ret.Signature = append(ret.Signature, Variable{t, Local, fmt.Sprintf("LV%d", i)})
 		}
@@ -250,7 +251,7 @@ func evaluateOp(opi hlir.Opcode, ctx *Context) ([]Instruction, error) {
 				case hlir.FuncArg:
 					ops = append(ops, GetLocal(basearray.Id))
 				default:
-					panic(fmt.Sprintf("Unhandled type for slice: ", reflect.TypeOf(basearray)))
+					panic(fmt.Sprintf("Unhandled type for slice: %v", reflect.TypeOf(basearray)))
 				}
 				idx += 2
 			default:
@@ -357,7 +358,7 @@ func evaluateOp(opi hlir.Opcode, ctx *Context) ([]Instruction, error) {
 				ops = append(ops, op...)
 			}
 			if ctx.curFuncRetNeedsMem {
-				ops = append(ops, I32Store{})
+				ops = append(ops, storeOp(op.Dst, ctx))
 			}
 		case hlir.TempValue:
 			// Do nothing, it's already on the stack
@@ -383,11 +384,7 @@ func evaluateOp(opi hlir.Opcode, ctx *Context) ([]Instruction, error) {
 						ops = append(ops, I32Const(globaloffset), I32Add{})
 					}
 					ops = append(ops, val...)
-					if typeinfo.TypeInfo.Size == 1 {
-						ops = append(ops, I32Store8{})
-					} else {
-						ops = append(ops, I32Store{})
-					}
+					ops = append(ops, storeOp(op.Dst, ctx))
 				} else {
 					ops = append(ops, SetLocal(ctx.LocalIndex(d)))
 				}
@@ -395,10 +392,48 @@ func evaluateOp(opi hlir.Opcode, ctx *Context) ([]Instruction, error) {
 		case hlir.FuncArg:
 			ops = append(ops, getValueForReferenceVariableSave(op.Dst, ctx)...)
 			ops = append(ops, getValue(op.Src, ctx)...)
-			ops = append(ops, I32Store{})
+			ops = append(ops, storeOp(op.Dst, ctx))
 			// FIXME: Implement
+		case hlir.Offset:
+			lv := d.Base.(hlir.LocalValue)
+			if addr, ok := ctx.curFuncMemVariables[lv]; ok {
+				ops = append(ops, GetGlobal(0))
+				if addr > 0 {
+					ops = append(ops, I32Const(addr), I32Add{})
+				}
+				scale := d.Scale
+				if scale == 0 {
+					scale = 4
+				}
+				switch o := d.Offset.(type) {
+				case hlir.IntLiteral:
+					if o > 0 {
+						ops = append(ops, getValue(d.Offset, ctx)...)
+						if scale != 1 {
+							ops = append(ops, I32Const(scale), I32Mul{})
+						}
+					}
+				default:
+					ops = append(ops, getValue(d.Offset, ctx)...)
+					if scale != 1 {
+						ops = append(ops, I32Const(scale), I32Mul{})
+					}
+					ops = append(ops, I32Add{})
+				}
+				ops = append(ops, getValue(op.Src, ctx)...)
+				ops = append(ops, storeOp(d.Base, ctx))
+			} else {
+				switch o := d.Offset.(type) {
+				case hlir.IntLiteral:
+					lv += hlir.LocalValue(o)
+				default:
+					panic("Unhandled offset type in WASM")
+				}
+				ops = append(ops, getValue(op.Src, ctx)...)
+				ops = append(ops, SetLocal(ctx.LocalIndex(lv)))
+			}
 		default:
-			panic(fmt.Sprintf("Unhandled dst register type in MOV: %v", op))
+			panic(fmt.Sprintf("Unhandled dst register type in op %v: %v", op, reflect.TypeOf(d)))
 		}
 		return ops, nil
 	case hlir.ADD:
@@ -732,14 +767,12 @@ func getValue(reg hlir.Register, ctx *Context) []Instruction {
 		return []Instruction{I32Const(v)}
 	case hlir.FuncArg:
 		if v.Reference {
-			return []Instruction{GetLocal(v.Id), I32Load{}}
+			return []Instruction{GetLocal(v.Id), loadOp(v, ctx)}
 		}
 		return []Instruction{GetLocal(v.Id)}
 	case hlir.LocalValue:
 		memoffset, memvar := ctx.curFuncMemVariables[v]
 		if !memvar {
-			// FIXME: Moving some locals to memory might have screwed up the index of locals after
-			// the ones stored in memory.
 			return []Instruction{GetLocal(ctx.LocalIndex(v))}
 		}
 
@@ -749,7 +782,7 @@ func getValue(reg hlir.Register, ctx *Context) []Instruction {
 		if memoffset > 0 {
 			ops = append(ops, I32Const(memoffset), I32Add{})
 		}
-		ops = append(ops, I32Load{})
+		ops = append(ops, loadOp(v, ctx))
 		return ops
 	case hlir.FuncRetVal:
 		if ctx.lastCallRetNeedsMem {
@@ -759,7 +792,7 @@ func getValue(reg hlir.Register, ctx *Context) []Instruction {
 			if v > 0 {
 				ops = append(ops, I32Const(4*v), I32Add{})
 			}
-			ops = append(ops, I32Load{})
+			ops = append(ops, loadOp(v, ctx))
 
 			return ops
 		}
@@ -789,12 +822,15 @@ func getValue(reg hlir.Register, ctx *Context) []Instruction {
 			switch off := v.Offset.(type) {
 			case hlir.IntLiteral:
 				if off == 0 {
-					return []Instruction{GetLocal(base.Id), I32Load{}}
+					return []Instruction{GetLocal(base.Id), loadOp(v, ctx)}
 				}
-				return []Instruction{GetLocal(base.Id), I32Const(uint(off) * uint(scale)), I32Add{}, I32Load{}}
+				return []Instruction{GetLocal(base.Id), I32Const(uint(off) * uint(scale)), I32Add{}, loadOp(v, ctx)}
 			default:
 				ops := getValue(v.Offset, ctx)
-				ops = append(ops, I32Const(scale), I32Mul{}, GetLocal(base.Id), I32Add{}, I32Load{})
+				if scale != 1 {
+					ops = append(ops, I32Const(scale), I32Mul{})
+				}
+				ops = append(ops, GetLocal(base.Id), I32Add{}, loadOp(v, ctx))
 				return ops
 			}
 		default:
@@ -803,21 +839,29 @@ func getValue(reg hlir.Register, ctx *Context) []Instruction {
 	useMem:
 		var ops []Instruction
 		// Calculate index
-		ops = append(ops, getValue(v.Offset, ctx)...)
-		// Scale the index to the appropriate memory location.
-		if v.Scale == hlir.IntLiteral(0) {
-			ops = append(ops, I32Const(4))
-		} else {
-			ops = append(ops, getValue(v.Scale, ctx)...)
+		if v.Offset != hlir.IntLiteral(0) {
+			ops = append(ops, getValue(v.Offset, ctx)...)
+			// Scale the index to the appropriate memory location.
+			if v.Scale == hlir.IntLiteral(0) {
+				ops = append(ops, I32Const(4))
+				ops = append(ops, I32Mul{})
+			} else if v.Scale == hlir.IntLiteral(1) {
+				// there's no scaling multiplication for scale 1.
+			} else {
+				ops = append(ops, getValue(v.Scale, ctx)...)
+				ops = append(ops, I32Mul{})
+			}
 		}
-		ops = append(ops, I32Mul{})
 
 		// Add it to the base register
 		ops = append(ops, GetGlobal(0))
 		if memoffset != 0 {
 			ops = append(ops, I32Const(memoffset), I32Add{})
 		}
-		ops = append(ops, I32Add{}, I32Load{})
+		if v.Offset != hlir.IntLiteral(0) {
+			ops = append(ops, I32Add{})
+		}
+		ops = append(ops, loadOp(v.Base, ctx))
 		return ops
 	case hlir.Pointer:
 		ctx.needsGlobal = true
@@ -829,7 +873,7 @@ func getValue(reg hlir.Register, ctx *Context) []Instruction {
 			if memoffset != 0 {
 				ret = append(ret, I32Const(memoffset), I32Add{})
 			}
-			ret = append(ret, I32Load{})
+			ret = append(ret, loadOp(v, ctx))
 			return ret
 		}
 		return nil
@@ -870,4 +914,31 @@ func getValueForCall(reg hlir.Register, ctx *Context) []Instruction {
 	default:
 		return getValue(reg, ctx)
 	}
+}
+
+func loadOp(src hlir.Register, ctx *Context) Instruction {
+	data, ok := ctx.registerData[src]
+	if !ok {
+		return I32Load{}
+	}
+	info := data.TypeInfo
+	if info.Size == 1 {
+		if info.Signed {
+			return I32Load8S{}
+		} else {
+			return I32Load8U{}
+		}
+	}
+	return I32Load{}
+}
+func storeOp(dst hlir.Register, ctx *Context) Instruction {
+	data, ok := ctx.registerData[dst]
+	if !ok {
+		panic(fmt.Sprintf("Could not find register data for %v", dst))
+	}
+	info := data.TypeInfo
+	if info.Size == 1 {
+		return I32Store8{}
+	}
+	return I32Store{}
 }

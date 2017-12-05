@@ -14,6 +14,10 @@ type TypeDef interface {
 	TypeDefn() TypeDef
 }
 
+type Assignable interface {
+	CanAssign() bool
+}
+
 type EnumOption struct {
 	Constructor string
 	Parameters  []Type
@@ -59,6 +63,10 @@ type VarWithType struct {
 	Name      Variable
 	Typ       Type
 	Reference bool
+}
+
+func (vt VarWithType) CanAssign() bool {
+	return true
 }
 
 func (vt VarWithType) Type() string {
@@ -188,7 +196,7 @@ type Value interface {
 }
 
 type AssignmentOperator struct {
-	Variable VarWithType
+	Variable Assignable
 	Value    Value
 }
 

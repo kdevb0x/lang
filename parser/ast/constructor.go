@@ -675,32 +675,14 @@ func consumeStmt(start int, tokens []token.Token, c *Context) (int, Node, error)
 				return 0, BlockStmt{}, fmt.Errorf("Can not index non-array value")
 			}
 
-			switch basetype := av.Base.Typ.(type) {
-			case ArrayType:
-				// Get the value that's being assigned.
-				valn, val, err := consumeValue(start+n+1, tokens, c)
-				if err != nil {
-					return 0, BlockStmt{}, err
-				}
-				nm := Variable(fmt.Sprintf("%v[%d]", av.Base.Name, av.Index))
-				return n + valn + 1, AssignmentOperator{
-					Variable: VarWithType{nm, basetype.Base, false},
-					Value:    val,
-				}, nil
-			case SliceType:
-				// Get the value that's being assigned.
-				valn, val, err := consumeValue(start+n+1, tokens, c)
-				if err != nil {
-					return 0, BlockStmt{}, err
-				}
-				nm := Variable(fmt.Sprintf("%v[%d]", av.Base.Name, av.Index))
-				return n + valn + 1, AssignmentOperator{
-					Variable: VarWithType{nm, basetype.Base, false},
-					Value:    val,
-				}, nil
-			default:
-				return 0, BlockStmt{}, fmt.Errorf("Array type must be ArrayType or SliceType")
+			valn, val, err := consumeValue(start+n+1, tokens, c)
+			if err != nil {
+				return 0, BlockStmt{}, err
 			}
+			return n + valn + 1, AssignmentOperator{
+				Variable: av,
+				Value:    val,
+			}, nil
 		case token.Operator("="):
 			if !c.IsVariable(t.String()) {
 				return 0, nil, fmt.Errorf("Invalid variable for assignment: %v", tokens[start])
@@ -709,6 +691,7 @@ func consumeStmt(start int, tokens []token.Token, c *Context) (int, Node, error)
 			if !c.IsMutable(t.String()) {
 				return 0, nil, fmt.Errorf(`Can not assign to immutable let variable "%v".`, tokens[start])
 			}
+
 			n, val, err := consumeValue(start+2, tokens, c)
 			if err != nil {
 				return 0, nil, err

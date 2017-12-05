@@ -4,7 +4,6 @@ about something.)
 # Bugfix TODOs
 - len should work on all slice types, and arrays, and strings
 - can not return []byte -- claims "invalid argument"
-- can not assign to index outside of let or mutable stmt? (ie. can not mutate mutable slices)
 
 # New features TODOs
 

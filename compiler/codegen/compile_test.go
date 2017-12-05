@@ -945,3 +945,24 @@ func ExampleMethodSyntax() {
 	}
 	// Output: 10
 }
+
+func ExampleAssignmentToConstantIndex() {
+	if err := RunProgram("constantindex", sampleprograms.AssignmentToConstantIndex); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: 365
+}
+
+func ExampleAssignmentToVariableIndex() {
+	if err := RunProgram("variableindex", sampleprograms.AssignmentToVariableIndex); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: 64
+}
+
+func ExampleAssignmentToSliceVariableIndex() {
+	if err := RunProgram("slicevariableindex", sampleprograms.AssignmentToSliceVariableIndex); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: 64
+}
