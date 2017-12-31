@@ -3673,7 +3673,7 @@ func TestSliceStringVariableParam(t *testing.T) {
 		t.Fatal(err)
 	}
 	if f.NumArgs != 2 {
-		t.Error("Got %d arguments, expected 2. Slices take up 2 argument slots.")
+		t.Errorf("Got %d arguments, expected 2. Slices take up 2 argument slots.", f.NumArgs)
 	}
 }
 
