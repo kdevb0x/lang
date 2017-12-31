@@ -84,13 +84,16 @@ TEXT exits(SB), 20, $0
 	// Strings are of the format struct{size, [size]char}, so we need to swap
 	// the order of the params in the syscall
 	write = `
-TEXT Write(SB), 20, $0-24
-	MOVQ $-1, offset+24(FP)
+TEXT Write(SB), 20, $48-24
 	MOVQ str+8(FP), R8
 	LEAQ 8(R8), SI
 	MOVQ 0(R8), DX
-	MOVQ DX, nbytes+16(FP)
-	MOVQ SI, buf+8(FP)	
+
+	MOVQ fd+0(FP), DI
+	MOVQ DI, 8(SP) // fd
+	MOVQ SI, 16(SP) // buf
+	MOVQ DX, 24(SP) // nbytes
+	MOVQ $-1, 32(SP) // Offset
 	
 	MOVQ $51, BP // pwrite syscall
 	SYSCALL
@@ -165,13 +168,13 @@ TEXT Close(SB), 20, $0-8
 	// FIXME: This should just be a wrapper to PrintString(), but
 	// for some reason it's not working unless it's inlined..
 	printbyteslice = `
-TEXT PrintByteSlice(SB), 20, $0-24
-	MOVQ $-1, offset+24(FP)
+TEXT PrintByteSlice(SB), 20, $40-24
+	MOVQ $-1, 32(SP) // offset
 	MOVQ nbytes+0(FP), DX // nbytes
-	MOVQ DX, nbytes+16(FP)
+	MOVQ DX, 24(SP) // nbytes 
 	MOVQ buf+8(FP), SI // buf
-	MOVQ SI, buf+8(FP)
-	MOVQ $1, fd+0(FP)
+	MOVQ SI, 16(SP) // buf
+	MOVQ $1, 8(SP) // fd
 	MOVQ $51, BP // pwrite syscall
 	SYSCALL
 	RET
