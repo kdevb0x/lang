@@ -3,6 +3,7 @@ package codegen
 import (
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/driusan/lang/compiler/mlir"
 	"github.com/driusan/lang/parser/ast"
@@ -11,6 +12,10 @@ import (
 type CPU interface {
 	ToPhysical(mlir.Register)
 	ConvertInstruction(mlir.Opcode) string
+}
+
+func strLiteralLength(s mlir.StringLiteral) uint {
+	return uint(len([]byte(strings.Replace(string(s), `\n`, "\n", -1))))
 }
 
 type amd64Registers struct {
@@ -199,7 +204,7 @@ func (a *amd64Registers) clearRegisterMapping() {
 func (a *Amd64) ToPhysical(r mlir.Register, altform bool) PhysicalRegister {
 	switch v := r.(type) {
 	case mlir.StringLiteral:
-		return PhysicalRegister("$" + string(a.stringLiterals[v]) + "+0(SB)")
+		return PhysicalRegister("$" + string(a.stringLiterals[v]) + "+8(SB)")
 	case mlir.IntLiteral:
 		return PhysicalRegister(fmt.Sprintf("$%d", v))
 	case mlir.FuncCallArg:
@@ -433,7 +438,32 @@ func (a *Amd64) ConvertInstruction(i int, ops []mlir.Opcode) string {
 
 			var suffix string = "Q"
 			switch val := arg.(type) {
-			case mlir.LocalValue, mlir.StringLiteral, mlir.FuncArg, mlir.Pointer:
+			case mlir.StringLiteral:
+				suffix = a.opSuffix(val, dst)
+				// First check if the arg is already in a register.
+				src = a.ToPhysical(arg, false)
+				r, err := a.getPhysicalRegister(arg)
+				if err == nil {
+					physArg = r
+					break
+				}
+				physArg, err = a.tempPhysicalRegister(false)
+				if err != nil {
+					panic(err)
+				}
+				v += fmt.Sprintf("MOVQ $%v, %v\n\t", strLiteralLength(val), fa)
+				switch d := dst.(type) {
+				case mlir.FuncArg:
+					d.Id++
+					fa = a.ToPhysical(d, true)
+				case mlir.FuncCallArg:
+					d.Id++
+					fa = a.ToPhysical(d, true)
+				default:
+					panic("Unknown type of call destination register")
+				}
+				v += fmt.Sprintf("MOVQ %v, %v\n\t", src, physArg)
+			case mlir.LocalValue, mlir.FuncArg, mlir.Pointer:
 				suffix = a.opSuffix(val, dst)
 				// First check if the arg is already in a register.
 				src = a.ToPhysical(arg, false)
@@ -488,7 +518,25 @@ func (a *Amd64) ConvertInstruction(i int, ops []mlir.Opcode) string {
 						v += fmt.Sprintf("\tMOVQ $%v, %v\n\t", src, baseAddr)
 					}
 					// Offset
+					fakescale := false
+					if val.Scale == 16 {
+						// Scale == 16 means that it's a string, and we need to move
+						// 2 words (length and pointer), not 1.
+						val.Scale = 8
+						fakescale = true
+						off *= 2
+					}
 					v += fmt.Sprintf("\tMOVQ %d(%v), %v\n\t", uint(off)*val.Scale, baseAddr, physArg)
+					if fakescale {
+						v += fmt.Sprintf("MOV%v %v, %v\n\t", suffix, physArg, fa)
+						v += fmt.Sprintf("\tMOVQ %d(%v), %v\n\t", uint(off+1)*val.Scale, baseAddr, physArg)
+						if o.TailCall {
+							panic("Unhandled tail call")
+						} else {
+							dst := mlir.FuncCallArg{i*2 + 1, ast.TypeInfo{8, arg.Signed()}}
+							fa = a.ToPhysical(dst, true)
+						}
+					}
 				case mlir.LocalValue, mlir.FuncArg, mlir.TempValue:
 					// Get the offset from memory into a register
 					offr, err := a.getPhysicalRegister(val.Offset)
@@ -511,7 +559,30 @@ func (a *Amd64) ConvertInstruction(i int, ops []mlir.Opcode) string {
 					}
 					// Offset from base into a physical register
 					suff := a.opSuffix(val.Base, dst)
+
+					fakescale := false
+					if val.Scale == 16 {
+						// Scales need to be 1, 2, 4, or 8, so if it's 16 we multiply the offset
+						// by 2 and use a scale of 8 in the asm.
+						v += fmt.Sprintf("\tSAL%v $1, %v\n\t", suffix, offr)
+						val.Scale = 8
+						fakescale = true
+					}
 					v += fmt.Sprintf("\tMOV%v (%v)(%v*%d), %v\n\t", suff, baseAddr, offr, val.Scale, physArg)
+					if fakescale {
+						// Scale of 16 implies size of 16,
+						// so after moving the first piece, add 1 to the index and copy the second
+						v += fmt.Sprintf("MOV%v %v, %v\n\t", suffix, physArg, fa)
+
+						if o.TailCall {
+							panic("Unhandled tail call")
+						} else {
+							dst := mlir.FuncCallArg{i*2 + 1, ast.TypeInfo{8, arg.Signed()}}
+							fa = a.ToPhysical(dst, true)
+						}
+						v += fmt.Sprintf("\tINC%v %v\n", suff, offr)
+						v += fmt.Sprintf("\tMOV%v (%v)(%v*%d), %v\n\t", suff, baseAddr, offr, val.Scale, physArg)
+					}
 				default:
 					panic(fmt.Sprintf("Unhandled offset type %v", reflect.TypeOf(val.Offset)))
 				}

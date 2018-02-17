@@ -59,8 +59,9 @@ func TestCompileHelloWorld(t *testing.T) {
 	DATA string0<>+8(SB)/8, $"Hello, w"
 	DATA string0<>+16(SB)/8, $"orld!\n\000\000"
 	GLOBL string0<>+0(SB), 8+16, $24
-		MOVQ $string0<>+0(SB), BX
-	MOVQ BX, 0(SP)
+	MOVQ $14, 0(SP)
+	MOVQ $string0<>+8(SB), BX
+	MOVQ BX, 8(SP)
 	CALL PrintString+0(SB)
 	RET
 `
@@ -75,7 +76,7 @@ func TestCompileHelloWorld(t *testing.T) {
 // need to be able to read the file from the test, to make sure it got written correctly
 // and cleaned up correctly.
 func TestCreateSyscall(t *testing.T) {
-	// We chdir below, defer a cleanup that resets it after the test finishes.
+	// We chdir below, defer a cleanup that resets it after the teste finishes.
 	pwd, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
@@ -89,7 +90,9 @@ func TestCreateSyscall(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(dir)
+	if !debug {
+		defer os.RemoveAll(dir)
+	}
 
 	exe, err := BuildProgram(dir, strings.NewReader(sampleprograms.CreateSyscall))
 	if err != nil {
@@ -115,7 +118,7 @@ func TestCreateSyscall(t *testing.T) {
 	}
 }
 
-// Test that Open/Readwork correctly. This isn't done as an Example test because we
+// Test that Open/Read work correctly. This isn't done as an Example test because we
 // need to know a little outside context (ie. what the current directory is, we also
 // need to be able to read the file from the test, to make sure it got written correctly
 // and cleaned up correctly.
@@ -134,7 +137,9 @@ func TestReadSyscall(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(dir)
+	if !debug {
+		defer os.RemoveAll(dir)
+	}
 
 	// There's currently no way to define constants, no bitwise operations, and only decimal
 	// numbers, so modes and flags are hardcoded in decimal.
@@ -194,7 +199,9 @@ func TestEchoProgram(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(dir)
+	if !debug {
+		defer os.RemoveAll(dir)
+	}
 
 	// There's currently no way to define constants, no bitwise operations, and only decimal
 	// numbers, so modes and flags are hardcoded in decimal.
@@ -343,6 +350,7 @@ func TestUnbufferedCat2(t *testing.T) {
 		t.Errorf("Unexpected value: got %v want %v", got, expected)
 	}
 }
+
 func TestUnbufferedCat3(t *testing.T) {
 	mlir.Debug = false
 	// We chdir below, defer a cleanup that resets it after the test finishes.
@@ -965,4 +973,11 @@ func ExampleAssignmentToSliceVariableIndex() {
 		fmt.Println(err.Error())
 	}
 	// Output: 64
+}
+
+func ExampleWriteStringByte() {
+	if err := RunProgram("writestringbyte", sampleprograms.WriteStringByte); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: hellohello
 }

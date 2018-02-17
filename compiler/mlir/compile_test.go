@@ -151,11 +151,16 @@ func TestIRGenLetStatementShadow(t *testing.T) {
 		},
 		},
 		MOV{
-			Src: StringLiteral("hello"),
+			Src: IntLiteral(5),
 			Dst: LocalValue{1, ast.TypeInfo{8, false}},
+		},
+		MOV{
+			Src: StringLiteral("hello"),
+			Dst: LocalValue{2, ast.TypeInfo{8, false}},
 		},
 		CALL{FName: "PrintString", Args: []Register{
 			LocalValue{1, ast.TypeInfo{8, false}},
+			LocalValue{2, ast.TypeInfo{8, false}},
 		},
 		},
 	}
@@ -2365,7 +2370,7 @@ func TestIREcho(t *testing.T) {
 			Args: []Register{
 				Offset{
 					Offset: LocalValue{0, ast.TypeInfo{8, true}},
-					Scale:  8,
+					Scale:  16,
 					Base:   FuncArg{1, ast.TypeInfo{8, false}, false},
 				},
 			},
@@ -2665,19 +2670,27 @@ func TestStringArray(t *testing.T) {
 
 	expected := []Opcode{
 		MOV{
-			Src: StringLiteral("foo"),
+			Src: IntLiteral(3),
 			Dst: LocalValue{0, ast.TypeInfo{8, false}},
 		},
 		MOV{
-			Src: StringLiteral("bar"),
+			Src: StringLiteral("foo"),
 			Dst: LocalValue{1, ast.TypeInfo{8, false}},
+		},
+		MOV{
+			Src: IntLiteral(3),
+			Dst: LocalValue{2, ast.TypeInfo{8, false}},
+		},
+		MOV{
+			Src: StringLiteral("bar"),
+			Dst: LocalValue{3, ast.TypeInfo{8, false}},
 		},
 		CALL{
 			FName: "PrintString",
 			Args: []Register{
 				Offset{
 					Base:   LocalValue{0, ast.TypeInfo{8, false}},
-					Scale:  8,
+					Scale:  16,
 					Offset: IntLiteral(1),
 				},
 			},
@@ -2688,7 +2701,7 @@ func TestStringArray(t *testing.T) {
 			Args: []Register{
 				Offset{
 					Base:   LocalValue{0, ast.TypeInfo{8, false}},
-					Scale:  8,
+					Scale:  16,
 					Offset: IntLiteral(0),
 				},
 			},
@@ -2716,20 +2729,32 @@ func TestPreEcho(t *testing.T) {
 			Dst: LocalValue{0, ast.TypeInfo{8, false}},
 		},
 		MOV{
-			Src: StringLiteral("foo"),
+			Src: IntLiteral(3),
 			Dst: LocalValue{1, ast.TypeInfo{8, false}},
 		},
 		MOV{
-			Src: StringLiteral("bar"),
+			Src: StringLiteral("foo"),
 			Dst: LocalValue{2, ast.TypeInfo{8, false}},
 		},
 		MOV{
-			Src: StringLiteral("baz"),
+			Src: IntLiteral(3),
 			Dst: LocalValue{3, ast.TypeInfo{8, false}},
 		},
 		MOV{
+			Src: StringLiteral("bar"),
+			Dst: LocalValue{4, ast.TypeInfo{8, false}},
+		},
+		MOV{
+			Src: IntLiteral(3),
+			Dst: LocalValue{5, ast.TypeInfo{8, false}},
+		},
+		MOV{
+			Src: StringLiteral("baz"),
+			Dst: LocalValue{6, ast.TypeInfo{8, false}},
+		},
+		MOV{
 			Src: IntLiteral(1),
-			Dst: LocalValue{4, ast.TypeInfo{8, true}},
+			Dst: LocalValue{7, ast.TypeInfo{8, true}},
 		},
 		CALL{
 			FName: "len",
@@ -2740,24 +2765,24 @@ func TestPreEcho(t *testing.T) {
 		},
 		MOV{
 			Src: FuncRetVal{0, ast.TypeInfo{8, false}},
-			Dst: LocalValue{5, ast.TypeInfo{8, false}},
+			Dst: LocalValue{8, ast.TypeInfo{8, false}},
 		},
 		Label("loop0cond"),
 		JGE{
-			ConditionalJump{Label: Label("loop0end"), Src: LocalValue{4, ast.TypeInfo{8, true}}, Dst: LocalValue{5, ast.TypeInfo{8, false}}},
+			ConditionalJump{Label: Label("loop0end"), Src: LocalValue{7, ast.TypeInfo{8, true}}, Dst: LocalValue{8, ast.TypeInfo{8, false}}},
 		},
 		CALL{
 			FName: "PrintString",
 			Args: []Register{
 				Offset{
 					Base:   LocalValue{1, ast.TypeInfo{8, false}},
-					Scale:  8,
-					Offset: LocalValue{4, ast.TypeInfo{8, true}},
+					Scale:  16,
+					Offset: LocalValue{7, ast.TypeInfo{8, true}},
 				},
 			},
 		},
 		MOV{
-			Src: LocalValue{4, ast.TypeInfo{8, true}},
+			Src: LocalValue{7, ast.TypeInfo{8, true}},
 			Dst: TempValue(1),
 		},
 		ADD{
@@ -2766,10 +2791,10 @@ func TestPreEcho(t *testing.T) {
 		},
 		MOV{
 			Src: TempValue(1),
-			Dst: LocalValue{4, ast.TypeInfo{8, true}},
+			Dst: LocalValue{7, ast.TypeInfo{8, true}},
 		},
 		JE{
-			ConditionalJump{Label: Label("if1else"), Src: LocalValue{4, ast.TypeInfo{8, true}}, Dst: LocalValue{5, ast.TypeInfo{8, false}}},
+			ConditionalJump{Label: Label("if1else"), Src: LocalValue{7, ast.TypeInfo{8, true}}, Dst: LocalValue{8, ast.TypeInfo{8, false}}},
 		},
 		CALL{FName: "PrintString", Args: []Register{StringLiteral(" ")}},
 		JMP{"if1elsedone"},
@@ -2821,7 +2846,7 @@ func TestPreEcho2(t *testing.T) {
 			Args: []Register{
 				Offset{
 					Base:   FuncArg{1, ast.TypeInfo{8, false}, false},
-					Scale:  8,
+					Scale:  16,
 					Offset: LocalValue{0, ast.TypeInfo{8, true}},
 				},
 			},
@@ -2864,16 +2889,28 @@ func TestPreEcho2(t *testing.T) {
 			Dst: LocalValue{0, ast.TypeInfo{8, false}},
 		},
 		MOV{
-			Src: StringLiteral("foo"),
+			Src: IntLiteral(3),
 			Dst: LocalValue{1, ast.TypeInfo{8, false}},
 		},
 		MOV{
-			Src: StringLiteral("bar"),
+			Src: StringLiteral("foo"),
 			Dst: LocalValue{2, ast.TypeInfo{8, false}},
 		},
 		MOV{
-			Src: StringLiteral("baz"),
+			Src: IntLiteral(3),
 			Dst: LocalValue{3, ast.TypeInfo{8, false}},
+		},
+		MOV{
+			Src: StringLiteral("bar"),
+			Dst: LocalValue{4, ast.TypeInfo{8, false}},
+		},
+		MOV{
+			Src: IntLiteral(3),
+			Dst: LocalValue{5, ast.TypeInfo{8, false}},
+		},
+		MOV{
+			Src: StringLiteral("baz"),
+			Dst: LocalValue{6, ast.TypeInfo{8, false}},
 		},
 		CALL{
 			FName: "PrintSlice",
@@ -2931,7 +2968,7 @@ func TestUnbufferedCat(t *testing.T) {
 			Args: []Register{
 				Offset{
 					Base:   FuncArg{1, ast.TypeInfo{8, false}, false},
-					Scale:  8,
+					Scale:  16,
 					Offset: LocalValue{2, ast.TypeInfo{8, true}},
 				},
 			},
@@ -3080,7 +3117,7 @@ func TestUnbufferedCat2(t *testing.T) {
 			Args: []Register{
 				Offset{
 					Base:   FuncArg{1, ast.TypeInfo{8, false}, false},
-					Scale:  8,
+					Scale:  16,
 					Offset: LocalValue{3, ast.TypeInfo{8, true}},
 				},
 			},

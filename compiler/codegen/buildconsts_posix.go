@@ -18,56 +18,70 @@ hackdone:
 	// by a 0.
 	// We need to convert these to a []string structure.
 	// Slices are structs of the form struct{len, *void}
-	// and strings are structs of the form struct{len, [n]char}
-	MOVQ SP, R8   // R8 = the original stack pointer that we're converting. It grows up.
+	// and strings are structs of the form struct{len, *void}
+	//
+	// SP, R8, and BP all start out as the current stack pointer.
+	// SP does not get modified until the end, BP is a new stack pointer
+	// that grows downwards as we calculate the strings, and R8 is the
+	// index into the C style argv[][] that we're currently working with.
+
 	MOVQ SP, BP   // BP = the new stack pointer after moving args. It grows down.
-	MOVQ (R8), BX // BX = argc, not mutated. It's the length of the slice at the end.
+	MOVQ (SP), BX // BX = argc, not mutated. It's the length of the slice at the end.
+	LEAQ (SP)(BX*8), R8 // R8 = the top of the C style *char[], since we're growing BP
+			// downwards, we need to ensure that we convert the arguments in reverse,
+			// and start at the end of argv.
+
+	// Loop over the arguments
 moveargs:
-	ADDQ $8, R8
-	CMPQ (R8), $0 // If R8 is 0, we've reached the end of argv
+	CMPQ R8, SP // If R8 is the original SP, we've reached the end of the loop.
 	JE mainstart
-	MOVQ (R8), DX // DX = argv[i]. We need to copy it below BP.
+	MOVQ (R8), DX // DX = argv[i]. We need to store the pointer for after we've calculated
+		      // the length.
 
 //strlenstart:
-	MOVQ $0, CX
+	MOVQ $0, CX // CX = the string length. Starts at 0.
 strlen:
-	CMPB (DX)(CX*1), $0
+	CMPB (DX)(CX*1), $0 // If DX[i] (where i is the current length) is 0, we've reached the end
+			// of the string.
 	JE donestrlen
-	INCQ CX
+	INCQ CX	// Increment length and check again.
 	JMP strlen
 donestrlen:
-	// Copy the string
-	// Make room on the (new) stack
-	SUBQ CX, BP
-	// Align the start of the string.
-	ANDQ $~7, BP
-	MOVQ CX, R9 // MOVSB is going to destroy CX, so back it up in R9
-	MOVQ DX, SI
-	MOVQ BP, DI
-	CLD
-	REP; MOVSB // Copy the string
-	
-	// Copy the string length.
-	SUBQ $8, BP   
-	MOVQ R9, 0(BP) // Strlen
-	// BP now has the string. Replace the *char at argv[DX] with the string at BP.
-	MOVQ BP, (R8)
-	SUBQ $24, BP
+	// The string length is now in CX, and the pointer in DX.
+
+	// Copy the string as struct{n, *char} to below BP
+	// String pointer
+	SUBQ $8, BP
+	MOVQ DX, 0(BP)
+	// String length.
+	SUBQ $8, BP
+	MOVQ CX, 0(BP)
+
+	SUBQ $8, R8 // Move to the next argument
 	JMP moveargs
-	
+
 mainstart:
-	// Finally, convert SP to a slice, after making room on the stack for it.
-	SUBQ $32, BP
-	LEAQ 8(SP), R8 // The R8 = the original argv, with the pointers converted from *char to string.
-	MOVQ R8, 8(BP)
-	MOVQ BX, 0(BP) // BX = argc, still.
+	// BP is not the start of a slice of strings, but the slice header is missing.
+	// BX is the slice length
+	// 
+	// Add the slice header for the []string. The pointer to the first string is currently at
+	// BP, so temporarily store it in AX because we're about to modify BP.
+	MOVQ BP, AX
+	SUBQ $24, BP
+	MOVQ AX, 8(BP) // Store the base pointer
+	MOVQ BX, 0(BP) // Store the length
+
+	// Make BP the new stack pointer for main now that we're done playing around with the
+	// C style (int argc, char **argv) header that was in memory and converted it to a
+	// []string
 	MOVQ BP, SP
 	CALL	main(SB)
 loop:
+	// If we fall through main, exit with a "success" exit status.
 	MOVQ	$0, 0(SP)
 	CALL	exits(SB)
-	JMP	loop
-
+	// Unreachable, but if it happens, just loop back keep calling exit.
+	JMP	loop 
 `
 
 	exits = `
@@ -87,15 +101,14 @@ TEXT Write(SB), 20, $0-24
 
 	// Strings have the format
 	// struct{ len int64, buf *char} 
-	MOVQ str+8(FP), R8
-	LEAQ 8(R8), SI // buf
-	MOVQ 0(R8), DX // nbytes
+	MOVQ nbytes+8(FP), DX // nbytes
+	MOVQ buf+16(FP), SI  // buf
 	MOVQ $` + SYS_WRITE + `, AX // write syscall
 	SYSCALL
 	RET
 `
 
-	// wrapper around syscall ssize_t write(int fd, const void *buf, size_t nbytes);
+	// wrapper around syscall ssize_t read(int fd, const void *buf, size_t nbytes);
 	// Strings are of the format struct{size, [size]char}, so we need to swap
 	// the order of the params in the syscall
 	read = `
@@ -119,15 +132,13 @@ TEXT Read(SB), 20, $0-24
 	// sure the string parameter is null terminated
 	open = `
 TEXT Open(SB), 20, $0-24
-	// 0(FP) is the string, which has the format struct{n int, buf [n]byte}
-	MOVQ file+0(FP), BX
-	// Move (the C string portion) into the first arg to the syscall
-	LEAQ 8(BX), DI
-	// Move the length into a register, so that we can index by it
-	MOVQ 0(BX), CX
+	// Move the C string pointer to the first register for the syscall
+	MOVQ file+8(FP), DI
+	// Move the length into any register, so that we can index by it
+	MOVQ file+0(FP), CX
 	// Ensure the string is null terminated.
-	// FIXME: This is segfaulting.
-	// MOVB $0, (DI)(CX*1)
+	MOVB $0, file+0(FP)(CX*1)
+	// Hardcoded parameters for the open syscall.
 	MOVQ $0, SI // open mode = 0 = O_RDONLY
 	MOVQ $0, DX // fileperms = irrelevant, since it's read only.. 
 	MOVQ $` + SYS_OPEN + `, AX // open syscall
@@ -139,15 +150,13 @@ TEXT Open(SB), 20, $0-24
 	// sure the string parameter is null terminated
 	createf = `
 TEXT Create(SB), 20, $0-24
-	// 0(FP) is the string, which has the format struct{n int, buf [n]byte}
-	MOVQ file+0(FP), BX
-	// Move (the C string portion) into the first arg to the syscall
-	LEAQ 8(BX), DI
-	// Move the length into a register, so that we can index by it
-	MOVQ 0(BX), CX
+	// Move the C string pointer to the first register for the syscall
+	MOVQ file+8(FP), DI
+	// Move the length into any register, so that we can index by it
+	MOVQ file+0(FP), CX
 	// Ensure the string is null terminated.
-	// FIXME: This is segfaulting.
-	// MOVB $0, (DI)(CX*1)
+	MOVB $0, file+0(FP)(CX*1)
+	// Hardcoded parameters for the open syscall.
 	MOVQ $%d, SI // open mode = O_WRONLY|O_CREAT
 	MOVQ $438, DX // fileperms. 438 decimal = 0666 octal.
 	MOVQ $` + SYS_OPEN + `, AX // open syscall
@@ -159,23 +168,6 @@ TEXT Create(SB), 20, $0-24
 TEXT Close(SB), 20, $0-8
 	MOVQ fd+0(FP), DI
 	MOVQ $` + SYS_CLOSE + `, AX // close syscall
-	SYSCALL
-	RET
-`
-
-	// FIXME: This should just be a wrapper to PrintString(), but
-	// for some reason it's not working unless it's inlined..
-	printbyteslice = `
-TEXT PrintByteSlice(SB), 20, $16
-	// wrapper around
-	// write(1, *buf, nbytes) syscall.
-	// Byte slices have the format
-	// struct{ len int64, buf *char}, the inverse
-	// of what we want
-	MOVQ $1, DI // fd
-	MOVQ buf+8(FP), SI // buf
-	MOVQ len+0(FP), DX // nbytes
-	MOVQ $` + SYS_WRITE + `, AX // write syscall
 	SYSCALL
 	RET
 `

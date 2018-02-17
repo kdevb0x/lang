@@ -210,11 +210,16 @@ func TestIRGenLetStatementShadow(t *testing.T) {
 		},
 		},
 		MOV{
-			Src: StringLiteral("hello"),
+			Src: IntLiteral(5),
 			Dst: LocalValue(1),
+		},
+		MOV{
+			Src: StringLiteral("hello"),
+			Dst: LocalValue(2),
 		},
 		CALL{FName: "PrintString", Args: []Register{
 			LocalValue(1),
+			LocalValue(2),
 		},
 		},
 	}
@@ -2705,7 +2710,7 @@ func TestIREcho(t *testing.T) {
 						Offset{
 							Base:   FuncArg{1, false},
 							Offset: LocalValue(0),
-							Scale:  IntLiteral(0),
+							Scale:  IntLiteral(16),
 							Container: ast.VarWithType{
 								"args", ast.SliceType{
 									ast.TypeLiteral("string"),
@@ -3053,12 +3058,20 @@ func TestStringArray(t *testing.T) {
 
 	expected := []Opcode{
 		MOV{
-			Src: StringLiteral("foo"),
+			Src: IntLiteral(3),
 			Dst: LocalValue(0),
 		},
 		MOV{
-			Src: StringLiteral("bar"),
+			Src: StringLiteral("foo"),
 			Dst: LocalValue(1),
+		},
+		MOV{
+			Src: IntLiteral(3),
+			Dst: LocalValue(2),
+		},
+		MOV{
+			Src: StringLiteral("bar"),
+			Dst: LocalValue(3),
 		},
 		CALL{
 			FName: "PrintString",
@@ -3066,7 +3079,7 @@ func TestStringArray(t *testing.T) {
 				Offset{
 					Base:   LocalValue(0),
 					Offset: IntLiteral(1),
-					Scale:  IntLiteral(0),
+					Scale:  IntLiteral(16),
 					Container: ast.VarWithType{
 						"args", ast.ArrayType{
 							ast.TypeLiteral("string"),
@@ -3084,7 +3097,7 @@ func TestStringArray(t *testing.T) {
 				Offset{
 					Base:   LocalValue(0),
 					Offset: IntLiteral(0),
-					Scale:  IntLiteral(0),
+					Scale:  IntLiteral(16),
 					Container: ast.VarWithType{
 						"args", ast.ArrayType{
 							ast.TypeLiteral("string"),
@@ -3117,20 +3130,32 @@ func TestPreEcho(t *testing.T) {
 			Dst: LocalValue(0),
 		},
 		MOV{
-			Src: StringLiteral("foo"),
+			Src: IntLiteral(3),
 			Dst: LocalValue(1),
 		},
 		MOV{
-			Src: StringLiteral("bar"),
+			Src: StringLiteral("foo"),
 			Dst: LocalValue(2),
 		},
 		MOV{
-			Src: StringLiteral("baz"),
+			Src: IntLiteral(3),
 			Dst: LocalValue(3),
 		},
 		MOV{
-			Src: IntLiteral(1),
+			Src: StringLiteral("bar"),
 			Dst: LocalValue(4),
+		},
+		MOV{
+			Src: IntLiteral(3),
+			Dst: LocalValue(5),
+		},
+		MOV{
+			Src: StringLiteral("baz"),
+			Dst: LocalValue(6),
+		},
+		MOV{
+			Src: IntLiteral(1),
+			Dst: LocalValue(7),
 		},
 		CALL{
 			FName: "len",
@@ -3141,14 +3166,14 @@ func TestPreEcho(t *testing.T) {
 		},
 		MOV{
 			Src: LastFuncCallRetVal{0, 0},
-			Dst: LocalValue(5),
+			Dst: LocalValue(8),
 		},
 		LOOP{
 			Condition: Condition{
 				Body: []Opcode{
 					LT{
-						Left:  LocalValue(4),
-						Right: LocalValue(5),
+						Left:  LocalValue(7),
+						Right: LocalValue(8),
 						Dst:   TempValue(0),
 					},
 				},
@@ -3160,8 +3185,8 @@ func TestPreEcho(t *testing.T) {
 					Args: []Register{
 						Offset{
 							Base:   LocalValue(1),
-							Scale:  IntLiteral(0),
-							Offset: LocalValue(4),
+							Scale:  IntLiteral(16),
+							Offset: LocalValue(7),
 							Container: ast.VarWithType{
 								"args",
 								ast.SliceType{
@@ -3173,21 +3198,21 @@ func TestPreEcho(t *testing.T) {
 					},
 				},
 				ADD{
-					Left:  LocalValue(4),
+					Left:  LocalValue(7),
 					Right: IntLiteral(1),
 					Dst:   TempValue(1),
 				},
 				MOV{
 					Src: TempValue(1),
-					Dst: LocalValue(4),
+					Dst: LocalValue(7),
 				},
 				IF{
 					ControlFlow: ControlFlow{
 						Condition: Condition{
 							Body: []Opcode{
 								NEQ{
-									Left:  LocalValue(4),
-									Right: LocalValue(5),
+									Left:  LocalValue(7),
+									Right: LocalValue(8),
 									Dst:   TempValue(2),
 								},
 							},
@@ -3257,7 +3282,7 @@ func TestPreEcho2(t *testing.T) {
 					Args: []Register{
 						Offset{
 							Base:   FuncArg{1, false},
-							Scale:  IntLiteral(0),
+							Scale:  IntLiteral(16),
 							Offset: LocalValue(0),
 							Container: ast.VarWithType{
 								"args",
@@ -3320,16 +3345,28 @@ func TestPreEcho2(t *testing.T) {
 			Dst: LocalValue(0),
 		},
 		MOV{
-			Src: StringLiteral("foo"),
+			Src: IntLiteral(3),
 			Dst: LocalValue(1),
 		},
 		MOV{
-			Src: StringLiteral("bar"),
+			Src: StringLiteral("foo"),
 			Dst: LocalValue(2),
 		},
 		MOV{
-			Src: StringLiteral("baz"),
+			Src: IntLiteral(3),
 			Dst: LocalValue(3),
+		},
+		MOV{
+			Src: StringLiteral("bar"),
+			Dst: LocalValue(4),
+		},
+		MOV{
+			Src: IntLiteral(3),
+			Dst: LocalValue(5),
+		},
+		MOV{
+			Src: StringLiteral("baz"),
+			Dst: LocalValue(6),
 		},
 		CALL{
 			FName: "PrintSlice",
@@ -3392,7 +3429,7 @@ func TestUnbufferedCat(t *testing.T) {
 						Offset{
 							Base:   FuncArg{1, false},
 							Offset: LocalValue(2),
-							Scale:  IntLiteral(0),
+							Scale:  IntLiteral(16),
 							Container: ast.VarWithType{
 								"args",
 								ast.SliceType{
@@ -3736,7 +3773,7 @@ func TestUnbufferedCat2(t *testing.T) {
 						Offset{
 							Base:   FuncArg{1, false},
 							Offset: LocalValue(3),
-							Scale:  IntLiteral(0),
+							Scale:  IntLiteral(16),
 							Container: ast.VarWithType{
 								"args",
 								ast.SliceType{

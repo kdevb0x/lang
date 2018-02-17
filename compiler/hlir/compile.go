@@ -222,7 +222,7 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]Opcode
 							Reference: true,
 						})
 					}
-					argRegs = append(argRegs, lv)
+					argRegs = append(argRegs, l)
 					p := Pointer{val1}
 					argRegs = append(argRegs, p)
 					info := context.registerInfo[p]
@@ -247,8 +247,17 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]Opcode
 				info := context.registerInfo[lv]
 				info.Creator = a
 				context.registerInfo[lv] = info
-
-				argRegs = append(argRegs, lv)
+				if a.Type() == "string" {
+					if lvl, ok := lv.(LocalValue); ok {
+						argRegs = append(argRegs, lvl)
+						lvl++
+						argRegs = append(argRegs, lvl)
+					} else {
+						panic("Unhandled register type for string")
+					}
+				} else {
+					argRegs = append(argRegs, lv)
+				}
 
 			}
 		case ast.FuncCall:
@@ -831,7 +840,9 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, []Register
 			Dst:   dst,
 		})
 		return ops, []Register{dst}, nil
-	case ast.VarWithType, ast.IntLiteral, ast.BoolLiteral, ast.EnumOption, ast.StringLiteral:
+	case ast.StringLiteral:
+		return nil, []Register{getRegister(ast.IntLiteral(len(s)), context), getRegister(s, context)}, nil
+	case ast.VarWithType, ast.IntLiteral, ast.BoolLiteral, ast.EnumOption:
 		return nil, []Register{getRegister(s, context)}, nil
 	case ast.ArrayValue:
 		base := getRegister(s.Base, context)
@@ -1092,16 +1103,16 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, []Register
 		}
 		return ops, regs, nil
 	case ast.ArrayLiteral:
-		regs := make([]Register, len(s))
+		regs := make([]Register, 0, len(s))
 		// First generate the LocalValue registers to ensure they're consecutive if there's a variable
 		// or some other expression in one of the literal pieces.
-		for i := range regs {
+		for i := 0; i < len(s); i++ {
 			newops, r, err := evaluateValue(s[i], context)
 			if err != nil {
 				return nil, nil, err
 			}
 			ops = append(ops, newops...)
-			regs[i] = r[0]
+			regs = append(regs, r...)
 		}
 		return ops, regs, nil
 	case ast.Brackets:

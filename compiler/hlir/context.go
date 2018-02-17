@@ -34,6 +34,12 @@ type variableLayout struct {
 }
 
 func (c variableLayout) GetTypeInfo(t string) ast.TypeInfo {
+	if t == "string" {
+		return ast.TypeInfo{
+			Size:   16,
+			Signed: false,
+		}
+	}
 	ti, ok := c.typeinfo[t]
 	if !ok {
 		panic("Could not get type info for " + string(t))

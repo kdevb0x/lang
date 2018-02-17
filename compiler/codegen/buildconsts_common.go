@@ -9,6 +9,7 @@ const (
 	// DI = pointer to string 
 	// R8 = string length
 	// R9 = bool true if negative
+	// R13 = unmodified string length
 	MOVQ arg0+0(FP), AX
 
 	// If negative, set R9 and set DI number to the absolute value
@@ -23,6 +24,7 @@ neg:
 	MOVQ $1, R9
 	// AX is now positive and R9 is true
 pos:
+	INCQ R13
 	MOVQ $0, R8
 	CMPQ AX, $0
 	JE print0
@@ -40,15 +42,15 @@ div10:
 	JMP div10
 
 addsign:
+	MOVQ R8, R13
 	CMPQ R9, $0
 	// It was positive, there's no sign to add
 	JE reverse
 	// Add a "-" sign to the end before reversing the string
 	MOVB $45, (DI)(R8*1)
 	INCQ R8
-
+	INCQ R13
 reverse:
-	PUSHQ R8
 	MOVQ SP, R10 // store the location of the string we just built on the stack
 	SUBQ $32, SP // make sure we don't overwrite it
 
@@ -68,32 +70,31 @@ rloop:
 	DECQ R11
 	DECQ R8
 	JMP rloop
-
-
 print:
-	MOVQ R10, 0(SP) // Move from R10 to arg0
+	MOVQ R13, 0(SP)
+	MOVQ R10, 8(SP) // Move from R10 to arg0
 	CALL PrintString(SB)
-	POPQ AX
 	ADDQ $32, SP
 	RET
 print0:
 	MOVQ SP, DI
 	MOVB $48, (DI)
-	PUSHQ $1
 	MOVQ SP, BP
 	SUBQ $32, SP
-	MOVQ BP, 0(SP)
+	MOVQ R13, 0(SP)
+	MOVQ BP, 8(SP)
 	CALL PrintString(SB)
-	POPQ AX
 	ADDQ $32, SP
 	RET
 `
 
 	printstring = `
-TEXT PrintString(SB), 20, $8-8
+TEXT PrintString(SB), 20, $48-16
+	MOVQ len+0(FP), AX
+	MOVQ str+8(FP), BX
 	MOVQ $1, 0(SP) // fd
-	MOVQ str+0(FP), AX
-	MOVQ AX, 8(SP)
+	MOVQ AX, 8(SP) // len
+	MOVQ BX, 16(SP) // str
 	CALL Write(SB)
 	RET
 `
@@ -102,5 +103,9 @@ TEXT PrintString(SB), 20, $8-8
 TEXT len(SB), 20, $0-16
 	MOVQ len+0(FP), AX
 	RET
+`
+	printbyteslice = `
+TEXT PrintByteSlice(SB), 20, $0
+	JMP PrintString+0(SB)
 `
 )
