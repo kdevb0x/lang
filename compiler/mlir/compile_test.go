@@ -3329,3 +3329,55 @@ func TestAssignmentToSliceVariableIndex(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 }
+
+func TestStringArg(t *testing.T) {
+	as, ti, c, err := ast.Parse(sampleprograms.StringArg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		MOV{ // mutable x []byte = { 1, 3, 4, 5 }
+			Src: IntLiteral(6),
+			Dst: LocalValue{0, ast.TypeInfo{8, false}},
+		},
+		MOV{
+			Src: StringLiteral("foobar"),
+			Dst: LocalValue{1, ast.TypeInfo{8, false}},
+		},
+		CALL{
+			FName: "PrintAString",
+			Args: []Register{
+				LocalValue{0, ast.TypeInfo{8, false}},
+				LocalValue{1, ast.TypeInfo{8, false}},
+			},
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	i, _, err = Generate(as[1], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected = []Opcode{
+		CALL{
+			FName: "PrintString",
+			Args: []Register{
+				FuncArg{0, ast.TypeInfo{8, false}, false},
+				FuncArg{1, ast.TypeInfo{8, false}, false},
+			},
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+}

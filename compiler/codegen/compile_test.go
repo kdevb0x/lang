@@ -981,3 +981,10 @@ func ExampleWriteStringByte() {
 	}
 	// Output: hellohello
 }
+
+func ExampleStringArg() {
+	if err := RunProgram("stringArg", sampleprograms.StringArg); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: foobar
+}

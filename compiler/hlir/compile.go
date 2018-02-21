@@ -59,17 +59,39 @@ func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callabl
 				}
 				nargs++
 			default:
-				context.FuncParamRegister(arg, nargs)
-				words := strings.Fields(string(arg.Type()))
-				for _, typePiece := range words {
+				if arg.Type() == "string" {
+					// Treat the same as a slice. Eventually these hacks should be removed
+					// and string should just be defined as type string []byte
+					context.FuncParamRegister(arg, nargs)
 					context.registerInfo[FuncArg{uint(nargs), arg.Reference}] = RegisterInfo{
 						"",
-						context.GetTypeInfo(typePiece),
+						ast.TypeInfo{0, false},
 						arg,
 						0,
 						arg,
 					}
 					nargs++
+					context.registerInfo[FuncArg{uint(nargs), arg.Reference}] = RegisterInfo{
+						"",
+						ast.TypeInfo{8, false},
+						arg,
+						0,
+						arg,
+					}
+					nargs++
+				} else {
+					context.FuncParamRegister(arg, nargs)
+					words := strings.Fields(string(arg.Type()))
+					for _, typePiece := range words {
+						context.registerInfo[FuncArg{uint(nargs), arg.Reference}] = RegisterInfo{
+							"",
+							context.GetTypeInfo(typePiece),
+							arg,
+							0,
+							arg,
+						}
+						nargs++
+					}
 				}
 			}
 		}
@@ -248,11 +270,16 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]Opcode
 				info.Creator = a
 				context.registerInfo[lv] = info
 				if a.Type() == "string" {
-					if lvl, ok := lv.(LocalValue); ok {
+					switch lvl := lv.(type) {
+					case LocalValue:
 						argRegs = append(argRegs, lvl)
 						lvl++
 						argRegs = append(argRegs, lvl)
-					} else {
+					case FuncArg:
+						argRegs = append(argRegs, lvl)
+						lvl.Id++
+						argRegs = append(argRegs, lvl)
+					default:
 						panic("Unhandled register type for string")
 					}
 				} else {

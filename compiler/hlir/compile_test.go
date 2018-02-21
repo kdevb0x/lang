@@ -4037,3 +4037,51 @@ func TestAssignmentToSliceVariableIndex(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 }
+
+func TestStringArg(t *testing.T) {
+	as, ti, c, err := ast.Parse(sampleprograms.StringArg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		MOV{
+			Src: IntLiteral(6),
+			Dst: LocalValue(0),
+		},
+		MOV{
+			Src: StringLiteral("foobar"),
+			Dst: LocalValue(1),
+		},
+		CALL{
+			FName: "PrintAString",
+			Args: []Register{
+				LocalValue(0),
+				LocalValue(1),
+			},
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	expected = []Opcode{
+		CALL{
+			FName: "PrintString",
+			Args: []Register{
+				FuncArg{0, false},
+				FuncArg{1, false},
+			},
+		},
+	}
+
+	i, _, _, err = Generate(as[1], ti, c, nil)
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
