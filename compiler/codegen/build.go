@@ -7,11 +7,23 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/driusan/lang/stdlib"
+
 	"github.com/driusan/lang/compiler/hlir"
 	"github.com/driusan/lang/compiler/mlir"
+
 	"github.com/driusan/lang/parser/ast"
 	"github.com/driusan/lang/parser/token"
 )
+
+func getMLIR(src string) (mlir.Func, error) {
+	nodes, ti, c, err := ast.Parse(src)
+	if err != nil {
+		return mlir.Func{}, err
+	}
+	f, _, err := mlir.Generate(nodes[0], ti, c, nil)
+	return f, err
+}
 
 // Builds a program. Directory d is used as the workspace, to build in,
 // and the source code for the program comes from src.
@@ -21,24 +33,31 @@ func BuildProgram(d string, src io.Reader) (string, error) {
 	mlir.Debug = false
 	// FIXME: This should be a library, not hardcoded string consts.
 	// FIXME: Make other architecture entrypoints..
-	f, err := os.Create(d + "/_main.s")
+	stdf, err := os.Create(d + "/_main.s")
 	if err != nil {
 		return "", err
 	}
-	fmt.Fprintf(f, entrypoint+"\n")
-	fmt.Fprintf(f, exits+"\n")
-	fmt.Fprintf(f, write+"\n")
-	fmt.Fprintf(f, read+"\n")
-	fmt.Fprintf(f, open+"\n")
-	fmt.Fprintf(f, closestr+"\n")
-	fmt.Fprintf(f, createf+"\n", O_WRONLY|O_CREAT)
-	fmt.Fprintf(f, printstring+"\n")
-	fmt.Fprintf(f, printbyteslice+"\n")
-	fmt.Fprintf(f, printint+"\n")
-	fmt.Fprintf(f, slicelen+"\n")
-	f.Close()
+	defer stdf.Close()
+	fmt.Fprintf(stdf, entrypoint+"\n")
+	fmt.Fprintf(stdf, exits+"\n")
+	fmt.Fprintf(stdf, write+"\n")
+	fmt.Fprintf(stdf, read+"\n")
+	fmt.Fprintf(stdf, open+"\n")
+	fmt.Fprintf(stdf, closestr+"\n")
+	fmt.Fprintf(stdf, createf+"\n", O_WRONLY|O_CREAT)
+	fmt.Fprintf(stdf, printint+"\n")
+	fmt.Fprintf(stdf, printstring+"\n")
+	fmt.Fprintf(stdf, slicelen+"\n")
 
-	f, err = os.Create(d + "/main.s")
+	printByteSlice, err := getMLIR(stdlib.PrintByteSlice)
+	if err != nil {
+		return "", err
+	}
+	if err := Compile(stdf, printByteSlice); err != nil {
+		return "", err
+	}
+
+	f, err := os.Create(d + "/main.s")
 	if err != nil {
 		return "", err
 	}
