@@ -88,24 +88,9 @@ print0:
 	RET
 `
 
-	printstring = `
-TEXT PrintString(SB), 20, $48-16
-	MOVQ len+0(FP), AX
-	MOVQ str+8(FP), BX
-	MOVQ $1, 0(SP) // fd
-	MOVQ AX, 8(SP) // len
-	MOVQ BX, 16(SP) // str
-	CALL Write(SB)
-	RET
-`
-
 	slicelen = `
 TEXT len(SB), 20, $0-16
 	MOVQ len+0(FP), AX
 	RET
-`
-	printbyteslice = `
-TEXT PrintByteSlice(SB), 20, $0
-	JMP PrintString+0(SB)
 `
 )

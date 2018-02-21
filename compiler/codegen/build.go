@@ -16,13 +16,19 @@ import (
 	"github.com/driusan/lang/parser/token"
 )
 
-func getMLIR(src string) (mlir.Func, error) {
+// builds a function and appends the assembly to dst.
+//
+// Used for building helpers from package stdlib and appending them to _main.s
+func buildFunc(dst io.Writer, src string) error {
 	nodes, ti, c, err := ast.Parse(src)
 	if err != nil {
-		return mlir.Func{}, err
+		return err
 	}
-	f, _, err := mlir.Generate(nodes[0], ti, c, nil)
-	return f, err
+	ir, _, err := mlir.Generate(nodes[0], ti, c, nil)
+	if err != nil {
+		return err
+	}
+	return Compile(dst, ir)
 }
 
 // Builds a program. Directory d is used as the workspace, to build in,
@@ -46,16 +52,10 @@ func BuildProgram(d string, src io.Reader) (string, error) {
 	fmt.Fprintf(stdf, closestr+"\n")
 	fmt.Fprintf(stdf, createf+"\n", O_WRONLY|O_CREAT)
 	fmt.Fprintf(stdf, printint+"\n")
-	fmt.Fprintf(stdf, printstring+"\n")
 	fmt.Fprintf(stdf, slicelen+"\n")
 
-	printByteSlice, err := getMLIR(stdlib.PrintByteSlice)
-	if err != nil {
-		return "", err
-	}
-	if err := Compile(stdf, printByteSlice); err != nil {
-		return "", err
-	}
+	buildFunc(stdf, stdlib.PrintByteSlice)
+	buildFunc(stdf, stdlib.PrintString)
 
 	f, err := os.Create(d + "/main.s")
 	if err != nil {

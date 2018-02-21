@@ -2,9 +2,7 @@
 about something.)
 
 # Bugfix TODOs
-- len should work on all slice types, and arrays, and strings
 - can not return []byte -- claims "invalid argument"
-- can not pass string as argument (string slices work however..)
 
 # New features TODOs
 
