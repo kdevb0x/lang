@@ -8,8 +8,8 @@ proc main () () {
 // Test the write syscall to a hardcoded file descriptor (stderr)
 const WriteSyscall = `
 proc main () () {
-	Write(1, "Stdout!")
-	Write(2, "Stderr!")
+	Write(1, cast("Stdout!") as []byte)
+	Write(2, cast("Stderr!") as []byte)
 }`
 
 // Test that the Open and Read syscalls work correctly. (Note: to use
@@ -29,7 +29,7 @@ proc main () () {
 const CreateSyscall = `
 proc main () () {
 	let fd = Create("foo.txt")
-	Write(fd, "Hello\n")
+	Write(fd, cast("Hello\n") as []byte)
 	Close(fd)
 }
 `

@@ -30,13 +30,13 @@ func NewContext() Context {
 			"PrintString": ProcDecl{
 				Name: "PrintString",
 				Args: []VarWithType{
-					{"", TypeLiteral("string"), false},
+					{"str", TypeLiteral("string"), false},
 				},
 			},
 			"PrintInt": ProcDecl{
 				Name: "PrintInt",
 				Args: []VarWithType{
-					{"", TypeLiteral("int"), false},
+					{"x", TypeLiteral("int"), false},
 				},
 			},
 			"PrintByteSlice": ProcDecl{
@@ -65,7 +65,7 @@ func NewContext() Context {
 				Name: "Write",
 				Args: []VarWithType{
 					{"fd", TypeLiteral("uint64"), false},
-					{"val", TypeLiteral("string"), false}, // NB. this should be []byte, once arrays are implemented.
+					{"val", SliceType{TypeLiteral("byte")}, false},
 				},
 			},
 			"Read": ProcDecl{
@@ -112,7 +112,7 @@ func NewContext() Context {
 			"Close": ProcDecl{
 				Name: "Close",
 				Args: []VarWithType{
-					{"val", TypeLiteral("string"), false},
+					{"val", TypeLiteral("uint64"), false},
 				},
 			},
 		},
@@ -782,6 +782,23 @@ argLoop:
 	}
 	if len(args) != len(f.UserArgs) {
 		return 0, FuncCall{}, fmt.Errorf("Unexpected number of parameters to %v: got %v want %v.", tokens[start], len(f.UserArgs), len(args))
+	}
+	// Check that the arguments we got were compatible.
+	// As a temporary hack, we don't check PrintInt or len, because PrintInt
+	// currently deals with all int types and len deals with both strings and
+	// slices, and there's not yet any casting
+	if name != "PrintInt" && name != "len" {
+		for i, arg := range args {
+			if IsLiteral(f.UserArgs[i]) {
+				if err := IsCompatibleType(c.Types[arg.Type()], f.UserArgs[i]); err != nil {
+					return 0, FuncCall{}, fmt.Errorf("Incompatible call to %v: argument %v must be of type %v (got %v)", name, arg.Name, arg.Type(), f.UserArgs[i].Type())
+				}
+			} else {
+				if arg.Type() != f.UserArgs[i].Type() {
+					return 0, FuncCall{}, fmt.Errorf("Incompatible call to %v: argument %v must be of type %v (got %v)", name, arg.Name, arg.Type(), f.UserArgs[i].Type())
+				}
+			}
+		}
 	}
 	return argStart - start - 1, f, nil
 }

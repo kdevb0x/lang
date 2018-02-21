@@ -52,7 +52,11 @@ func (ev EnumValue) Node() Node {
 	return ev
 }
 func (ev EnumValue) Type() string {
-	return ev.Constructor.Type()
+	base := ev.Constructor.Type()
+	for _, a := range ev.Parameters {
+		base += " " + a.Type()
+	}
+	return base
 }
 
 func (ev EnumValue) String() string {
@@ -346,4 +350,20 @@ func (b Brackets) Type() string {
 }
 func (b Brackets) String() string {
 	return fmt.Sprintf("Brackets{%v}", b.Val)
+}
+
+type Cast struct {
+	Val Value
+	Typ Type
+}
+
+func (c Cast) Value() interface{} {
+	return c.Val
+}
+func (c Cast) Node() Node {
+	return c
+}
+
+func (c Cast) Type() string {
+	return c.Typ.Type()
 }

@@ -354,6 +354,19 @@ func compare(v1, v2 Node) bool {
 		}
 		return true
 	}
+	if v1a, ok := v1.(Cast); ok {
+		v2a, ok := v2.(Cast)
+		if !ok {
+			return false
+		}
+		if !compare(v1a.Val, v2a.Val) {
+			return false
+		}
+		if !compare(v1a.Typ, v2a.Typ) {
+			return false
+		}
+		return true
+	}
 
 	panic(fmt.Sprintf("Unimplemented type for compare %v vs %v", reflect.TypeOf(v1), reflect.TypeOf(v2)))
 }
@@ -4409,6 +4422,7 @@ func TestAssignmentToVariableIndex(t *testing.T) {
 		}
 	}
 }
+
 func TestAssignmentToSliceVariableIndex(t *testing.T) {
 	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.AssignmentToSliceVariableIndex))
 	if err != nil {
@@ -4494,6 +4508,66 @@ func TestAssignmentToSliceVariableIndex(t *testing.T) {
 									Left:  VarWithType{"y", TypeLiteral("byte"), false},
 									Right: IntLiteral(1),
 								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("got %v want %v", ast[i], v)
+		}
+	}
+}
+
+func TestCastBuiltin(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.CastBuiltin))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Node{
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+
+				[]Node{
+					LetStmt{
+						Var: VarWithType{
+							"foo",
+							SliceType{
+								Base: TypeLiteral("byte"),
+							},
+							false,
+						},
+						Val: ArrayLiteral{
+							IntLiteral(70),
+							IntLiteral(111),
+							IntLiteral(111),
+						},
+					},
+					FuncCall{
+						Name: "PrintString",
+						UserArgs: []Value{
+							Cast{
+								Val: VarWithType{
+									"foo",
+									SliceType{
+										Base: TypeLiteral("byte"),
+									},
+									false,
+								},
+								Typ: TypeLiteral("string"),
 							},
 						},
 					},

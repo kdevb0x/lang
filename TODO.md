@@ -9,7 +9,6 @@ about something.)
 - Implement multiple dispatch
 - Implement "import" / package namespaces
 	- refactor builtins into separate standard library package
-- Casting (Syntax: `cast(val) as type`)
 - Compile time evaluation of pure functions with constant arguments
 - Add comments and convert samples from Go strings to files
 

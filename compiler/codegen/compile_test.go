@@ -988,3 +988,17 @@ func ExampleStringArg() {
 	}
 	// Output: foobar
 }
+
+func ExampleCastBuiltin() {
+	if err := RunProgram("cast", sampleprograms.CastBuiltin); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: Foo
+}
+
+func ExampleCastBuiltin2() {
+	if err := RunProgram("cast", sampleprograms.CastBuiltin2); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: bar
+}

@@ -21,3 +21,25 @@ proc main() () {
 	PrintInt(x)
 }
 `
+
+const WrongArgType = `
+func foo(s int) (int) {
+	return s+5
+}
+
+proc main() () {
+	foo("hello")
+}
+`
+
+const WrongArgUserType = `
+type fint int
+func foo(s fint) (int) {
+	return s+5
+}
+
+proc main() () {
+	let x int = 5
+	foo(x)
+}
+`

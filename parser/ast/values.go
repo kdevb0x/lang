@@ -392,10 +392,14 @@ func consumeValue(start int, tokens []token.Token, c *Context) (int, Value, erro
 			}
 			return 0, nil, fmt.Errorf("Invalid operator while expecting value: %v", tokens[i])
 		case token.Keyword:
-			if t == "let" {
+			switch t {
+			case "let":
 				return consumeLetStmt(i, tokens, c)
+			case "cast":
+				return consumeCastStmt(i, tokens, c)
+			default:
+				return 0, nil, fmt.Errorf("Only let statements may be used inside of a value context.")
 			}
-			return 0, nil, fmt.Errorf("Only let statements may be used inside of a value context.")
 		default:
 			return 0, nil, fmt.Errorf("Invalid value: %v (%v)", tokens[i], reflect.TypeOf(tokens[i]))
 		}

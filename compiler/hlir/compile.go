@@ -213,6 +213,55 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]Opcode
 			}
 		case ast.StringLiteral, ast.IntLiteral, ast.BoolLiteral:
 			argRegs = append(argRegs, getRegister(a, context))
+		case ast.Cast:
+			if ast.IsLiteral(a.Val) {
+				argRegs = append(argRegs, getRegister(a.Val, context))
+			} else {
+				switch a.Typ.(type) {
+				case ast.SliceType:
+					newops, r, err := evaluateValue(a.Val, context)
+					if err != nil {
+						return nil, err
+					}
+					ops = append(ops, newops...)
+					switch lvl := r[0].(type) {
+					case LocalValue:
+						argRegs = append(argRegs, lvl)
+						lvl++
+						argRegs = append(argRegs, lvl)
+					case FuncArg:
+						argRegs = append(argRegs, lvl)
+						lvl.Id++
+						argRegs = append(argRegs, lvl)
+					default:
+						panic("Unhandled register type for string")
+					}
+				default:
+					newops, r, err := evaluateValue(a.Val, context)
+					if err != nil {
+						return nil, err
+					}
+					ops = append(ops, newops...)
+					if a.Typ.Type() == "string" {
+						// Hack to make sure casting between strings and bytes
+						// work.
+						switch lvl := r[0].(type) {
+						case LocalValue:
+							argRegs = append(argRegs, lvl)
+							lvl++
+							argRegs = append(argRegs, Pointer{lvl})
+						case FuncArg:
+							argRegs = append(argRegs, lvl)
+							lvl.Id++
+							argRegs = append(argRegs, Pointer{lvl})
+						default:
+							panic("Unhandled register type for string")
+						}
+					} else {
+						argRegs = append(argRegs, r...)
+					}
+				}
+			}
 		case ast.ArrayValue:
 			newops, r, err := evaluateValue(a, context)
 			if err != nil {

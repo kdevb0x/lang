@@ -94,7 +94,11 @@ func IsCompatibleType(t TypeDefn, v Value) error {
 		}
 		return nil
 	default:
-		panic("Unhandled literal type in IsCompatibleType")
+
+		if v.Type() == t.Name.Type() {
+			return nil
+		}
+		return fmt.Errorf("Incompatible type for non-literal")
 	}
 }
 

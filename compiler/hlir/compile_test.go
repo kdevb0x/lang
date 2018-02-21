@@ -4085,3 +4085,77 @@ func TestStringArg(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 }
+
+func TestCastBuiltin(t *testing.T) {
+	as, ti, c, err := ast.Parse(sampleprograms.CastBuiltin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		MOV{
+			Src: IntLiteral(3),
+			Dst: LocalValue(0),
+		},
+		MOV{
+			Src: IntLiteral(70),
+			Dst: LocalValue(1),
+		},
+		MOV{
+			Src: IntLiteral(111),
+			Dst: LocalValue(2),
+		},
+		MOV{
+			Src: IntLiteral(111),
+			Dst: LocalValue(3),
+		},
+		CALL{
+			FName: "PrintString",
+			Args: []Register{
+				LocalValue(0),
+				Pointer{LocalValue(1)},
+			},
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestCastBuiltin2(t *testing.T) {
+	as, ti, c, err := ast.Parse(sampleprograms.CastBuiltin2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		MOV{
+			Src: IntLiteral(3),
+			Dst: LocalValue(0),
+		},
+		MOV{
+			Src: StringLiteral("bar"),
+			Dst: LocalValue(1),
+		},
+		CALL{
+			FName: "PrintByteSlice",
+			Args: []Register{
+				LocalValue(0),
+				LocalValue(1),
+			},
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Fatalf("%v", err)
+	}
+}

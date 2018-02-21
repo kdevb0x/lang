@@ -6,6 +6,6 @@ const PrintByteSlice = `proc PrintByteSlice(buf []byte) () {
 `
 
 const PrintString = `proc PrintString(str string) () {
-	Write(1, str)
+	Write(1, cast(str) as []byte)
 }
 `

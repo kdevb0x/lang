@@ -127,3 +127,19 @@ func ExampleIncompleteMatch() {
 
 	// Output: Inexhaustive match for enum type "Foo": Missing case "C".
 }
+
+func ExampleWrongArgType() {
+	if err := buildAST(invalidprograms.WrongArgType); err != nil {
+		fmt.Println(err.Error())
+	}
+
+	// Output: Incompatible call to foo: argument s must be of type int (got string)
+}
+
+func ExampleWrongArgUserType() {
+	if err := buildAST(invalidprograms.WrongArgUserType); err != nil {
+		fmt.Println(err.Error())
+	}
+
+	// Output: Incompatible call to foo: argument s must be of type fint (got int)
+}

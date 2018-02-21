@@ -54,8 +54,12 @@ func BuildProgram(d string, src io.Reader) (string, error) {
 	fmt.Fprintf(stdf, printint+"\n")
 	fmt.Fprintf(stdf, slicelen+"\n")
 
-	buildFunc(stdf, stdlib.PrintByteSlice)
-	buildFunc(stdf, stdlib.PrintString)
+	if err := buildFunc(stdf, stdlib.PrintByteSlice); err != nil {
+		return "", err
+	}
+	if err := buildFunc(stdf, stdlib.PrintString); err != nil {
+		return "", err
+	}
 
 	f, err := os.Create(d + "/main.s")
 	if err != nil {

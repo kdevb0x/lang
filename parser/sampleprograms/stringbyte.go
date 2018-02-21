@@ -6,7 +6,7 @@ package sampleprograms
 const WriteStringByte = `proc main() () {
 	let str string = "hello"
 	let bty []byte= { 104, 101,  108, 108, 111 }
-	Write(1, str)
+	Write(1, cast(str) as []byte)
 	Write(1, bty)
 }
 `
