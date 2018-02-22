@@ -113,11 +113,11 @@ func printDataLiteral(w io.Writer, str string) PhysicalRegister {
 
 func reserveStackSize(f mlir.Func) string {
 	if f.NumLocals == 0 && f.NumArgs == 0 {
-		return fmt.Sprintf("%v", (f.LargestFuncCall)*8)
+		return fmt.Sprintf("%v", (f.LargestFuncCall+1)*8)
 	} else if f.NumLocals == 0 {
-		return fmt.Sprintf("%v-%d", f.LargestFuncCall*8, (f.NumArgs * 8))
+		return fmt.Sprintf("%v-%d", (f.LargestFuncCall+1)*8, (f.NumArgs * 8))
 	} else if f.NumArgs == 0 {
-		return fmt.Sprintf("%d", (f.NumLocals*8)+(f.LargestFuncCall*8))
+		return fmt.Sprintf("%d", (f.NumLocals*8)+((f.LargestFuncCall+1)*8))
 	}
-	return fmt.Sprintf("%d-%d", (f.NumLocals*8)+(f.LargestFuncCall*8), f.NumArgs*8)
+	return fmt.Sprintf("%d-%d", (f.NumLocals*8)+(f.LargestFuncCall*8)+8, f.NumArgs*8)
 }

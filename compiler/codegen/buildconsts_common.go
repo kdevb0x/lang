@@ -3,7 +3,7 @@ package codegen
 // Non-OS specific builtin functions
 const (
 	// FIXME: This could probably be better written.
-	printint = `TEXT PrintInt(SB), 20, $16
+	printint = `TEXT PrintInt(SB), 20, $32-16
 	// CX = remaining digits (after div)
 	// DX = last digit (after div)
 	// DI = pointer to string 
@@ -79,12 +79,11 @@ print:
 print0:
 	MOVQ SP, DI
 	MOVB $48, (DI)
-	MOVQ SP, BP
-	SUBQ $32, SP
-	MOVQ R13, 0(SP)
-	MOVQ BP, 8(SP)
+	SUBQ $24, SP
+	MOVQ $1, 0(SP)
+	MOVQ DI, 8(SP)
 	CALL PrintString(SB)
-	ADDQ $32, SP
+	ADDQ $24, SP
 	RET
 `
 

@@ -54,7 +54,7 @@ func TestCompileHelloWorld(t *testing.T) {
 	// HelloWorld is simple enough that we can hand compile it. Most other
 	// programs we just compile it, run it and check the output to ensure
 	// that they work.
-	expected := `TEXT main(SB), 4+16, $8
+	expected := `TEXT main(SB), 4+16, $16
 	DATA string0<>+0(SB)/8, $14
 	DATA string0<>+8(SB)/8, $"Hello, w"
 	DATA string0<>+16(SB)/8, $"orld!\n\000\000"
