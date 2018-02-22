@@ -6,7 +6,7 @@ package sampleprograms
 // currently with an array literal and there's no equivalent
 // of malloc() or make(). This should be updated once it's
 // implemented..
-const UnbufferedCat = `proc main (args []string) () {
+const UnbufferedCat = `func main (args []string) () -> affects(IO) {
 	mutable buf []byte = {0}
 
 	mutable i = 1
@@ -33,7 +33,7 @@ const UnbufferedCat = `proc main (args []string) () {
 //
 // (The syntax for this was not implemented when the UnbufferedCat
 // test was first written.)
-const UnbufferedCat2 = `proc main (args []string) () {
+const UnbufferedCat2 = `func main (args []string) () -> affects(IO) {
 	mutable buf []byte = {0}
 
 	let i = 0
@@ -51,7 +51,7 @@ const UnbufferedCat2 = `proc main (args []string) () {
 // method invocation syntax too.
 //
 // (The method invocation syntax was implemented after let bindings.)
-const UnbufferedCat3 = `proc main (args []string) () {
+const UnbufferedCat3 = `func main (args []string) () -> affects(IO) {
 	mutable buf []byte = {0}
 
 	let i = 0

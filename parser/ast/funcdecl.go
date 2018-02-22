@@ -23,9 +23,10 @@ func (t Tuple) Type() string {
 // type Function should be the same as procedure, but
 // until the statements are settled we're just have Funcedure
 type FuncDecl struct {
-	Name   string
-	Args   Tuple
-	Return Tuple
+	Name    string
+	Args    Tuple
+	Return  Tuple
+	Effects []Effect
 
 	Body BlockStmt
 }
@@ -39,7 +40,7 @@ func (pd FuncDecl) GetArgs() []VarWithType {
 }
 
 func (fd FuncDecl) String() string {
-	return fmt.Sprintf("FuncDecl{\n\tName: %v,\n\tArgs: %v,\n\tReturn: %v,\n\tBody: %v}", fd.Name, fd.Args, fd.Return, fd.Body)
+	return fmt.Sprintf("FuncDecl{\n\tName: %v,\n\tArgs: %v,\n\tReturn: %v,\n\tEffects:: %v\n\tBody: %v}", fd.Name, fd.Args, fd.Return, fd.Effects, fd.Body)
 }
 
 func (fd FuncDecl) Type() string {

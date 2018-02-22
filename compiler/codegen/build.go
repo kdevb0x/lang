@@ -99,7 +99,7 @@ func BuildProgram(d string, src io.Reader) (string, error) {
 	// Generate the IR for the functions.
 	for _, v := range prog {
 		switch v.(type) {
-		case ast.FuncDecl, ast.ProcDecl:
+		case ast.FuncDecl:
 			fnc, _, err := mlir.Generate(v, ti, c, enums)
 			if err != nil {
 				return "", err

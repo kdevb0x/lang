@@ -28,13 +28,6 @@ func ExampleTooFewArgs() {
 	// Output: Unexpected number of parameters to aFunc: got 0 want 1.
 }
 
-func ExampleBadProcCall() {
-	if err := buildAST(invalidprograms.BadProcCall); err != nil {
-		fmt.Println(err.Error())
-	}
-	// Output: Can not call procedure from pure function.
-}
-
 func ExampleBadLetAssignment() {
 	if err := buildAST(invalidprograms.LetAssignment); err != nil {
 		fmt.Println(err.Error())

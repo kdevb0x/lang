@@ -2,7 +2,7 @@ package invalidprograms
 
 // TooManyArguments is a program which tries to call a function
 // with too many arguments.
-const TooManyArguments = `proc main() () {
+const TooManyArguments = `func main() () -> affects(IO) {
 	let x int = aFunc(3)
 	printf("%d\n", x)
 }
@@ -14,7 +14,7 @@ func aFunc() (int) {
 
 // TooFewArguments is a program which tries to call a function
 // without enough arguments.
-const TooFewArguments = `proc main() () {
+const TooFewArguments = `func main() () -> affects(IO) {
 	let x int = aFunc()
 	printf("%d\n", x)
 }

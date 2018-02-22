@@ -2,7 +2,7 @@ package sampleprograms
 
 // MethodSyntax tests foo.x() method invocation
 // syntax. It should print "10"
-const MethodSyntax = `proc main() () {
+const MethodSyntax = `func main() () -> affects(IO) {
 	let foo = 3
 	let y = foo.add3().add(4)
 	PrintInt(y)

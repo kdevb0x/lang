@@ -18,6 +18,6 @@ const SimpleAlgorithm = `func loop(high int) (int) {
 	return total
 }
 
-proc main () () {
+func main () () -> affects(IO) {
 	PrintInt(loop(10))
 }`

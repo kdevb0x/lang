@@ -1,6 +1,6 @@
 package sampleprograms
 
-const IndexAssignment = `proc main() () {
+const IndexAssignment = `func main() () -> affects(IO){
 	let x []int = { 3, 4, 5 }
 	mutable n = x[1]
 	let n2 = x[2]
@@ -9,7 +9,7 @@ const IndexAssignment = `proc main() () {
 	PrintInt(n2)
 }`
 
-const IndexedAddition = `proc main() () {
+const IndexedAddition = `func main() () -> affects(IO) {
 	let x []int = { 3, 4, 5 }
 	mutable n = x[1]
 	n = n + x[2]
@@ -20,7 +20,7 @@ const IndexedAddition = `proc main() () {
 }
 `
 
-const AssignmentToConstantIndex = `proc main () () {
+const AssignmentToConstantIndex = `func main () () -> affects(IO) {
 	mutable x = { 3, 4, 5 }
 	x[1] = 6
 	PrintInt(x[0])
@@ -28,7 +28,7 @@ const AssignmentToConstantIndex = `proc main () () {
 	PrintInt(x[2])
 }`
 
-const AssignmentToVariableIndex = `proc main () () {
+const AssignmentToVariableIndex = `func main () () -> affects(IO) {
 	mutable x = { 1, 3, 4, 5 }
 	let y = x[0]
 	x[y] = 6
@@ -36,7 +36,7 @@ const AssignmentToVariableIndex = `proc main () () {
 	PrintInt(x[y+1])
 }`
 
-const AssignmentToSliceConstantIndex = `proc main () () {
+const AssignmentToSliceConstantIndex = `func main () () -> affects(IO) {
 	mutable x []byte = { 3, 4, 5 }
 	x[1] = 6
 	PrintInt(x[0])
@@ -44,7 +44,7 @@ const AssignmentToSliceConstantIndex = `proc main () () {
 	PrintInt(x[2])
 }`
 
-const AssignmentToSliceVariableIndex = `proc main () () {
+const AssignmentToSliceVariableIndex = `func main () () -> affects(IO) {
 	mutable x []byte = { 1, 3, 4, 5 }
 	let y = x[0]
 	x[y] = 6

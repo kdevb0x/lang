@@ -40,7 +40,7 @@ func Parse(src string) (Module, error) {
 	// Generate the IR for the functions.
 	for _, v := range nodes {
 		switch v.(type) {
-		case ast.FuncDecl, ast.ProcDecl:
+		case ast.FuncDecl:
 			fnc, _, registers, err := hlir.Generate(v, ti, callables, enums)
 			if err != nil {
 				return Module{}, err

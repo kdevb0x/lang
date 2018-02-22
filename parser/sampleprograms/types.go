@@ -3,7 +3,7 @@ package sampleprograms
 const UserDefinedType = `
 type Foo int
 
-proc main() () {
+func main() () -> affects(IO) {
 	let x Foo = 4
 	PrintInt(x)
 }`
@@ -11,7 +11,7 @@ proc main() () {
 const EnumType = `
 data Foo = A | B
 
-proc main() () {
+func main() () -> affects(IO) {
 	let a Foo = A
 	match a {
 	case A:
@@ -24,7 +24,7 @@ proc main() () {
 const EnumTypeInferred = `
 data Foo = A | B
 
-proc main() () {
+func main() () -> affects(IO) {
 	let a = B
 	match a {
 	case A:
@@ -44,7 +44,7 @@ func DoSomething(x int) (Maybe int) {
 	return Just 5
 }
 
-proc main() () {
+func main() () -> affects(IO) {
 	let x = DoSomething(3)
 	match x {
 	case Nothing:

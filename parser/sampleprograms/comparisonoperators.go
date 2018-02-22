@@ -1,6 +1,6 @@
 package sampleprograms
 
-const EqualComparison = `proc main() () {
+const EqualComparison = `func main() () -> affects(IO) {
 	mutable a int = 3
 	let b int = 3
 	if a == b {
@@ -16,7 +16,7 @@ const EqualComparison = `proc main() () {
 	}
 }`
 
-const NotEqualComparison = `proc main() () {
+const NotEqualComparison = `func main() () -> affects(IO) {
 	mutable a int = 3
 	let b int = 3
 	if a != b {
@@ -32,7 +32,7 @@ const NotEqualComparison = `proc main() () {
 	}
 }`
 
-const GreaterComparison = `proc main() () {
+const GreaterComparison = `func main() () -> affects(IO) {
 	mutable a int = 4
 	let b int = 3
 	if a > b {
@@ -49,7 +49,7 @@ const GreaterComparison = `proc main() () {
 	}
 }`
 
-const GreaterOrEqualComparison = `proc main() () {
+const GreaterOrEqualComparison = `func main() () -> affects(IO) {
 	mutable a int = 4
 	let b int = 3
 	if a >= b {
@@ -66,7 +66,7 @@ const GreaterOrEqualComparison = `proc main() () {
 	}
 }`
 
-const LessThanComparison = `proc main() () {
+const LessThanComparison = `func main() () -> affects(IO) {
 	mutable a int = 4
 	let b int = 3
 	if a < b {
@@ -82,7 +82,7 @@ const LessThanComparison = `proc main() () {
 	}
 }`
 
-const LessThanOrEqualComparison = `proc main() () {
+const LessThanOrEqualComparison = `func main() () -> affects(IO) {
 	mutable a int = 1
 	let b int = 3
 	if a <= b {
