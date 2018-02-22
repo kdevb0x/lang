@@ -4159,3 +4159,41 @@ func TestCastBuiltin2(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 }
+
+func TestCastIntVariable(t *testing.T) {
+	as, ti, c, err := ast.Parse(sampleprograms.CastIntVariable)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, rd, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		MOV{
+			Src: IntLiteral(65),
+			Dst: LocalValue(0),
+		},
+		MOV{
+			Src: LocalValue(0),
+			Dst: LocalValue(1),
+		},
+		CALL{
+			FName: "PrintInt",
+			Args: []Register{
+				LocalValue(1),
+			},
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Errorf("%v", err)
+	}
+	if got := rd[LocalValue(1)].TypeInfo; got != (ast.TypeInfo{1, false}) {
+		t.Errorf("Incorrect type info for byte cast: got %v", got)
+	}
+	if got := rd[LocalValue(0)].TypeInfo; got != (ast.TypeInfo{0, true}) {
+		t.Errorf("Incorrect type info for uncast integer: got %v", got)
+	}
+}

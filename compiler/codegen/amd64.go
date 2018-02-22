@@ -275,7 +275,7 @@ func (a Amd64) opSuffix(src, dst mlir.Register) string {
 		}
 		return base
 	} else if dstsize < srcsize {
-		panic("Register sizes do not match.")
+		return a.singleRegSuffix(dstsize)
 	}
 	return base
 }

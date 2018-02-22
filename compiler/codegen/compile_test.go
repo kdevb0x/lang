@@ -1002,3 +1002,10 @@ func ExampleCastBuiltin2() {
 	}
 	// Output: bar
 }
+
+func ExampleCastIntVariable() {
+	if err := RunProgram("castint", sampleprograms.CastIntVariable); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: 65
+}

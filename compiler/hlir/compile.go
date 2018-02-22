@@ -308,7 +308,7 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]Opcode
 						Id: l.Id + 1,
 					})
 				default:
-					panic(fmt.Sprintf("This should not happen %v", reflect.TypeOf(lv)))
+					panic(fmt.Sprintf("This should not happen: %v", reflect.TypeOf(lv)))
 				}
 			default:
 				lv := context.Get(a)
@@ -431,6 +431,9 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 					nvr := context.Get(vr)
 					context.SetLocalRegister(s.Var, nvr)
 					continue
+				case ast.Cast:
+					reg := context.NextLocalRegister(s.Var)
+					context.SetLocalRegister(s.Var, reg)
 				case ast.ArrayLiteral:
 					reg := context.NextLocalRegister(s.Var)
 					ops = append(ops, MOV{
@@ -441,7 +444,7 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 					info.SliceSize = uint(len(s.Val.(ast.ArrayLiteral)))
 					context.registerInfo[reg] = info
 				default:
-					panic("Unhandled register type in slice assignment")
+					panic(fmt.Sprintf("Unhandled register type in slice assignment: %v", reflect.TypeOf(vr)))
 				}
 			}
 			body, rvs, err := evaluateValue(s.Val, context)
@@ -1191,6 +1194,8 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, []Register
 			regs = append(regs, r...)
 		}
 		return ops, regs, nil
+	case ast.Cast:
+		return evaluateValue(s.Val, context)
 	case ast.Brackets:
 		// The precedence was already handled while building the ast
 		return evaluateValue(s.Val, context)
