@@ -99,15 +99,14 @@ TEXT exits(SB), 20, $-16
 	// the order of the params in the syscall
 	write = `
 TEXT Write(SB), 20, $0-24
-	MOVQ fd+0(FP), DI
 	MOVQ nbytes+8(FP), DX
 	MOVQ buf+16(FP), SI
 
-	MOVQ DI, fd+0(FP) // fd
-	MOVQ SI, buf+8(FP) // buf
-	MOVQ DX, nbytes+16(FP)
+	MOVQ DX, buf+16(FP)
+	MOVQ SI, nbytes+8(FP)
+
 	MOVQ $-1, offset+24(FP) // Offset
-	
+
 	MOVQ $51, BP // pwrite syscall
 	SYSCALL
 	RET
