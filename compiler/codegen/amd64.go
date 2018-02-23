@@ -247,6 +247,13 @@ func (a *Amd64) ToPhysical(r mlir.Register, altform bool) PhysicalRegister {
 		default:
 			panic("Not implemented")
 		}
+	case mlir.TempValue:
+		r, err := a.getPhysicalRegister(v)
+		if err == nil {
+			return r
+		}
+		panic("Unknown TempValue register")
+
 	case mlir.Offset:
 		// Returns the address of the base of the offset. It needs to be manually indexed into
 		// whereever this is called from..

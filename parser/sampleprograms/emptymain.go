@@ -4,3 +4,9 @@ package sampleprograms
 // an empty proc main.
 const EmptyMain = `proc main() () {
 }`
+
+// EmptyReturn is the same as EmptyMain, but contains a naked
+// return statement.
+const EmptyReturn = `proc main() () {
+	return
+}`

@@ -1009,3 +1009,10 @@ func ExampleCastIntVariable() {
 	}
 	// Output: 65
 }
+
+func ExampleEmptyReturn() {
+	if err := RunProgram("emptyreturn", sampleprograms.EmptyReturn); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output:
+}

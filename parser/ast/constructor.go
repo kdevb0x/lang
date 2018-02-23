@@ -18,6 +18,7 @@ type Context struct {
 	Types       map[string]TypeDefn
 	PureContext bool // true if inside a pure function.
 	EnumOptions map[string]EnumOption
+	CurFunc     Callable
 }
 
 func NewContext() Context {
@@ -161,6 +162,7 @@ func (c Context) Clone() Context {
 		c2.EnumOptions[k] = v
 	}
 	c2.PureContext = c.PureContext
+	c2.CurFunc = c.CurFunc
 	return c2
 }
 
@@ -330,6 +332,7 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, Callables, error)
 					c.Mutables[string(v.Name)] = v
 				}
 			}
+			c.CurFunc = cur
 			n, block, err := consumeBlock(i, tokens, &c)
 			if err != nil {
 				return nil, nil, nil, err
@@ -346,7 +349,6 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, Callables, error)
 			c.Variables = make(map[string]VarWithType)
 			c.Mutables = make(map[string]VarWithType)
 			c.PureContext = true
-
 			i++
 
 			// FIXME: This should check that the name is valid and
@@ -360,6 +362,7 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, Callables, error)
 			}
 			cur.Args = a
 			cur.Return = r
+			c.CurFunc = cur
 			i += n
 			for _, v := range cur.Args {
 				c.Variables[string(v.Name)] = v
@@ -712,6 +715,10 @@ func consumeStmt(start int, tokens []token.Token, c *Context) (int, Node, error)
 		case "mutable":
 			return consumeMutStmt(start, tokens, c)
 		case "return":
+			if len(c.CurFunc.ReturnTuple()) == 0 {
+				return 1, ReturnStmt{}, nil
+			}
+
 			n, nd, err := consumeValue(start+1, tokens, c)
 			if err != nil {
 				return 0, ReturnStmt{}, err

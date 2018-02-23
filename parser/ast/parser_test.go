@@ -67,6 +67,9 @@ func compare(v1, v2 Node) bool {
 		if !ok {
 			return false
 		}
+		if v1a.Val == nil && v2a.Val == nil {
+			return true
+		}
 		return compare(v1a.Val, v2a.Val)
 	}
 
@@ -367,7 +370,6 @@ func compare(v1, v2 Node) bool {
 		}
 		return true
 	}
-
 	panic(fmt.Sprintf("Unimplemented type for compare %v vs %v", reflect.TypeOf(v1), reflect.TypeOf(v2)))
 }
 
@@ -4579,6 +4581,35 @@ func TestCastBuiltin(t *testing.T) {
 	for i, v := range expected {
 		if !compare(ast[i], v) {
 			t.Errorf("got %v want %v", ast[i], v)
+		}
+	}
+}
+
+func TestEmptyReturn(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.EmptyReturn))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []Node{
+		ProcDecl{
+			Name:   "main",
+			Args:   nil,
+			Return: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					ReturnStmt{},
+				},
+			},
+		},
+	}
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("empty function: got %v want %v", ast[i], v)
 		}
 	}
 }
