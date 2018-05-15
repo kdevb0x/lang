@@ -1,11 +1,11 @@
 package stdlib
 
-const PrintByteSlice = `proc PrintByteSlice(buf []byte) () {
+const PrintByteSlice = `func PrintByteSlice(buf []byte) () : io {
 	Write(1, buf)
 }
 `
 
-const PrintString = `proc PrintString(str string) () {
+const PrintString = `func PrintString(str string) () : io {
 	Write(1, cast(str) as []byte)
 }
 `
