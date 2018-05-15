@@ -1,9 +1,9 @@
 package ast
 
 import (
-	"fmt"
+//	"fmt"
 
-	"github.com/driusan/lang/parser/sampleprograms/invalidprograms"
+//	"github.com/driusan/lang/parser/sampleprograms/invalidprograms"
 )
 
 func buildAST(src string) error {
@@ -14,6 +14,7 @@ func buildAST(src string) error {
 	return nil
 }
 
+/*
 func ExampleTooManyArgs() {
 	if err := buildAST(invalidprograms.TooManyArguments); err != nil {
 		fmt.Println(err.Error())
@@ -143,3 +144,4 @@ func ExampleWrongArgUserType() {
 
 	// Output: Incompatible call to foo: argument s must be of type fint (got int)
 }
+*/

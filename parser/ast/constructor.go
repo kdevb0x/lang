@@ -229,7 +229,13 @@ func consumePrototype(start int, tokens []token.Token, c *Context) (n int, args 
 	if err != nil {
 		return 0, nil, nil, err
 	}
-	return n + n2, argsDefn, retDefn, nil
+
+	// FIXME: Consume the effect list, don't skip it.
+	n3, err := skipEffectList(start+n+n2, tokens, c)
+	if err != nil {
+		return 0, nil, nil, err
+	}
+	return n + n2+n3, argsDefn, retDefn, nil
 }
 
 func extractPrototypes(tokens []token.Token, c *Context) error {
@@ -1035,7 +1041,11 @@ func skipPrototype(start int, tokens []token.Token, c *Context) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	return n + n2, nil
+	n3, err := skipEffectList(start+n+n2, tokens, c)
+	if err != nil {
+		return 0, err
+	}
+	return n + n2 + n3, nil
 }
 
 func skipTuple(start int, tokens []token.Token, c *Context) (int, error) {
@@ -1050,4 +1060,22 @@ func skipTuple(start int, tokens []token.Token, c *Context) (int, error) {
 		}
 	}
 	return 0, fmt.Errorf("Missing closing ')' for tuple.")
+}
+
+func skipEffectList(start int, tokens []token.Token, c *Context) (int, error) {
+	i := start
+	if tokens[i] == token.Char("{") {
+		// No effects, but no error
+		return 0, nil
+	}
+	if tokens[i] != token.Char(":") {
+		return 0, fmt.Errorf("Not at start of an effect list. Expecting ':', not %v", tokens[i])
+	}
+
+	for ; i < len(tokens); i++ {
+		if tokens[i] == token.Char("{") {
+			return i - start, nil
+		}
+	}
+	return 0, fmt.Errorf("Effect lists must end with a block start.")
 }
