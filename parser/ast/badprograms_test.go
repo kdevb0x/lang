@@ -1,9 +1,9 @@
 package ast
 
 import (
-//	"fmt"
+	"fmt"
 
-//	"github.com/driusan/lang/parser/sampleprograms/invalidprograms"
+	"github.com/driusan/lang/parser/sampleprograms/invalidprograms"
 )
 
 func buildAST(src string) error {
@@ -14,7 +14,6 @@ func buildAST(src string) error {
 	return nil
 }
 
-/*
 func ExampleTooManyArgs() {
 	if err := buildAST(invalidprograms.TooManyArguments); err != nil {
 		fmt.Println(err.Error())
@@ -27,13 +26,6 @@ func ExampleTooFewArgs() {
 		fmt.Println(err.Error())
 	}
 	// Output: Unexpected number of parameters to aFunc: got 0 want 1.
-}
-
-func ExampleBadProcCall() {
-	if err := buildAST(invalidprograms.BadProcCall); err != nil {
-		fmt.Println(err.Error())
-	}
-	// Output: Can not call procedure from pure function.
 }
 
 func ExampleBadLetAssignment() {
@@ -144,4 +136,3 @@ func ExampleWrongArgUserType() {
 
 	// Output: Incompatible call to foo: argument s must be of type fint (got int)
 }
-*/

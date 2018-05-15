@@ -1,5 +1,5 @@
 package invalidprograms
 
-const TooBigUint8 = `proc main() () {
+const TooBigUint8 = `func main() () {
 	let y uint8 = 256
 }`
