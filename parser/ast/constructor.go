@@ -831,6 +831,10 @@ func consumeEffectList(start int, tokens []token.Token, c *Context) (int, []Effe
 
 	var effects []Effect
 	for i++; i < len(tokens); i++ {
+		if tokens[i] == token.Char(",") {
+			continue
+		}
+
 		if tokens[i] == token.Char("{") {
 			return i - start, effects, nil
 		}

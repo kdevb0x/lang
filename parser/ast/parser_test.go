@@ -503,7 +503,6 @@ func TestParseFizzBuzz(t *testing.T) {
 	}
 }
 
-/*
 func TestHelloWorld(t *testing.T) {
 	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.HelloWorld))
 	if err != nil {
@@ -514,10 +513,11 @@ func TestHelloWorld(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 			Body: BlockStmt{
 				[]Node{
 					FuncCall{
@@ -547,10 +547,11 @@ func TestEmptyMain(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: nil,
 
 			Body: BlockStmt{},
 		},
@@ -572,10 +573,11 @@ func TestLetStatement(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -612,10 +614,11 @@ func TestLetStatementShadow(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -669,10 +672,11 @@ func TestMutStatement(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -713,7 +717,6 @@ func TestMutStatement(t *testing.T) {
 			t.Errorf("mut statement: got %v want %v", ast[i], v)
 		}
 	}
-
 }
 
 func TestTwoProcs(t *testing.T) {
@@ -726,7 +729,7 @@ func TestTwoProcs(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
+		FuncDecl{
 			Name: "foo",
 			Args: nil,
 			Return: []VarWithType{
@@ -740,10 +743,11 @@ func TestTwoProcs(t *testing.T) {
 				},
 			},
 		},
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 			Body: BlockStmt{
 				[]Node{
 					FuncCall{
@@ -776,10 +780,11 @@ func TestOutOfOrder(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 			Body: BlockStmt{
 				[]Node{
 					FuncCall{
@@ -793,7 +798,7 @@ func TestOutOfOrder(t *testing.T) {
 				},
 			},
 		},
-		ProcDecl{
+		FuncDecl{
 			Name: "foo",
 			Args: nil,
 			Return: []VarWithType{
@@ -826,7 +831,7 @@ func TestSumToTen(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
+		FuncDecl{
 			Name: "sum",
 			Args: []VarWithType{
 				{Name: "x", Typ: TypeLiteral("int")},
@@ -872,8 +877,9 @@ func TestSumToTen(t *testing.T) {
 				},
 			},
 		},
-		ProcDecl{
-			Name: "main",
+		FuncDecl{
+			Name:    "main",
+			Effects: []Effect{"io"},
 			Body: BlockStmt{
 				[]Node{
 					FuncCall{
@@ -924,10 +930,11 @@ func TestSimpleFunc(t *testing.T) {
 				},
 			},
 		},
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 			Body: BlockStmt{
 				[]Node{
 					FuncCall{
@@ -1025,8 +1032,9 @@ func TestSumToTenRecursive(t *testing.T) {
 				},
 			},
 		},
-		ProcDecl{
-			Name: "main",
+		FuncDecl{
+			Name:    "main",
+			Effects: []Effect{"io"},
 			Body: BlockStmt{
 				[]Node{
 					FuncCall{
@@ -1064,10 +1072,11 @@ func TestSomeMath(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -1243,10 +1252,11 @@ func TestEqualComparisonMath(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -1333,10 +1343,11 @@ func TestNotEqualComparisonMath(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -1422,10 +1433,11 @@ func TestGreaterComparisonMath(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -1511,10 +1523,11 @@ func TestGreaterOrEqualComparisonMath(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -1601,10 +1614,11 @@ func TestLessThanComparisonMath(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -1690,10 +1704,11 @@ func TestLessThanOrEqualComparisonMath(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -1783,10 +1798,11 @@ func TestUserDefinedType(t *testing.T) {
 			Name:         TypeLiteral("Foo"),
 			ConcreteType: TypeLiteral("int"),
 		},
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -1864,10 +1880,11 @@ func TestTypeInference(t *testing.T) {
 				},
 			},
 		},
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -1935,10 +1952,11 @@ func TestEnumType(t *testing.T) {
 			},
 			nil,
 		},
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -1991,7 +2009,6 @@ func TestEnumType(t *testing.T) {
 			t.Errorf("enum test (%d): got %v want %v", i, ast[i], v)
 		}
 	}
-
 }
 
 func TestEnumTypeInferred(t *testing.T) {
@@ -2012,10 +2029,11 @@ func TestEnumTypeInferred(t *testing.T) {
 			},
 			nil,
 		},
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -2081,10 +2099,11 @@ func TestIfElseMatch(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -2212,10 +2231,11 @@ func TestGenericEnumType(t *testing.T) {
 				},
 			},
 		},
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -2393,10 +2413,11 @@ func TestMatchParam(t *testing.T) {
 				},
 			},
 		},
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -2450,7 +2471,7 @@ func TestMatchParam2(t *testing.T) {
 			},
 			nil,
 		},
-		ProcDecl{
+		FuncDecl{
 			Name: "foo",
 			Args: []VarWithType{{"x", TypeLiteral("Maybe int"), false}},
 			Return: []VarWithType{
@@ -2460,6 +2481,7 @@ func TestMatchParam2(t *testing.T) {
 					false,
 				},
 			},
+			Effects: []Effect{"io"},
 			Body: BlockStmt{
 				[]Node{
 					FuncCall{
@@ -2495,10 +2517,11 @@ func TestMatchParam2(t *testing.T) {
 				},
 			},
 		},
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -2530,7 +2553,6 @@ func TestMatchParam2(t *testing.T) {
 			t.Errorf("enum test (%d): got %v want %v", i, ast[i], v)
 		}
 	}
-
 }
 
 func TestSimpleAlgorithm(t *testing.T) {
@@ -2621,10 +2643,11 @@ func TestSimpleAlgorithm(t *testing.T) {
 				},
 			},
 		},
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -2662,10 +2685,11 @@ func TestConcreteTypeInt64(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 			Body: BlockStmt{
 				[]Node{
 					LetStmt{
@@ -2703,10 +2727,11 @@ func TestSimpleArray(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -2764,10 +2789,11 @@ func TestSimpleArrayInference(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -2825,10 +2851,11 @@ func TestArrayMutation(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -2928,7 +2955,6 @@ func TestArrayMutation(t *testing.T) {
 			t.Errorf("let statement (%d): got %v want %v", i, ast[i], v)
 		}
 	}
-
 }
 
 func TestReferenceVariable(t *testing.T) {
@@ -2941,7 +2967,7 @@ func TestReferenceVariable(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
+		FuncDecl{
 			Name: "changer",
 			Args: []VarWithType{
 				VarWithType{"x", TypeLiteral("int"), true},
@@ -2950,6 +2976,7 @@ func TestReferenceVariable(t *testing.T) {
 			Return: []VarWithType{
 				VarWithType{Name: "", Typ: TypeLiteral("int")},
 			},
+			Effects: []Effect{"mutator"},
 			Body: BlockStmt{
 				[]Node{
 					AssignmentOperator{
@@ -2966,7 +2993,7 @@ func TestReferenceVariable(t *testing.T) {
 			},
 		},
 
-		ProcDecl{
+		FuncDecl{
 			Name:   "main",
 			Args:   nil,
 			Return: nil,
@@ -3040,10 +3067,11 @@ func TestSimpleSlice(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -3099,10 +3127,11 @@ func TestSimpleSliceInference(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -3173,10 +3202,11 @@ func TestSliceMutation(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -3284,10 +3314,11 @@ func TestSliceParam(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -3320,12 +3351,13 @@ func TestSliceParam(t *testing.T) {
 				},
 			},
 		},
-		ProcDecl{
+		FuncDecl{
 			Name: "PrintASlice",
 			Args: []VarWithType{
 				{Name: "A", Typ: SliceType{Base: TypeLiteral("byte")}},
 			},
-			Return: nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -3364,10 +3396,11 @@ func TestReadSyscall(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io", "disk"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -3471,10 +3504,11 @@ func TestSliceLength(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -3516,7 +3550,6 @@ func TestSliceLength(t *testing.T) {
 			t.Errorf("let statement (%d): got %v want %v", i, ast[i], v)
 		}
 	}
-
 }
 
 func TestIndexAssignment(t *testing.T) {
@@ -3529,10 +3562,11 @@ func TestIndexAssignment(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -3627,10 +3661,11 @@ func TestIndexedAddition(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -3750,10 +3785,11 @@ func TestPrecedence(t *testing.T) {
 		t.Fatalf("%v: %v", err, tokens)
 	}
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -3806,10 +3842,11 @@ func TestLetCondition(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -3937,7 +3974,7 @@ func TestUnbufferedCat2(t *testing.T) {
 	}
 
 	expected := []Node{
-		ProcDecl{
+		FuncDecl{
 			Name: "main",
 			Args: []VarWithType{
 				VarWithType{
@@ -3946,7 +3983,8 @@ func TestUnbufferedCat2(t *testing.T) {
 					false,
 				},
 			},
-			Return: nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -4091,10 +4129,11 @@ func TestMethodSyntax(t *testing.T) {
 	}
 
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -4158,7 +4197,7 @@ func TestUnbufferedCat3(t *testing.T) {
 	}
 
 	expected := []Node{
-		ProcDecl{
+		FuncDecl{
 			Name: "main",
 			Args: []VarWithType{
 				VarWithType{
@@ -4167,7 +4206,8 @@ func TestUnbufferedCat3(t *testing.T) {
 					false,
 				},
 			},
-			Return: nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -4312,10 +4352,11 @@ func TestAssignmentToVariableIndex(t *testing.T) {
 	}
 
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 
@@ -4417,10 +4458,11 @@ func TestAssignmentToSliceVariableIndex(t *testing.T) {
 	}
 
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 
@@ -4517,10 +4559,11 @@ func TestCastBuiltin(t *testing.T) {
 	}
 
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 
 			Body: BlockStmt{
 
@@ -4565,33 +4608,3 @@ func TestCastBuiltin(t *testing.T) {
 		}
 	}
 }
-
-func TestEmptyReturn(t *testing.T) {
-	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.EmptyReturn))
-	if err != nil {
-		t.Fatal(err)
-	}
-	ast, _, _, err := Construct(tokens)
-	if err != nil {
-		t.Fatal(err)
-	}
-	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
-
-			Body: BlockStmt{
-				[]Node{
-					ReturnStmt{},
-				},
-			},
-		},
-	}
-	for i, v := range expected {
-		if !compare(ast[i], v) {
-			t.Errorf("empty function: got %v want %v", ast[i], v)
-		}
-	}
-}
-*/

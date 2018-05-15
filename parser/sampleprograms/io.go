@@ -1,13 +1,13 @@
 package sampleprograms
 
 const PrintString = `
-proc main () () {
+func main () () : io {
 	PrintString("Success!")
 }`
 
 // Test the write syscall to a hardcoded file descriptor (stderr)
 const WriteSyscall = `
-proc main () () {
+func main () () : io, disk {
 	Write(1, cast("Stdout!") as []byte)
 	Write(2, cast("Stderr!") as []byte)
 }`
@@ -15,7 +15,7 @@ proc main () () {
 // Test that the Open and Read syscalls work correctly. (Note: to use
 // this test you need to know what's in the foo.txt file first.)
 const ReadSyscall = `
-proc main () () {
+func main () () : io, disk{
 		let fd = Open("foo.txt")
 		mutable dta []byte = {0, 1, 2, 3, 4, 5}
 		let n = Read(fd, dta)
