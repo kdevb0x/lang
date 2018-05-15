@@ -17,8 +17,6 @@ func topLevelNode(T token.Token) (Node, error) {
 		return nil, nil
 	case token.Keyword:
 		switch t.String() {
-		case "proc":
-			return ProcDecl{}, nil
 		case "func":
 			return FuncDecl{}, nil
 		case "type":
@@ -109,44 +107,6 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, Callables, error)
 		}
 
 		switch cur := cn.(type) {
-		case ProcDecl:
-			// move past the "proc" keyword and reset the local
-			// variables and mutables, since we're in a new function.
-			c.Variables = make(map[string]VarWithType)
-			c.Mutables = make(map[string]VarWithType)
-			c.PureContext = false
-			i++
-
-			// FIXME: This should check that the name is valid and
-			// i isn't out of bounds.
-			cur.Name = tokens[i].String()
-			i++
-
-			n, a, r, err := consumePrototype(i, tokens, &c)
-			if err != nil {
-				return nil, nil, nil, err
-			}
-			cur.Args = a
-			cur.Return = r
-			i += n
-
-			for _, v := range cur.Args {
-				c.Variables[string(v.Name)] = v
-				if v.Reference {
-					c.Mutables[string(v.Name)] = v
-				}
-			}
-			c.CurFunc = cur
-			n, block, err := consumeBlock(i, tokens, &c)
-			if err != nil {
-				return nil, nil, nil, err
-			}
-			cur.Body = block
-
-			i += n - 1
-
-			nodes = append(nodes, cur)
-			callables[cur.Name] = append(callables[cur.Name], cur)
 		case FuncDecl:
 			// move past the "func" keyword and reset the local
 			// variables and mutables, since we're in a new function.
@@ -160,12 +120,13 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, Callables, error)
 			cur.Name = tokens[i].String()
 			i++
 
-			n, a, r, err := consumePrototype(i, tokens, &c)
+			n, a, r, e, err := consumePrototype(i, tokens, &c)
 			if err != nil {
 				return nil, nil, nil, err
 			}
 			cur.Args = a
 			cur.Return = r
+			cur.Effects = e
 			c.CurFunc = cur
 			i += n
 			for _, v := range cur.Args {
@@ -219,23 +180,23 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, Callables, error)
 	return nodes, ti, callables, nil
 }
 
-func consumePrototype(start int, tokens []token.Token, c *Context) (n int, args []VarWithType, retn []VarWithType, err error) {
+func consumePrototype(start int, tokens []token.Token, c *Context) (n int, args []VarWithType, retn []VarWithType, effects []Effect, err error) {
 	n, argsDefn, err := consumeArgs(start, tokens, c)
 	if err != nil {
-		return 0, nil, nil, err
+		return 0, nil, nil, nil, err
 	}
 
 	n2, retDefn, err := consumeTypeList(start+n, tokens, *c)
 	if err != nil {
-		return 0, nil, nil, err
+		return 0, nil, nil, nil, err
 	}
 
 	// FIXME: Consume the effect list, don't skip it.
-	n3, err := skipEffectList(start+n+n2, tokens, c)
+	n3, effects, err := consumeEffectList(start+n+n2, tokens, c)
 	if err != nil {
-		return 0, nil, nil, err
+		return 0, nil, nil, nil, err
 	}
-	return n + n2+n3, argsDefn, retDefn, nil
+	return n + n2 + n3, argsDefn, retDefn, effects, nil
 }
 
 func extractPrototypes(tokens []token.Token, c *Context) error {
@@ -249,27 +210,6 @@ func extractPrototypes(tokens []token.Token, c *Context) error {
 		}
 
 		switch cur := cn.(type) {
-		case ProcDecl:
-			i++
-
-			cur.Name = tokens[i].String()
-			i++
-
-			n, err := skipPrototype(i, tokens, c)
-			if err != nil {
-				return err
-			}
-			i += n
-
-			n, err = skipBlock(i, tokens, c)
-			if err != nil {
-				return err
-			}
-			i += n
-
-			// Now that we know the function is valid, add it to
-			// the context's list of functions
-			c.Functions[cur.Name] = cur
 		case FuncDecl:
 			i++
 
@@ -326,41 +266,19 @@ func extractPrototypes(tokens []token.Token, c *Context) error {
 		}
 
 		switch cur := cn.(type) {
-		case ProcDecl:
-			i++
-
-			cur.Name = tokens[i].String()
-			i++
-
-			n, a, r, err := consumePrototype(i, tokens, c)
-			if err != nil {
-				return err
-			}
-			cur.Args = a
-			cur.Return = r
-			i += n
-
-			n, err = skipBlock(i, tokens, c)
-			if err != nil {
-				return err
-			}
-			i += n
-
-			// Now that we know the function is valid, add it to
-			// the context's list of functions
-			c.Functions[cur.Name] = cur
 		case FuncDecl:
 			i++
 
 			cur.Name = tokens[i].String()
 			i++
 
-			n, a, r, err := consumePrototype(i, tokens, c)
+			n, a, r, e, err := consumePrototype(i, tokens, c)
 			if err != nil {
 				return err
 			}
 			cur.Args = a
 			cur.Return = r
+			cur.Effects = e
 			i += n
 
 			n, err = skipBlock(i, tokens, c)
@@ -558,11 +476,6 @@ func consumeFuncCall(start int, tokens []token.Token, c *Context, mvals []Value)
 	decl, ok := c.Functions[name]
 	if !ok {
 		return 0, FuncCall{}, fmt.Errorf("Undefined function: %v", name)
-	}
-	if c.PureContext {
-		if _, ok := decl.(ProcDecl); ok {
-			return 0, FuncCall{}, fmt.Errorf("Can not call procedure from pure function.")
-		}
 	}
 
 	// FIXME: This should support variadic functions, too.
@@ -906,6 +819,25 @@ func consumeTypeList(start int, tokens []token.Token, c Context) (int, []VarWith
 	return 0, nil, fmt.Errorf("Could not parse arguments")
 }
 
+func consumeEffectList(start int, tokens []token.Token, c *Context) (int, []Effect, error) {
+	i := start
+	if tokens[i] == token.Char("{") {
+		// No effects, but no error
+		return 0, nil, nil
+	}
+	if tokens[i] != token.Char(":") {
+		return 0, nil, fmt.Errorf("Not at start of an effect list. Expecting ':', not %v", tokens[i])
+	}
+
+	var effects []Effect
+	for i++; i < len(tokens); i++ {
+		if tokens[i] == token.Char("{") {
+			return i - start, effects, nil
+		}
+		effects = append(effects, Effect(tokens[i].String()))
+	}
+	return 0, nil, fmt.Errorf("Effect lists must end with a block start.")
+}
 func consumeType(start int, tokens []token.Token, c *Context) (int, Type, error) {
 	nm := tokens[start].String()
 	if nm == "[" {

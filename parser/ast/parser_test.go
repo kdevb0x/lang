@@ -81,36 +81,6 @@ func compare(v1, v2 Node) bool {
 		return compare(v1a.Left, v2a.Left) && compare(v1a.Right, v2a.Right)
 	}
 
-	if v1a, ok := v1.(ProcDecl); ok {
-		v2a, ok := v2.(ProcDecl)
-		if !ok {
-			return false
-		}
-		if v1a.Name != v2a.Name {
-			return false
-		}
-		if len(v1a.Args) != len(v2a.Args) {
-			return false
-		}
-		for i := range v1a.Args {
-			if compare(v1a.Args[i], v2a.Args[i]) == false {
-				return false
-			}
-		}
-		if len(v1a.Return) != len(v2a.Return) {
-			return false
-		}
-
-		for i := range v1a.Return {
-			if compare(v1a.Return[i], v2a.Return[i]) == false {
-				return false
-			}
-		}
-		if compare(v1a.Body, v2a.Body) == false {
-			return false
-		}
-		return true
-	}
 	if v1a, ok := v1.(FuncDecl); ok {
 		v2a, ok := v2.(FuncDecl)
 		if !ok {
@@ -133,6 +103,15 @@ func compare(v1, v2 Node) bool {
 
 		for i := range v1a.Return {
 			if compare(v1a.Return[i], v2a.Return[i]) == false {
+				return false
+			}
+		}
+		if len(v1a.Effects) != len(v2a.Effects) {
+			return false
+		}
+
+		for i := range v1a.Effects {
+			if v1a.Effects[i] != v2a.Effects[i] {
 				return false
 			}
 		}
@@ -384,10 +363,11 @@ func TestParseFizzBuzz(t *testing.T) {
 	}
 
 	expected := []Node{
-		ProcDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"io"},
 			Body: BlockStmt{
 				[]Node{
 					MutStmt{

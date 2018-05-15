@@ -3,6 +3,7 @@ about something.)
 
 # Bugfix TODOs
 - can not return []byte -- claims "invalid argument"
+- Need to enforce that effects are either handled or propagated from function
 
 # New features TODOs
 
