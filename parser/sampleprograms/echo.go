@@ -2,7 +2,7 @@ package sampleprograms
 
 // echo echos its arguments to stdout. It's the simplest
 // program to test command line parameters..
-const Echo = `proc main(args []string) () {
+const Echo = `func main(args []string) () : io {
 	mutable i = 1
 	let length = len(args)
 	while i < length {
@@ -21,7 +21,7 @@ const Echo = `proc main(args []string) () {
 // arguments and has the parameters hardcoded, to make sure
 // any bugs in echo are from the argument passing, not the
 // program logic.
-const PreEcho = `proc main() () {
+const PreEcho = `func main() () : io {
 	let args []string = { "foo", "bar", "baz" }
 	mutable i = 1
 	let length = len(args)
@@ -39,7 +39,7 @@ const PreEcho = `proc main() () {
 
 // PreEcho2 is like Echo, but ensures the argument passing of
 // slices works correctly.
-const PreEcho2 = `proc PrintSlice(args []string) () {
+const PreEcho2 = `func PrintSlice(args []string) () : io {
 	mutable i = 1
 	let length = len(args)
 	while i < length {
@@ -54,7 +54,7 @@ const PreEcho2 = `proc PrintSlice(args []string) () {
 	PrintString("\n")
 }
 
-proc main() () {
+func main() () : io {
 	let args []string = { "foo", "bar", "baz" }
 	PrintSlice(args)
 }

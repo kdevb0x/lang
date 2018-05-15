@@ -1,12 +1,12 @@
 package sampleprograms
 
 // Stringarg tests passing a string as a parameter.
-const StringArg = `proc main() () {
+const StringArg = `func main() () : io {
 	let b string = "foobar"
 	PrintAString(b)
 }
 
-proc PrintAString(str string) () {
+func PrintAString(str string) () : io {
 	PrintString(str)
 
 }

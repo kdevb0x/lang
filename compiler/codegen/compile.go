@@ -8,7 +8,7 @@ import (
 	"github.com/driusan/lang/compiler/mlir"
 )
 
-var debug bool =true
+var debug bool = true
 
 // Compile takes an AST and writes the assembly that it compiles to to
 // w.
