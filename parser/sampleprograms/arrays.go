@@ -1,19 +1,19 @@
 package sampleprograms
 
 // SimpleArray creates and initializes an array
-const SimpleArray = `proc main() () {
+const SimpleArray = `func main () () : io {
 	let n [5]int = { 1, 2, 3, 4, 5 }
 	PrintInt(n[3])
 }`
 
 // SimpleArrayInference tests type inference on an array literal
-const SimpleArrayInference = `proc main() () {
+const SimpleArrayInference = `func main () () : io {
 	let n = { 1, 2, 3, 4, 5 }
 	PrintInt(n[3])
 }`
 
 // ArrayMutation tests mutating an array value.
-const ArrayMutation = `proc main() () {
+const ArrayMutation = `func main () () : io {
 	mutable n = { 1, 2, 3, 4, 5 }
 	PrintInt(n[3])
 	PrintString("\n")
@@ -25,7 +25,7 @@ const ArrayMutation = `proc main() () {
 
 // ArrayIndex tests indexing into an array by a variable
 const ArrayIndex = `
-proc main () () {
+func main () () : io {
 	let x = 3
 	let n = { 1, 2, 3, 4, 5 }
 	mutable n2 = { 1, 2, 3, 4, 5 }
@@ -36,7 +36,7 @@ proc main () () {
 `
 
 const StringArray = `
-proc main () () {
+func main () () : io {
 	let args = { "foo", "bar" }
 	PrintString(args[1])
 	PrintString("\n")

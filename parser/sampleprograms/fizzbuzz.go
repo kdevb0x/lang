@@ -2,7 +2,7 @@ package sampleprograms
 
 // Fizzbuzz is a simple, well formatted fizzbuzz program
 // to use for testing.
-const Fizzbuzz = `proc main() () {
+const Fizzbuzz = `func main () () : io {
 	mutable terminate bool = false
 	mutable i int = 1
 	while terminate != true {
