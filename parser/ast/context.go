@@ -71,11 +71,11 @@ func NewContext() Context {
 					//     It needs a way to mark parameters mutable.
 					{"dst", SliceType{TypeLiteral("byte")}, true},
 				},
-				Return: []VarWithType{{"", TypeLiteral("uint64"), false}},
+				Return:  []VarWithType{{"", TypeLiteral("uint64"), false}},
 				Effects: []Effect{"Filesystem"},
 			},
 			"Open": FuncDecl{
-				Name: "Open",
+				Name:    "Open",
 				Effects: []Effect{"FD"},
 				Args: []VarWithType{
 					{"val", TypeLiteral("string"), false},
@@ -91,7 +91,7 @@ func NewContext() Context {
 				Return: []VarWithType{{"", TypeLiteral("uint64"), false}},
 			},
 			"Create": FuncDecl{
-				Name: "Create",
+				Name:    "Create",
 				Effects: []Effect{"FD", "Filesystem"},
 				Args: []VarWithType{
 					{"val", TypeLiteral("string"), false},
@@ -107,7 +107,7 @@ func NewContext() Context {
 				Return: []VarWithType{{"", TypeLiteral("uint64"), false}},
 			},
 			"Close": FuncDecl{
-				Name: "Close",
+				Name:    "Close",
 				Effects: []Effect{"FD"},
 				Args: []VarWithType{
 					{"val", TypeLiteral("uint64"), false},
