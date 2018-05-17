@@ -10,7 +10,7 @@ const CastBuiltin2 = `func main() () -> affects(IO) {
 	PrintByteSlice(cast(foo) as []byte)
 }`
 
-const CastIntVariable = `proc main () () {
+const CastIntVariable = `func main () () -> affects(IO) {
 	let foo = 65
 	let baz = cast(foo) as byte
 

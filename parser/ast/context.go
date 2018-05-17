@@ -17,23 +17,26 @@ func NewContext() Context {
 			// FIXME: These should be replaced by a
 			// multiple dispatch Print function and/or
 			// moved to a standard library, not build in.
-			"PrintString": ProcDecl{
+			"PrintString": FuncDecl{
 				Name: "PrintString",
 				Args: []VarWithType{
 					{"str", TypeLiteral("string"), false},
 				},
+				Effects: []Effect{"IO"},
 			},
-			"PrintInt": ProcDecl{
+			"PrintInt": FuncDecl{
 				Name: "PrintInt",
 				Args: []VarWithType{
 					{"x", TypeLiteral("int"), false},
 				},
+				Effects: []Effect{"IO"},
 			},
-			"PrintByteSlice": ProcDecl{
+			"PrintByteSlice": FuncDecl{
 				Name: "PrintByteSlice",
 				Args: []VarWithType{
 					{"slice", SliceType{TypeLiteral("byte")}, false},
 				},
+				Effects: []Effect{"IO"},
 			},
 			"len": FuncDecl{
 				Name: "len",
@@ -51,14 +54,15 @@ func NewContext() Context {
 			// and into a standard library, once enough of the
 			// compiler is implemented to have a standard
 			// library.
-			"Write": ProcDecl{
+			"Write": FuncDecl{
 				Name: "Write",
 				Args: []VarWithType{
 					{"fd", TypeLiteral("uint64"), false},
 					{"val", SliceType{TypeLiteral("byte")}, false},
 				},
+				Effects: []Effect{"IO", "Filesystem"},
 			},
-			"Read": ProcDecl{
+			"Read": FuncDecl{
 				Args: []VarWithType{
 					{"fd", TypeLiteral("uint64"), false},
 					// NB. this should be []byte, once arrays are implemented.
@@ -68,9 +72,11 @@ func NewContext() Context {
 					{"dst", SliceType{TypeLiteral("byte")}, true},
 				},
 				Return: []VarWithType{{"", TypeLiteral("uint64"), false}},
+				Effects: []Effect{"Filesystem"},
 			},
-			"Open": ProcDecl{
+			"Open": FuncDecl{
 				Name: "Open",
+				Effects: []Effect{"FD"},
 				Args: []VarWithType{
 					{"val", TypeLiteral("string"), false},
 					/*
@@ -84,8 +90,9 @@ func NewContext() Context {
 				},
 				Return: []VarWithType{{"", TypeLiteral("uint64"), false}},
 			},
-			"Create": ProcDecl{
+			"Create": FuncDecl{
 				Name: "Create",
+				Effects: []Effect{"FD", "Filesystem"},
 				Args: []VarWithType{
 					{"val", TypeLiteral("string"), false},
 					/*
@@ -99,8 +106,9 @@ func NewContext() Context {
 				},
 				Return: []VarWithType{{"", TypeLiteral("uint64"), false}},
 			},
-			"Close": ProcDecl{
+			"Close": FuncDecl{
 				Name: "Close",
+				Effects: []Effect{"FD"},
 				Args: []VarWithType{
 					{"val", TypeLiteral("uint64"), false},
 				},
