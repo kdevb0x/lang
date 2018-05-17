@@ -829,7 +829,7 @@ func consumeEffectList(start int, tokens []token.Token, c *Context) (int, []Effe
 		return 0, nil, nil
 	}
 	if tokens[i] != token.Operator("->") {
-		return 0, nil, fmt.Errorf("Not at start of an effect list. Expecting '->', not %v", tokens[i])
+		return 0, nil, fmt.Errorf("Not at start of an effect list. Expecting '->', not '%v'", tokens[i])
 	}
 	if tokens[i+1] != token.Keyword("affects") {
 		return 0, nil, fmt.Errorf("Not at start of an effect list. Expecting 'affects', not %v", tokens[i+1])
@@ -1012,7 +1012,7 @@ func skipEffectList(start int, tokens []token.Token, c *Context) (int, error) {
 		return 0, nil
 	}
 	if tokens[i] != token.Operator("->") {
-		return 0, fmt.Errorf("Not at start of an effect list. Expecting '->', not %v", tokens[i])
+		return 0, fmt.Errorf("Not at start of an effect list. Expecting '->', not '%v'", tokens[i])
 	}
 	if tokens[i+1] != token.Keyword("affects") {
 		return 0, fmt.Errorf("Not at start of an effect list. Expecting 'affects', not %v", tokens[i+1])

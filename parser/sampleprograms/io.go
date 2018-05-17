@@ -1,7 +1,7 @@
 package sampleprograms
 
 const PrintString = `
-func main () () : io {
+func main () () -> affects(IO) {
 	PrintString("Success!")
 }`
 
@@ -27,7 +27,7 @@ func main () () -> affects(IO, Filesystem) {
 // Tests that the Create and Write syscalls work (Note: to use this
 // as a test you need to be able to read foo.txt after.)
 const CreateSyscall = `
-proc main () () {
+func main () () -> affects(IO, Filesystem) {
 	let fd = Create("foo.txt")
 	Write(fd, cast("Hello\n") as []byte)
 	Close(fd)
