@@ -12,7 +12,7 @@ func foo(x int) (int) {
 	return 0
 }
 
-func main() () : io {
+func main() () -> affects(IO) {
 	PrintInt(foo(1))
 	PrintString(", ")
 	PrintInt(foo(3))

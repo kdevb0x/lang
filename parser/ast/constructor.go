@@ -131,6 +131,9 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, Callables, error)
 			i += n
 			for _, v := range cur.Args {
 				c.Variables[string(v.Name)] = v
+				if v.Reference {
+					c.Mutables[string(v.Name)] = v
+				}
 			}
 
 			n, block, err := consumeBlock(i, tokens, &c)
@@ -825,9 +828,13 @@ func consumeEffectList(start int, tokens []token.Token, c *Context) (int, []Effe
 		// No effects, but no error
 		return 0, nil, nil
 	}
-	if tokens[i] != token.Char(":") {
-		return 0, nil, fmt.Errorf("Not at start of an effect list. Expecting ':', not %v", tokens[i])
+	if tokens[i] != token.Operator("->") {
+		return 0, nil, fmt.Errorf("Not at start of an effect list. Expecting '->', not %v", tokens[i])
 	}
+	if tokens[i+1] != token.Keyword("affects") {
+		return 0, nil, fmt.Errorf("Not at start of an effect list. Expecting 'affects', not %v", tokens[i+1])
+	}
+	i += 2
 
 	var effects []Effect
 	for i++; i < len(tokens); i++ {
@@ -835,8 +842,8 @@ func consumeEffectList(start int, tokens []token.Token, c *Context) (int, []Effe
 			continue
 		}
 
-		if tokens[i] == token.Char("{") {
-			return i - start, effects, nil
+		if tokens[i] == token.Char(")") {
+			return i - start + 1, effects, nil
 		}
 		effects = append(effects, Effect(tokens[i].String()))
 	}
@@ -1004,9 +1011,13 @@ func skipEffectList(start int, tokens []token.Token, c *Context) (int, error) {
 		// No effects, but no error
 		return 0, nil
 	}
-	if tokens[i] != token.Char(":") {
-		return 0, fmt.Errorf("Not at start of an effect list. Expecting ':', not %v", tokens[i])
+	if tokens[i] != token.Operator("->") {
+		return 0, fmt.Errorf("Not at start of an effect list. Expecting '->', not %v", tokens[i])
 	}
+	if tokens[i+1] != token.Keyword("affects") {
+		return 0, fmt.Errorf("Not at start of an effect list. Expecting 'affects', not %v", tokens[i+1])
+	}
+	i += 2
 
 	for ; i < len(tokens); i++ {
 		if tokens[i] == token.Char("{") {

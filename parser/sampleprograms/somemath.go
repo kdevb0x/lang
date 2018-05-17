@@ -1,7 +1,7 @@
 package sampleprograms
 
 // SomeMath does arbitrary math operations to ensure that they work.
-const SomeMath = `func main() () : io {
+const SomeMath = `func main() () -> affects(IO) {
 	let add int = 1 + 2
 	let sub int = 1 - 2
 	let mul int = 2 * 3
@@ -30,7 +30,7 @@ const SomeMath = `func main() () : io {
 // values.
 //
 // It should Print "-3"
-const Precedence = `func main() () : io {
+const Precedence = `func main() () -> affects(IO) {
 	let x = (1 + 2) * (3 - 4)
 	PrintInt(x)
 }

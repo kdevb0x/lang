@@ -5,6 +5,6 @@ const SimpleFunc = `func foo() (int) {
 	return 3
 }
 
-func main() () : io {
+func main() () -> affects(IO) {
 	PrintInt(foo())
 }`

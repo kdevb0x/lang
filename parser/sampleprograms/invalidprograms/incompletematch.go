@@ -3,7 +3,7 @@ package invalidprograms
 const IncompleteMatch = `
 data Foo = A | B | C
 
-func main() () : io {
+func main() () -> affects(IO) {
 	let x = A
 	match x {
 	case A:

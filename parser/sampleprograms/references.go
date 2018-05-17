@@ -2,12 +2,12 @@ package sampleprograms
 
 // ReferenceVariable mutates a variable that is passed by reference.
 // FIXME: Determine how this should interact with effects
-const ReferenceVariable = `func changer(mutable x int, y int) (int) : mutator {
+const ReferenceVariable = `func changer(mutable x int, y int) (int) -> affects(mutate) {
 	x = 4
 	return x + y
 }
 
-func main() () : io {
+func main() () -> affects(IO) {
 	mutable var = 3
 	PrintInt(var)
 	PrintString("\n")

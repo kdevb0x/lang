@@ -2,7 +2,7 @@ package invalidprograms
 
 // LetAssignment is a program that tries to mutate a let variable,
 // rather than shadowing it.
-const LetAssignment = `func main() () : io {
+const LetAssignment = `func main() () -> affects(IO) {
 	let x int = 3
 	x = x + 5
 	PrintInt(x)
@@ -11,7 +11,7 @@ const LetAssignment = `func main() () : io {
 
 // MutStatementShadow creates a mutable variable, and then tries to shadow
 // it, which is illegal.
-const MutStatementShadow = `func main() () : io {
+const MutStatementShadow = `func main() () -> affects(IO) {
 	mutable n int = 5
 	PrintInt(n)
 	mutable n string = "hello"
@@ -20,7 +20,7 @@ const MutStatementShadow = `func main() () : io {
 
 // MutStatementShadow creates a mutable variable, and then tries to shadow
 // it with a let statement, which is still illegal.
-const MutStatementShadow2 = `func main() () : io {
+const MutStatementShadow2 = `func main() () -> affects(IO) {
 	mutable n int = 5
 	PrintInt(n)
 	let n string = "hello"
@@ -29,7 +29,7 @@ const MutStatementShadow2 = `func main() () : io {
 
 // MutStatementScopeShadow creates a mutable variable, and tries to shadow
 // it in a different scope, which is still illegal.
-const MutStatementScopeShadow = `func main() () : io {
+const MutStatementScopeShadow = `func main() () -> affects(IO) {
 	mutable n int = 5
 	PrintInt(n)
 	if n == 5 {
@@ -40,7 +40,7 @@ const MutStatementScopeShadow = `func main() () : io {
 
 // MutStatementScopeShadow creates a mutable variable, and tries to shadow
 // it with a let variable in a different scope, which is still illegal.
-const MutStatementScopeShadow2 = `func main() () : io {
+const MutStatementScopeShadow2 = `func main() () -> affects(IO) {
 	mutable n int = 5
 	PrintInt(n)
 	if n == 5 {

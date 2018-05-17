@@ -1,6 +1,6 @@
 package sampleprograms
 
-const EqualComparison = `func main() () : io {
+const EqualComparison = `func main() () -> affects(IO) {
 	mutable a int = 3
 	let b int = 3
 	if a == b {
@@ -16,7 +16,7 @@ const EqualComparison = `func main() () : io {
 	}
 }`
 
-const NotEqualComparison = `func main() () : io {
+const NotEqualComparison = `func main() () -> affects(IO) {
 	mutable a int = 3
 	let b int = 3
 	if a != b {
@@ -32,7 +32,7 @@ const NotEqualComparison = `func main() () : io {
 	}
 }`
 
-const GreaterComparison = `func main() () : io {
+const GreaterComparison = `func main() () -> affects(IO) {
 	mutable a int = 4
 	let b int = 3
 	if a > b {
@@ -49,7 +49,7 @@ const GreaterComparison = `func main() () : io {
 	}
 }`
 
-const GreaterOrEqualComparison = `func main() () : io {
+const GreaterOrEqualComparison = `func main() () -> affects(IO) {
 	mutable a int = 4
 	let b int = 3
 	if a >= b {
@@ -66,7 +66,7 @@ const GreaterOrEqualComparison = `func main() () : io {
 	}
 }`
 
-const LessThanComparison = `func main() () : io {
+const LessThanComparison = `func main() () -> affects(IO) {
 	mutable a int = 4
 	let b int = 3
 	if a < b {
@@ -82,7 +82,7 @@ const LessThanComparison = `func main() () : io {
 	}
 }`
 
-const LessThanOrEqualComparison = `func main() () : io {
+const LessThanOrEqualComparison = `func main() () -> affects(IO) {
 	mutable a int = 1
 	let b int = 3
 	if a <= b {

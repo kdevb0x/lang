@@ -1,6 +1,6 @@
 package sampleprograms
 
-const IndexAssignment = `func main() () : io{
+const IndexAssignment = `func main() () -> affects(IO){
 	let x []int = { 3, 4, 5 }
 	mutable n = x[1]
 	let n2 = x[2]
@@ -9,7 +9,7 @@ const IndexAssignment = `func main() () : io{
 	PrintInt(n2)
 }`
 
-const IndexedAddition = `func main() () : io {
+const IndexedAddition = `func main() () -> affects(IO) {
 	let x []int = { 3, 4, 5 }
 	mutable n = x[1]
 	n = n + x[2]
@@ -20,7 +20,7 @@ const IndexedAddition = `func main() () : io {
 }
 `
 
-const AssignmentToConstantIndex = `func main () () : io {
+const AssignmentToConstantIndex = `func main () () -> affects(IO) {
 	mutable x = { 3, 4, 5 }
 	x[1] = 6
 	PrintInt(x[0])
@@ -28,7 +28,7 @@ const AssignmentToConstantIndex = `func main () () : io {
 	PrintInt(x[2])
 }`
 
-const AssignmentToVariableIndex = `func main () () : io {
+const AssignmentToVariableIndex = `func main () () -> affects(IO) {
 	mutable x = { 1, 3, 4, 5 }
 	let y = x[0]
 	x[y] = 6
@@ -36,7 +36,7 @@ const AssignmentToVariableIndex = `func main () () : io {
 	PrintInt(x[y+1])
 }`
 
-const AssignmentToSliceConstantIndex = `func main () () : io {
+const AssignmentToSliceConstantIndex = `func main () () -> affects(IO) {
 	mutable x []byte = { 3, 4, 5 }
 	x[1] = 6
 	PrintInt(x[0])
@@ -44,7 +44,7 @@ const AssignmentToSliceConstantIndex = `func main () () : io {
 	PrintInt(x[2])
 }`
 
-const AssignmentToSliceVariableIndex = `func main () () : io {
+const AssignmentToSliceVariableIndex = `func main () () -> affects(IO) {
 	mutable x []byte = { 1, 3, 4, 5 }
 	let y = x[0]
 	x[y] = 6

@@ -367,7 +367,7 @@ func TestParseFizzBuzz(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 			Body: BlockStmt{
 				[]Node{
 					MutStmt{
@@ -517,7 +517,7 @@ func TestHelloWorld(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 			Body: BlockStmt{
 				[]Node{
 					FuncCall{
@@ -577,7 +577,7 @@ func TestLetStatement(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -618,7 +618,7 @@ func TestLetStatementShadow(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -676,7 +676,7 @@ func TestMutStatement(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -747,7 +747,7 @@ func TestTwoProcs(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 			Body: BlockStmt{
 				[]Node{
 					FuncCall{
@@ -784,7 +784,7 @@ func TestOutOfOrder(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 			Body: BlockStmt{
 				[]Node{
 					FuncCall{
@@ -879,7 +879,7 @@ func TestSumToTen(t *testing.T) {
 		},
 		FuncDecl{
 			Name:    "main",
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 			Body: BlockStmt{
 				[]Node{
 					FuncCall{
@@ -934,7 +934,7 @@ func TestSimpleFunc(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 			Body: BlockStmt{
 				[]Node{
 					FuncCall{
@@ -1034,7 +1034,7 @@ func TestSumToTenRecursive(t *testing.T) {
 		},
 		FuncDecl{
 			Name:    "main",
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 			Body: BlockStmt{
 				[]Node{
 					FuncCall{
@@ -1076,7 +1076,7 @@ func TestSomeMath(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -1256,7 +1256,7 @@ func TestEqualComparisonMath(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -1347,7 +1347,7 @@ func TestNotEqualComparisonMath(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -1437,7 +1437,7 @@ func TestGreaterComparisonMath(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -1527,7 +1527,7 @@ func TestGreaterOrEqualComparisonMath(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -1618,7 +1618,7 @@ func TestLessThanComparisonMath(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -1708,7 +1708,7 @@ func TestLessThanOrEqualComparisonMath(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -1802,7 +1802,7 @@ func TestUserDefinedType(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -1884,7 +1884,7 @@ func TestTypeInference(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -1956,7 +1956,7 @@ func TestEnumType(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -2033,7 +2033,7 @@ func TestEnumTypeInferred(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -2103,7 +2103,7 @@ func TestIfElseMatch(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -2235,7 +2235,7 @@ func TestGenericEnumType(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -2417,7 +2417,7 @@ func TestMatchParam(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -2481,7 +2481,7 @@ func TestMatchParam2(t *testing.T) {
 					false,
 				},
 			},
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 			Body: BlockStmt{
 				[]Node{
 					FuncCall{
@@ -2521,7 +2521,7 @@ func TestMatchParam2(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -2647,7 +2647,7 @@ func TestSimpleAlgorithm(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -2689,7 +2689,7 @@ func TestConcreteTypeInt64(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 			Body: BlockStmt{
 				[]Node{
 					LetStmt{
@@ -2731,7 +2731,7 @@ func TestSimpleArray(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -2793,7 +2793,7 @@ func TestSimpleArrayInference(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -2855,7 +2855,7 @@ func TestArrayMutation(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -2976,7 +2976,7 @@ func TestReferenceVariable(t *testing.T) {
 			Return: []VarWithType{
 				VarWithType{Name: "", Typ: TypeLiteral("int")},
 			},
-			Effects: []Effect{"mutator"},
+			Effects: []Effect{"mutate"},
 			Body: BlockStmt{
 				[]Node{
 					AssignmentOperator{
@@ -2994,9 +2994,10 @@ func TestReferenceVariable(t *testing.T) {
 		},
 
 		FuncDecl{
-			Name:   "main",
-			Args:   nil,
-			Return: nil,
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -3071,7 +3072,7 @@ func TestSimpleSlice(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -3131,7 +3132,7 @@ func TestSimpleSliceInference(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -3206,7 +3207,7 @@ func TestSliceMutation(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -3318,7 +3319,7 @@ func TestSliceParam(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -3357,7 +3358,7 @@ func TestSliceParam(t *testing.T) {
 				{Name: "A", Typ: SliceType{Base: TypeLiteral("byte")}},
 			},
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -3400,7 +3401,7 @@ func TestReadSyscall(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io", "disk"},
+			Effects: []Effect{"IO", "Filesystem"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -3508,7 +3509,7 @@ func TestSliceLength(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -3566,7 +3567,7 @@ func TestIndexAssignment(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -3665,7 +3666,7 @@ func TestIndexedAddition(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -3789,7 +3790,7 @@ func TestPrecedence(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -3846,7 +3847,7 @@ func TestLetCondition(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -3984,7 +3985,7 @@ func TestUnbufferedCat2(t *testing.T) {
 				},
 			},
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -4133,7 +4134,7 @@ func TestMethodSyntax(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -4207,7 +4208,7 @@ func TestUnbufferedCat3(t *testing.T) {
 				},
 			},
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 				[]Node{
@@ -4356,7 +4357,7 @@ func TestAssignmentToVariableIndex(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 
@@ -4462,7 +4463,7 @@ func TestAssignmentToSliceVariableIndex(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 
@@ -4563,7 +4564,7 @@ func TestCastBuiltin(t *testing.T) {
 			Name:    "main",
 			Args:    nil,
 			Return:  nil,
-			Effects: []Effect{"io"},
+			Effects: []Effect{"IO"},
 
 			Body: BlockStmt{
 

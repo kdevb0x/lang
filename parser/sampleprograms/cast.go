@@ -1,11 +1,11 @@
 package sampleprograms
 
-const CastBuiltin = `func main() () : io {
+const CastBuiltin = `func main() () -> affects(IO) {
 	let foo []byte = { 70, 111, 111 }
 	PrintString(cast(foo) as string)
 }`
 
-const CastBuiltin2 = `func main() () : io {
+const CastBuiltin2 = `func main() () -> affects(IO) {
 	let foo = "bar"
 	PrintByteSlice(cast(foo) as []byte)
 }`

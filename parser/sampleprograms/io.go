@@ -7,7 +7,7 @@ func main () () : io {
 
 // Test the write syscall to a hardcoded file descriptor (stderr)
 const WriteSyscall = `
-func main () () : io, disk {
+func main () () -> affects(IO, Filesystem) {
 	Write(1, cast("Stdout!") as []byte)
 	Write(2, cast("Stderr!") as []byte)
 }`
@@ -15,7 +15,7 @@ func main () () : io, disk {
 // Test that the Open and Read syscalls work correctly. (Note: to use
 // this test you need to know what's in the foo.txt file first.)
 const ReadSyscall = `
-func main () () : io, disk{
+func main () () -> affects(IO, Filesystem) {
 		let fd = Open("foo.txt")
 		mutable dta []byte = {0, 1, 2, 3, 4, 5}
 		let n = Read(fd, dta)

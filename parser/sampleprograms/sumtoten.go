@@ -12,7 +12,7 @@ const SumToTen = `func sum(x int) (int) {
 	return sum
 }
 
-func main() () : io {
+func main() () -> affects(IO) {
 	PrintInt(sum(10))
 }`
 
@@ -30,7 +30,7 @@ func partial_sum(partial int, x int) (int) {
 	return partial_sum(partial + x, x - 1)
 }
 
-func main() () : io {
+func main() () -> affects(IO) {
 	PrintInt(sum(10))
 }
 `

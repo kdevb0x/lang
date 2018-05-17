@@ -1,6 +1,6 @@
 package sampleprograms
 
-const SimpleMatch = `func main () () : io {
+const SimpleMatch = `func main () () -> affects(IO) {
 	let x = 3
 	match x {
 	case 1:
@@ -14,7 +14,7 @@ const SimpleMatch = `func main () () : io {
 	}
 }`
 
-const IfElseMatch = `func main () () : io {
+const IfElseMatch = `func main () () -> affects(IO) {
 	let x = 3
 	match {
 	case x < 3:
@@ -39,7 +39,7 @@ func foo (x Maybe int) (int) {
 	}
 }
 
-func main () () : io {
+func main () () -> affects(IO) {
 	PrintInt(foo(Just 5))
 }`
 
@@ -48,7 +48,7 @@ func main () () : io {
 // (There was a bug where func calls didn't work if the string param was a single character long.)
 const MatchParam2 = `data Maybe x = Nothing | Just x
 
-func foo (x Maybe int) (int) : io {
+func foo (x Maybe int) (int) -> affects(IO) {
 	PrintString("x")
 	match x {
 	case Just n:
@@ -58,6 +58,6 @@ func foo (x Maybe int) (int) : io {
 	}
 }
 
-func main () () : io {
+func main () () -> affects(IO) {
 	PrintInt(foo(Just 5))
 }`
