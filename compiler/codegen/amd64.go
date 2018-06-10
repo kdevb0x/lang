@@ -458,14 +458,14 @@ func (a *Amd64) ConvertInstruction(i int, ops []mlir.Opcode) string {
 				if err != nil {
 					panic(err)
 				}
-				v += fmt.Sprintf("MOVQ $%v, %v\n\t", strLiteralLength(val), fa)
+				//v += fmt.Sprintf("MOVQ $%v, %v\n\t", strLiteralLength(val), fa)
 				switch d := dst.(type) {
 				case mlir.FuncArg:
 					d.Id++
 					fa = a.ToPhysical(d, true)
 				case mlir.FuncCallArg:
-					d.Id++
-					fa = a.ToPhysical(d, true)
+				//	d.Id++
+				//	fa = a.ToPhysical(d, true)
 				default:
 					panic("Unknown type of call destination register")
 				}
