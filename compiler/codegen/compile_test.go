@@ -459,6 +459,7 @@ func ExampleMutAddition() {
 	}
 	// Output: 8
 }
+
 func ExampleSimpleFunc() {
 	if err := RunProgram("simplefunc", sampleprograms.SimpleFunc); err != nil {
 		fmt.Println(err.Error())
@@ -628,8 +629,8 @@ func ExampleGreaterOrEqualComparison() {
 	// 3
 }
 
-func ExampleLessThanEqualComparison() {
-	if err := RunProgram("lessthanequalcompare", sampleprograms.LessThanComparison); err != nil {
+func ExampleLessThanComparison() {
+	if err := RunProgram("lessthancompare", sampleprograms.LessThanComparison); err != nil {
 		fmt.Println(err.Error())
 	}
 	// Output: false
@@ -795,7 +796,7 @@ func ExampleSimpleArray() {
 	// Output: 4
 }
 
-func ExampleMutationArray() {
+func ExampleArrayMutation() {
 	if err := RunProgram("arraymutation", sampleprograms.ArrayMutation); err != nil {
 		fmt.Println(err.Error())
 	}
@@ -804,7 +805,7 @@ func ExampleMutationArray() {
 	// 3
 }
 
-func ExampleReference() {
+func ExampleReferenceVariable() {
 	if err := RunProgram("referencevariable", sampleprograms.ReferenceVariable); err != nil {
 		fmt.Println(err.Error())
 	}

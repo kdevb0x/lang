@@ -137,7 +137,7 @@ func TestIRGenHelloWorld(t *testing.T) {
 	}
 
 	expected := []Opcode{
-		CALL{FName: "PrintString", Args: []Register{StringLiteral(`Hello, world!\n`)}},
+		CALL{FName: "PrintString", Args: []Register{IntLiteral(14), StringLiteral(`Hello, world!\n`)}},
 	}
 	if len(i.Body) != len(expected) {
 		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
@@ -206,6 +206,7 @@ func TestIRGenLetStatementShadow(t *testing.T) {
 		},
 		},
 		CALL{FName: "PrintString", Args: []Register{
+			IntLiteral(1),
 			StringLiteral(`\n`),
 		},
 		},
@@ -711,6 +712,7 @@ func TestIRGenFizzBuzz(t *testing.T) {
 						},
 						Body: []Opcode{
 							CALL{FName: "PrintString", Args: []Register{
+								IntLiteral(8),
 								StringLiteral("fizzbuzz"),
 							},
 							},
@@ -735,6 +737,7 @@ func TestIRGenFizzBuzz(t *testing.T) {
 								},
 								Body: []Opcode{
 									CALL{FName: "PrintString", Args: []Register{
+										IntLiteral(4),
 										StringLiteral("buzz"),
 									},
 									},
@@ -759,6 +762,7 @@ func TestIRGenFizzBuzz(t *testing.T) {
 										},
 										Body: []Opcode{
 											CALL{FName: "PrintString", Args: []Register{
+												IntLiteral(4),
 												StringLiteral("fizz"),
 											},
 											},
@@ -776,6 +780,7 @@ func TestIRGenFizzBuzz(t *testing.T) {
 					},
 				},
 				CALL{FName: "PrintString", Args: []Register{
+					IntLiteral(1),
 					StringLiteral(`\n`),
 				},
 				},
@@ -899,6 +904,7 @@ func TestIRGenSomeMathStatement(t *testing.T) {
 			Dst: LocalValue(4),
 		},
 		CALL{FName: "PrintString", Args: []Register{
+			IntLiteral(5),
 			StringLiteral(`Add: `),
 		},
 		},
@@ -907,11 +913,13 @@ func TestIRGenSomeMathStatement(t *testing.T) {
 		},
 		},
 		CALL{FName: "PrintString", Args: []Register{
+			IntLiteral(1),
 			StringLiteral(`\n`),
 		},
 		},
 
 		CALL{FName: "PrintString", Args: []Register{
+			IntLiteral(5),
 			StringLiteral(`Sub: `),
 		},
 		},
@@ -920,11 +928,13 @@ func TestIRGenSomeMathStatement(t *testing.T) {
 		},
 		},
 		CALL{FName: "PrintString", Args: []Register{
+			IntLiteral(1),
 			StringLiteral(`\n`),
 		},
 		},
 
 		CALL{FName: "PrintString", Args: []Register{
+			IntLiteral(5),
 			StringLiteral(`Mul: `),
 		},
 		},
@@ -933,11 +943,13 @@ func TestIRGenSomeMathStatement(t *testing.T) {
 		},
 		},
 		CALL{FName: "PrintString", Args: []Register{
+			IntLiteral(1),
 			StringLiteral(`\n`),
 		},
 		},
 
 		CALL{FName: "PrintString", Args: []Register{
+			IntLiteral(5),
 			StringLiteral(`Div: `),
 		},
 		},
@@ -946,11 +958,13 @@ func TestIRGenSomeMathStatement(t *testing.T) {
 		},
 		},
 		CALL{FName: "PrintString", Args: []Register{
+			IntLiteral(1),
 			StringLiteral(`\n`),
 		},
 		},
 
 		CALL{FName: "PrintString", Args: []Register{
+			IntLiteral(9),
 			StringLiteral(`Complex: `),
 		},
 		},
@@ -959,6 +973,7 @@ func TestIRGenSomeMathStatement(t *testing.T) {
 		},
 		},
 		CALL{FName: "PrintString", Args: []Register{
+			IntLiteral(1),
 			StringLiteral(`\n`),
 		},
 		},
@@ -1331,7 +1346,7 @@ func TestIRGenFibonacci(t *testing.T) {
 		},
 		CALL{
 			FName: "PrintString",
-			Args:  []Register{StringLiteral(`\n`)},
+			Args:  []Register{IntLiteral(1), StringLiteral(`\n`)},
 		},
 		CALL{
 			FName: "fib_rec",
@@ -1423,6 +1438,7 @@ func TestIREnumType(t *testing.T) {
 					CALL{
 						FName: "PrintString",
 						Args: []Register{
+							IntLiteral(8),
 							StringLiteral(`I am A!\n`),
 						},
 					},
@@ -1444,6 +1460,7 @@ func TestIREnumType(t *testing.T) {
 					CALL{
 						FName: "PrintString",
 						Args: []Register{
+							IntLiteral(8),
 							StringLiteral(`I am B!\n`),
 						},
 					},
@@ -1548,6 +1565,7 @@ func TestIRGenericEnumType(t *testing.T) {
 					CALL{
 						FName: "PrintString",
 						Args: []Register{
+							IntLiteral(14),
 							StringLiteral(`I am nothing!\n`),
 						},
 					},
@@ -1574,6 +1592,7 @@ func TestIRGenericEnumType(t *testing.T) {
 					CALL{
 						FName: "PrintString",
 						Args: []Register{
+							IntLiteral(1),
 							StringLiteral(`\n`),
 						},
 					},
@@ -1609,6 +1628,7 @@ func TestIRGenericEnumType(t *testing.T) {
 					CALL{
 						FName: "PrintString",
 						Args: []Register{
+							IntLiteral(14),
 							StringLiteral(`I am nothing!\n`),
 						},
 					},
@@ -1635,6 +1655,7 @@ func TestIRGenericEnumType(t *testing.T) {
 					CALL{
 						FName: "PrintString",
 						Args: []Register{
+							IntLiteral(1),
 							StringLiteral(`\n`),
 						},
 					},
@@ -1761,6 +1782,7 @@ func TestIRMatchParam2(t *testing.T) {
 	}
 	expected := []Opcode{
 		CALL{FName: "PrintString", Args: []Register{
+			IntLiteral(1),
 			StringLiteral("x"),
 		},
 		},
@@ -2066,7 +2088,7 @@ func TestIRArrayMutation(t *testing.T) {
 				},
 			},
 		},
-		CALL{FName: "PrintString", Args: []Register{StringLiteral(`\n`)}},
+		CALL{FName: "PrintString", Args: []Register{IntLiteral(1), StringLiteral(`\n`)}},
 		MOV{
 			Src: IntLiteral(2),
 			Dst: Offset{
@@ -2099,7 +2121,7 @@ func TestIRArrayMutation(t *testing.T) {
 				},
 			},
 		},
-		CALL{FName: "PrintString", Args: []Register{StringLiteral(`\n`)}},
+		CALL{FName: "PrintString", Args: []Register{IntLiteral(1), StringLiteral(`\n`)}},
 		CALL{
 			FName: "PrintInt",
 			Args: []Register{
@@ -2161,7 +2183,7 @@ func TestIRReferenceVariable(t *testing.T) {
 			Dst: LocalValue(0),
 		},
 		CALL{FName: "PrintInt", Args: []Register{LocalValue(0)}},
-		CALL{FName: "PrintString", Args: []Register{StringLiteral(`\n`)}},
+		CALL{FName: "PrintString", Args: []Register{IntLiteral(1), StringLiteral(`\n`)}},
 		CALL{
 			FName: "changer",
 			Args: []Register{
@@ -2174,7 +2196,7 @@ func TestIRReferenceVariable(t *testing.T) {
 			Dst: LocalValue(1),
 		},
 		CALL{FName: "PrintInt", Args: []Register{LocalValue(0)}},
-		CALL{FName: "PrintString", Args: []Register{StringLiteral(`\n`)}},
+		CALL{FName: "PrintString", Args: []Register{IntLiteral(1), StringLiteral(`\n`)}},
 		CALL{FName: "PrintInt", Args: []Register{LocalValue(1)}},
 	}
 	i, _, _, err = Generate(as[1], ti, c, nil)
@@ -2352,7 +2374,7 @@ func TestIRSimpleSliceMutation(t *testing.T) {
 				},
 			},
 		},
-		CALL{FName: "PrintString", Args: []Register{StringLiteral(`\n`)}},
+		CALL{FName: "PrintString", Args: []Register{IntLiteral(1), StringLiteral(`\n`)}},
 		MOV{
 			Src: IntLiteral(2),
 			Dst: Offset{
@@ -2383,7 +2405,7 @@ func TestIRSimpleSliceMutation(t *testing.T) {
 				},
 			},
 		},
-		CALL{FName: "PrintString", Args: []Register{StringLiteral(`\n`)}},
+		CALL{FName: "PrintString", Args: []Register{IntLiteral(1), StringLiteral(`\n`)}},
 		CALL{
 			FName: "PrintInt",
 			Args: []Register{
@@ -2481,6 +2503,7 @@ func TestIRWriteSyscall(t *testing.T) {
 			FName: "Write",
 			Args: []Register{
 				IntLiteral(1),
+				IntLiteral(7),
 				StringLiteral("Stdout!"),
 			},
 		},
@@ -2488,6 +2511,7 @@ func TestIRWriteSyscall(t *testing.T) {
 			FName: "Write",
 			Args: []Register{
 				IntLiteral(2),
+				IntLiteral(7),
 				StringLiteral("Stderr!"),
 			},
 		},
@@ -2512,6 +2536,7 @@ func TestIRReadSyscall(t *testing.T) {
 		CALL{
 			FName: "Open",
 			Args: []Register{
+				IntLiteral(7),
 				StringLiteral("foo.txt"),
 			},
 		},
@@ -2611,6 +2636,7 @@ func TestIRIfElseMatch(t *testing.T) {
 					CALL{
 						FName: "PrintString",
 						Args: []Register{
+							IntLiteral(17),
 							StringLiteral(`x is less than 3\n`),
 						},
 					},
@@ -2632,6 +2658,7 @@ func TestIRIfElseMatch(t *testing.T) {
 					CALL{
 						FName: "PrintString",
 						Args: []Register{
+							IntLiteral(20),
 							StringLiteral(`x is greater than 3\n`),
 						},
 					},
@@ -2653,6 +2680,7 @@ func TestIRIfElseMatch(t *testing.T) {
 					CALL{
 						FName: "PrintString",
 						Args: []Register{
+							IntLiteral(17),
 							StringLiteral(`x is less than 4\n`),
 						},
 					},
@@ -2745,6 +2773,7 @@ func TestIREcho(t *testing.T) {
 							CALL{
 								FName: "PrintString",
 								Args: []Register{
+									IntLiteral(1),
 									StringLiteral(" "),
 								},
 							},
@@ -2756,6 +2785,7 @@ func TestIREcho(t *testing.T) {
 		CALL{
 			FName: "PrintString",
 			Args: []Register{
+				IntLiteral(1),
 				StringLiteral(`\n`),
 			},
 		},
@@ -2844,7 +2874,7 @@ func TestArrayIndex(t *testing.T) {
 		},
 		CALL{
 			FName: "PrintString",
-			Args:  []Register{StringLiteral(`\n`)},
+			Args:  []Register{IntLiteral(1), StringLiteral(`\n`)},
 		},
 		// Convert x+1 offset from index into byte offset
 		ADD{
@@ -2936,7 +2966,7 @@ func TestIndexAssignment(t *testing.T) {
 		CALL{FName: "PrintInt", Args: []Register{
 			LocalValue(4),
 		}},
-		CALL{FName: "PrintString", Args: []Register{StringLiteral(`\n`)}},
+		CALL{FName: "PrintString", Args: []Register{IntLiteral(1), StringLiteral(`\n`)}},
 		CALL{FName: "PrintInt", Args: []Register{LocalValue(5)}},
 	}
 
@@ -3037,7 +3067,7 @@ func TestIndexedAddition(t *testing.T) {
 			Dst: LocalValue(5),
 		},
 		CALL{FName: "PrintInt", Args: []Register{LocalValue(4)}},
-		CALL{FName: "PrintString", Args: []Register{StringLiteral(`\n`)}},
+		CALL{FName: "PrintString", Args: []Register{IntLiteral(1), StringLiteral(`\n`)}},
 		CALL{FName: "PrintInt", Args: []Register{LocalValue(5)}},
 	}
 
@@ -3090,7 +3120,7 @@ func TestStringArray(t *testing.T) {
 				},
 			},
 		},
-		CALL{FName: "PrintString", Args: []Register{StringLiteral(`\n`)}},
+		CALL{FName: "PrintString", Args: []Register{IntLiteral(1), StringLiteral(`\n`)}},
 		CALL{
 			FName: "PrintString",
 			Args: []Register{
@@ -3223,6 +3253,7 @@ func TestPreEcho(t *testing.T) {
 							CALL{
 								FName: "PrintString",
 								Args: []Register{
+									IntLiteral(1),
 									StringLiteral(" "),
 								},
 							},
@@ -3231,7 +3262,7 @@ func TestPreEcho(t *testing.T) {
 				},
 			},
 		},
-		CALL{FName: "PrintString", Args: []Register{StringLiteral(`\n`)}},
+		CALL{FName: "PrintString", Args: []Register{IntLiteral(1), StringLiteral(`\n`)}},
 	}
 
 	if err := compareIR(i.Body, expected); err != nil {
@@ -3320,6 +3351,7 @@ func TestPreEcho2(t *testing.T) {
 							CALL{
 								FName: "PrintString",
 								Args: []Register{
+									IntLiteral(1),
 									StringLiteral(" "),
 								},
 							},
@@ -3328,7 +3360,7 @@ func TestPreEcho2(t *testing.T) {
 				},
 			},
 		},
-		CALL{FName: "PrintString", Args: []Register{StringLiteral(`\n`)}},
+		CALL{FName: "PrintString", Args: []Register{IntLiteral(1), StringLiteral(`\n`)}},
 	}
 
 	if err := compareIR(i.Body, expected); err != nil {

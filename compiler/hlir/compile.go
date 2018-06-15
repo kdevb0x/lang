@@ -154,11 +154,21 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]Opcode
 				ops = append(ops, arg...)
 				argRegs = append(argRegs, r[0])
 			}
-		case ast.StringLiteral, ast.IntLiteral, ast.BoolLiteral:
+		case ast.StringLiteral:
+			// Decompose strings into len, literal pairs so we don't need special cases in
+			// other IRs
+			argRegs = append(argRegs, IntLiteral(len(strings.Replace(string(a), `\n`, "\n", -1))))
+			argRegs = append(argRegs, getRegister(a, context))
+		case ast.IntLiteral, ast.BoolLiteral:
 			argRegs = append(argRegs, getRegister(a, context))
 		case ast.Cast:
 			if ast.IsLiteral(a.Val) {
-				argRegs = append(argRegs, getRegister(a.Val, context))
+				if s, ok := a.Val.(ast.StringLiteral); ok {
+					argRegs = append(argRegs, IntLiteral(len(strings.Replace(string(s), `\n`, "\n", -1))))
+					argRegs = append(argRegs, getRegister(s, context))
+				} else {
+					argRegs = append(argRegs, getRegister(a.Val, context))
+				}
 			} else {
 				switch a.Typ.(type) {
 				case ast.SliceType:
