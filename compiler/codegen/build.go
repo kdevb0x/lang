@@ -82,7 +82,7 @@ func BuildProgram(d string, src io.Reader) (string, error) {
 	enums := make(hlir.EnumMap)
 	for _, v := range prog {
 		switch v.(type) {
-		case ast.SumTypeDefn:
+		case ast.EnumTypeDefn:
 			_, opts, err := mlir.Generate(v, ti, c, enums)
 			if err != nil {
 				return "", err
@@ -107,7 +107,7 @@ func BuildProgram(d string, src io.Reader) (string, error) {
 			if err := Compile(f, fnc); err != nil {
 				return "", err
 			}
-		case ast.TypeDefn, ast.SumTypeDefn:
+		case ast.TypeDefn, ast.EnumTypeDefn:
 			// No IR for types, we've already verified them.
 		default:
 			panic("Unhandled AST node type for code generation")

@@ -22,7 +22,7 @@ func ParseFromReader(src io.Reader) (*Context, error) {
 	// Generate all valid types
 	for _, v := range as {
 		switch v.(type) {
-		case ast.SumTypeDefn:
+		case ast.EnumTypeDefn:
 			_, newenums, _, err := hlir.Generate(v, ti, c, enums)
 			if err != nil {
 				return nil, err

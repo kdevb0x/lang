@@ -7,7 +7,7 @@ import (
 	"github.com/driusan/lang/parser/token"
 )
 
-func TestConsumeSumTypeList(t *testing.T) {
+func TestConsumeEnumTypeList(t *testing.T) {
 	cases := []struct {
 		Code      string
 		Expected  []EnumOption
@@ -36,7 +36,7 @@ func TestConsumeSumTypeList(t *testing.T) {
 		tokens, err := token.Tokenize(strings.NewReader(tc.Code))
 		tokens = stripWhitespace(tokens)
 
-		n, value, err := consumeSumTypeList(0, tokens, &Context{})
+		n, value, err := consumeEnumTypeList(0, tokens, &Context{})
 		if err != nil {
 			t.Fatal(err)
 		}

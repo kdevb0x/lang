@@ -135,26 +135,26 @@ func (t TypeDefn) PrettyPrint(lvl int) string {
 	panic("Not implemented")
 }
 
-type SumTypeDefn struct {
+type EnumTypeDefn struct {
 	Name       Type
 	Options    []EnumOption
 	Parameters []Type
 }
 
-func (t SumTypeDefn) Node() Node {
+func (t EnumTypeDefn) Node() Node {
 	return t
 }
 
-func (t SumTypeDefn) String() string {
-	return fmt.Sprintf("SumTypeDefn{%v, Options: %v}", t.Name, t.Options)
+func (t EnumTypeDefn) String() string {
+	return fmt.Sprintf("EnumTypeDefn{%v, Options: %v}", t.Name, t.Options)
 
 }
 
-func (t SumTypeDefn) TypeDefn() TypeDef {
+func (t EnumTypeDefn) TypeDefn() TypeDef {
 	return t
 }
 
-func (t SumTypeDefn) PrettyPrint(lvl int) string {
+func (t EnumTypeDefn) PrettyPrint(lvl int) string {
 	panic("Not implemented")
 }
 

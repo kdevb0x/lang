@@ -24,7 +24,7 @@ func topLevelNode(T token.Token) (Node, error) {
 		case "type":
 			return TypeDefn{}, nil
 		case "data":
-			return SumTypeDefn{}, nil
+			return EnumTypeDefn{}, nil
 		}
 		return nil, fmt.Errorf("Invalid top level keyword: %v", t)
 	default:
@@ -167,7 +167,7 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, Callables, error)
 				panic("Unhandled concrete type: " + string(c.Types[typeName].ConcreteType.Type()))
 			}
 			i += 2
-		case SumTypeDefn:
+		case EnumTypeDefn:
 			n, typeNames, err := consumeIdentifiersUntilEquals(i+1, tokens, &c)
 			if err != nil {
 				return nil, nil, nil, err
@@ -175,7 +175,7 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, Callables, error)
 			i += n + 1
 
 			cur.Name = TypeLiteral(typeNames[0].String())
-			n, options, err := consumeSumTypeList(i+1, tokens, &c)
+			n, options, err := consumeEnumTypeList(i+1, tokens, &c)
 			if err != nil {
 				return nil, nil, nil, err
 			}
@@ -248,7 +248,7 @@ func extractPrototypes(tokens []token.Token, c *Context) error {
 			i++
 			cur.ConcreteType = TypeLiteral(tokens[i].String())
 			c.Types[cur.Name.Type()] = cur
-		case SumTypeDefn:
+		case EnumTypeDefn:
 			n, typeNames, err := consumeIdentifiersUntilEquals(i+1, tokens, c)
 			if err != nil {
 				return err
@@ -257,7 +257,7 @@ func extractPrototypes(tokens []token.Token, c *Context) error {
 
 			cur.Name = TypeLiteral(typeNames[0].String())
 
-			n, _, err = consumeSumTypeList(i+1, tokens, c)
+			n, _, err = consumeEnumTypeList(i+1, tokens, c)
 			if err != nil {
 				return err
 			}
@@ -308,7 +308,7 @@ func extractPrototypes(tokens []token.Token, c *Context) error {
 			i++
 			cur.ConcreteType = TypeLiteral(tokens[i].String())
 			c.Types[cur.Name.Type()] = cur
-		case SumTypeDefn:
+		case EnumTypeDefn:
 			n, typeNames, err := consumeIdentifiersUntilEquals(i+1, tokens, c)
 			if err != nil {
 				return err
@@ -320,7 +320,7 @@ func extractPrototypes(tokens []token.Token, c *Context) error {
 			for _, param := range typeNames[1:] {
 				pv = append(pv, TypeLiteral(param.String()))
 			}
-			n, options, err := consumeSumTypeList(i+1, tokens, c)
+			n, options, err := consumeEnumTypeList(i+1, tokens, c)
 			if err != nil {
 				return err
 			}
@@ -933,7 +933,7 @@ func consumeIdentifiersUntilEquals(start int, tokens []token.Token, c *Context) 
 	return 0, nil, fmt.Errorf("Could not parse identifiers")
 }
 
-func consumeSumTypeList(start int, tokens []token.Token, c *Context) (int, []EnumOption, error) {
+func consumeEnumTypeList(start int, tokens []token.Token, c *Context) (int, []EnumOption, error) {
 	var vals []EnumOption
 	var val EnumOption
 	for i := start; i < len(tokens); i++ {

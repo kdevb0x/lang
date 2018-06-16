@@ -190,8 +190,8 @@ func compare(v1, v2 Node) bool {
 		}
 		return compare(v1a.Condition, v2a.Condition) && compare(v1a.Body, v2a.Body) && compare(v1a.Else, v2a.Else)
 	}
-	if v1a, ok := v1.(SumTypeDefn); ok {
-		v2a, ok := v2.(SumTypeDefn)
+	if v1a, ok := v1.(EnumTypeDefn); ok {
+		v2a, ok := v2.(EnumTypeDefn)
 		if !ok {
 			return false
 		}
@@ -1954,7 +1954,7 @@ func TestEnumType(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		SumTypeDefn{
+		EnumTypeDefn{
 			TypeLiteral("Foo"),
 			[]EnumOption{
 				EnumOption{"A", nil, TypeLiteral("Foo")},
@@ -2031,7 +2031,7 @@ func TestEnumTypeInferred(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		SumTypeDefn{
+		EnumTypeDefn{
 			TypeLiteral("Foo"),
 			[]EnumOption{
 				EnumOption{"A", nil, TypeLiteral("Foo")},
@@ -2202,7 +2202,7 @@ func TestGenericEnumType(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		SumTypeDefn{
+		EnumTypeDefn{
 			TypeLiteral("Maybe"),
 			[]EnumOption{
 				EnumOption{"Nothing", nil, TypeLiteral("Maybe")},
@@ -2376,7 +2376,7 @@ func TestMatchParam(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		SumTypeDefn{
+		EnumTypeDefn{
 			TypeLiteral("Maybe"),
 			[]EnumOption{
 				EnumOption{"Nothing", nil, TypeLiteral("Maybe")},
@@ -2473,7 +2473,7 @@ func TestMatchParam2(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []Node{
-		SumTypeDefn{
+		EnumTypeDefn{
 			TypeLiteral("Maybe"),
 			[]EnumOption{
 				EnumOption{"Nothing", nil, TypeLiteral("Maybe")},

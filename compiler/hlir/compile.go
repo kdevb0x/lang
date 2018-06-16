@@ -111,7 +111,7 @@ func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callabl
 			return Func{}, nil, nil, err
 		}
 		return Func{Name: n.Name, Body: body, NumArgs: uint(nargs), NumLocals: uint(context.numLocals)}, enums, context.registerInfo, nil
-	case ast.SumTypeDefn:
+	case ast.EnumTypeDefn:
 		e := make(EnumMap)
 		for i, v := range n.Options {
 			e[v.Constructor] = i
