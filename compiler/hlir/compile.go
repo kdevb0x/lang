@@ -769,6 +769,7 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 			ops = append(ops, ASSERT{
 				Predicate: Condition{pbody, pregister[0]},
 				Message:   StringLiteral(s.Message),
+				Node:      s.Predicate,
 			})
 
 		default:

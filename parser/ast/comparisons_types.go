@@ -27,6 +27,10 @@ func (n EqualityComparison) String() string {
 	return fmt.Sprintf("EqualityComparison{%v == %v}", n.Left, n.Right)
 }
 
+func (c EqualityComparison) PrettyPrint(lvl int) string {
+	return fmt.Sprintf("%v%v == %v", nTabs(lvl), c.Left.PrettyPrint(0), c.Right.PrettyPrint(0))
+}
+
 type NotEqualsComparison struct {
 	Left, Right Value
 }
@@ -45,6 +49,10 @@ func (n NotEqualsComparison) Node() Node {
 
 func (n NotEqualsComparison) String() string {
 	return fmt.Sprintf("NotEqualsComparison{%v == %v}", n.Left, n.Right)
+}
+
+func (n NotEqualsComparison) PrettyPrint(lvl int) string {
+	return fmt.Sprintf("%v%v != %v", nTabs(lvl), n.Left.PrettyPrint(0), n.Right.PrettyPrint(0))
 }
 
 func (c NotEqualsComparison) Type() string {
@@ -76,6 +84,9 @@ func (c GreaterComparison) Type() string {
 func (c GreaterComparison) String() string {
 	return fmt.Sprintf("GreaterComparison{%v, %v}", c.Left, c.Right)
 }
+func (c GreaterComparison) PrettyPrint(lvl int) string {
+	return fmt.Sprintf("%v%v > %v", nTabs(lvl), c.Left.PrettyPrint(0), c.Right.PrettyPrint(0))
+}
 
 type GreaterOrEqualComparison struct {
 	Left, Right Value
@@ -99,6 +110,10 @@ func (n GreaterOrEqualComparison) Value() interface{} {
 	return n.BoolValue()
 }
 
+func (n GreaterOrEqualComparison) PrettyPrint(lvl int) string {
+	return fmt.Sprintf("%v%v >= %v", nTabs(lvl), n.Left.PrettyPrint(0), n.Right.PrettyPrint(0))
+}
+
 type LessThanOrEqualComparison struct {
 	Left, Right Value
 }
@@ -119,6 +134,10 @@ func (gc LessThanOrEqualComparison) BoolValue() bool {
 
 func (c LessThanOrEqualComparison) Type() string {
 	return "bool"
+}
+
+func (n LessThanOrEqualComparison) PrettyPrint(lvl int) string {
+	return fmt.Sprintf("%v%v <= %v", nTabs(lvl), n.Left.PrettyPrint(0), n.Right.PrettyPrint(0))
 }
 
 type LessThanComparison struct {
@@ -145,4 +164,8 @@ func (c LessThanComparison) Type() string {
 
 func (c LessThanComparison) String() string {
 	return fmt.Sprintf("LessThanComparison{%v, %v}", c.Left, c.Right)
+}
+
+func (n LessThanComparison) PrettyPrint(lvl int) string {
+	return fmt.Sprintf("%v%v < %v", nTabs(lvl), n.Left.PrettyPrint(0), n.Right.PrettyPrint(0))
 }

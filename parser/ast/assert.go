@@ -19,6 +19,10 @@ func (a Assertion) String() string {
 	return fmt.Sprintf("Assertion{ %v }", a.Predicate)
 }
 
+func (a Assertion) PrettyPrint(lvl int) string {
+	panic("Not implemented")
+}
+
 func consumeAssertStmt(start int, tokens []token.Token, c *Context) (int, Assertion, error) {
 	a := Assertion{}
 	if tokens[start] != token.Keyword("assert") {

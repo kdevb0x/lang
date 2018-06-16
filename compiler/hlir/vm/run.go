@@ -404,7 +404,7 @@ func runOp(op hlir.Opcode, ctx *Context, allowed []ast.Effect) (stop bool, err e
 	case hlir.ASSERT:
 		//fmt.Printf("Before: %v\n", ctx)
 		if !evalCondition(o.Predicate, ctx, []ast.Effect{}) {
-			err := assertionError(o.Message)
+			err := assertionError{string(o.Message), o.Node}
 			ctx.writeStderr(err.Error())
 			return true, err
 		}
@@ -530,11 +530,14 @@ func dereferencePointer(r hlir.Register, ctx *Context) (hlir.Register, *Context)
 	}
 }
 
-type assertionError string
+type assertionError struct {
+	Message string
+	src     ast.Node
+}
 
 func (a assertionError) Error() string {
-	if a == "" {
-		return fmt.Sprintf("assert failed")
+	if a.Message == "" {
+		return fmt.Sprintf("assert %v failed", a.src.PrettyPrint(0))
 	}
-	return fmt.Sprintf("assert failed: %s", string(a))
+	return fmt.Sprintf("assert %v failed: %s", a.src.PrettyPrint(0), string(a.Message))
 }

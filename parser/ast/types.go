@@ -39,6 +39,10 @@ func (eo EnumOption) String() string {
 	return fmt.Sprintf("EnumOption{%v, Parameters: %v ParentType: %v}", eo.Constructor, eo.Parameters, eo.ParentType)
 }
 
+func (e EnumOption) PrettyPrint(lvl int) string {
+	panic("Not implemented")
+}
+
 type EnumValue struct {
 	Constructor EnumOption
 	Parameters  []Value
@@ -61,6 +65,10 @@ func (ev EnumValue) Type() string {
 
 func (ev EnumValue) String() string {
 	return fmt.Sprintf("EnumValue{%v, Parameters: %v}", ev.Constructor, ev.Parameters)
+}
+
+func (e EnumValue) PrettyPrint(lvl int) string {
+	panic("Not implemented")
 }
 
 type VarWithType struct {
@@ -95,8 +103,13 @@ func (v VarWithType) String() string {
 	return fmt.Sprintf("VarWithType{%v %v %v}", v.Name, v.Typ, v.Reference)
 }
 
+func (v VarWithType) PrettyPrint(lvl int) string {
+	return fmt.Sprintf("%v%v", nTabs(lvl), v.Name)
+}
+
 type Node interface {
 	Node() Node
+	PrettyPrint(lvl int) string
 }
 
 type MutStmt struct {
@@ -118,6 +131,10 @@ func (t TypeDefn) TypeDefn() TypeDef {
 	return t
 }
 
+func (t TypeDefn) PrettyPrint(lvl int) string {
+	panic("Not implemented")
+}
+
 type SumTypeDefn struct {
 	Name       Type
 	Options    []EnumOption
@@ -137,8 +154,15 @@ func (t SumTypeDefn) TypeDefn() TypeDef {
 	return t
 }
 
+func (t SumTypeDefn) PrettyPrint(lvl int) string {
+	panic("Not implemented")
+}
+
 func (m MutStmt) Type() string {
 	return m.Var.Type()
+}
+func (m MutStmt) PrettyPrint(lvl int) string {
+	panic("Not implemented")
 }
 
 type LetStmt struct {
@@ -162,12 +186,20 @@ func (ls LetStmt) Value() interface{} {
 	return ls.Val.Value()
 }
 
+func (ls LetStmt) PrettyPrint(lvl int) string {
+	panic("Not implemented")
+}
+
 type BlockStmt struct {
 	Stmts []Node
 }
 
 func (b BlockStmt) Node() Node {
 	return b
+}
+
+func (b BlockStmt) PrettyPrint(lvl int) string {
+	panic("Not implemented")
 }
 
 func (b BlockStmt) String() string {
@@ -211,6 +243,10 @@ func (ao AssignmentOperator) Node() Node {
 	return ao
 }
 
+func (ao AssignmentOperator) PrettyPrint(lvl int) string {
+	panic("Not implemented")
+}
+
 type AdditionOperator struct {
 	Left, Right Value
 }
@@ -231,6 +267,10 @@ func (ao AdditionOperator) Type() string {
 	return ao.Left.Type()
 }
 
+func (o AdditionOperator) PrettyPrint(lvl int) string {
+	return fmt.Sprintf("%v%v + %v", nTabs(lvl), o.Left.PrettyPrint(0), o.Right.PrettyPrint(0))
+}
+
 type SubtractionOperator struct {
 	Left, Right Value
 }
@@ -249,6 +289,10 @@ func (o SubtractionOperator) String() string {
 
 func (o SubtractionOperator) Type() string {
 	return o.Left.Type()
+}
+
+func (o SubtractionOperator) PrettyPrint(lvl int) string {
+	return fmt.Sprintf("%v%v - %v", nTabs(lvl), o.Left.PrettyPrint(0), o.Right.PrettyPrint(0))
 }
 
 type MulOperator struct {
@@ -274,6 +318,10 @@ func (o MulOperator) Type() string {
 	return o.Right.Type()
 }
 
+func (o MulOperator) PrettyPrint(lvl int) string {
+	return fmt.Sprintf("%v%v * %v", nTabs(lvl), o.Left.PrettyPrint(0), o.Right.PrettyPrint(0))
+}
+
 type DivOperator struct {
 	Left, Right Value
 }
@@ -291,6 +339,10 @@ func (o DivOperator) String() string {
 
 func (o DivOperator) Type() string {
 	return o.Left.Type()
+}
+
+func (o DivOperator) PrettyPrint(lvl int) string {
+	return fmt.Sprintf("%v%v / %v", nTabs(lvl), o.Left.PrettyPrint(0), o.Right.PrettyPrint(0))
 }
 
 type ModOperator struct {
@@ -312,6 +364,9 @@ func (m ModOperator) String() string {
 func (m ModOperator) Type() string {
 	return m.Left.Type()
 }
+func (o ModOperator) PrettyPrint(lvl int) string {
+	return fmt.Sprintf("%v%v %c %v", nTabs(lvl), o.Left.PrettyPrint(0), '%', o.Right.PrettyPrint(0))
+}
 
 type Variable string
 
@@ -324,6 +379,10 @@ func (v Variable) Node() Node {
 	return v
 }
 
+func (v Variable) PrettyPrint(lvl int) string {
+	return nTabs(lvl) + string(v)
+}
+
 type TypeLiteral string
 
 func (tl TypeLiteral) Type() string {
@@ -332,6 +391,10 @@ func (tl TypeLiteral) Type() string {
 
 func (tl TypeLiteral) Node() Node {
 	return tl
+}
+
+func (tl TypeLiteral) PrettyPrint(lvl int) string {
+	return nTabs(lvl) + string(tl)
 }
 
 type Brackets struct {
@@ -352,6 +415,10 @@ func (b Brackets) String() string {
 	return fmt.Sprintf("Brackets{%v}", b.Val)
 }
 
+func (b Brackets) PrettyPrint(lvl int) string {
+	return fmt.Sprintf("%v(%v)", nTabs(lvl), b.Val.PrettyPrint(0))
+}
+
 type Cast struct {
 	Val Value
 	Typ Type
@@ -366,4 +433,8 @@ func (c Cast) Node() Node {
 
 func (c Cast) Type() string {
 	return c.Typ.Type()
+}
+
+func (c Cast) PrettyPrint(lvl int) string {
+	return fmt.Sprintf("%vcast (%v) as %v", nTabs(lvl), c.Val.PrettyPrint(0), c.Typ.PrettyPrint(0))
 }

@@ -50,3 +50,7 @@ func (fd FuncDecl) Type() string {
 func (fd FuncDecl) ReturnTuple() Tuple {
 	return fd.Return
 }
+
+func (fd FuncDecl) PrettyPrint(lvl int) string {
+	panic("Unimplemented")
+}

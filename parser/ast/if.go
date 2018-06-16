@@ -20,6 +20,10 @@ func (i IfStmt) Node() Node {
 	return i
 }
 
+func (i IfStmt) PrettyPrint(lvl int) string {
+	panic("Not implemented")
+}
+
 func consumeIfStmt(start int, tokens []token.Token, c *Context) (int, IfStmt, error) {
 	l := IfStmt{}
 

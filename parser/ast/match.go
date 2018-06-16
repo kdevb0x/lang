@@ -22,6 +22,10 @@ func (i MatchCase) String() string {
 
 }
 
+func (i MatchCase) PrettyPrint(lvl int) string {
+	panic("Not implemented")
+}
+
 type MatchStmt struct {
 	Condition Value
 	Cases     []MatchCase
@@ -33,6 +37,10 @@ func (i MatchStmt) String() string {
 
 func (i MatchStmt) Node() Node {
 	return i
+}
+
+func (i MatchStmt) PrettyPrint(lvl int) string {
+	panic("Not implemented")
 }
 
 func consumeMatchStmt(start int, tokens []token.Token, c *Context) (int, MatchStmt, error) {

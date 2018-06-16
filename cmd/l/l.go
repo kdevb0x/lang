@@ -66,7 +66,7 @@ func main() {
 		switch args[0] {
 		case "test":
 			if err := getVMAndRunTests(src); err != nil {
-				log.Fatal(err)
+				fmt.Fprintln(os.Stderr, err)
 			}
 		default:
 			// And build the program.

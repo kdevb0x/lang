@@ -27,3 +27,16 @@ func (f FuncCall) Type() string {
 	}
 	return f.Returns[0].Type()
 }
+
+func (f FuncCall) PrettyPrint(lvl int) string {
+	ret := fmt.Sprintf("%v%v(", nTabs(lvl), f.Name)
+	for i, v := range f.UserArgs {
+		if i == 0 {
+			ret += v.PrettyPrint(0)
+		} else {
+			ret += ", " + v.PrettyPrint(0)
+		}
+
+	}
+	return ret + ")"
+}

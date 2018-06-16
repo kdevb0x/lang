@@ -2,6 +2,8 @@ package hlir
 
 import (
 	"fmt"
+
+	"github.com/driusan/lang/parser/ast"
 )
 
 type Opcode interface {
@@ -356,6 +358,10 @@ func (o LTE) ModifiedRegisters() []Register {
 type ASSERT struct {
 	Predicate Condition
 	Message   StringLiteral
+
+	// AST Node that generated the predicate. Primarily used for generating
+	// the error message when it fails.
+	Node ast.Node
 }
 
 func (o ASSERT) Registers() []Register {

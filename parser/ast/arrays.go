@@ -20,6 +20,9 @@ func (a ArrayType) Node() Node {
 func (a ArrayType) String() string {
 	return fmt.Sprintf("ArrayType{[%d]%v}", a.Size, a.Base.Type())
 }
+func (a ArrayType) PrettyPrint(lvl int) string {
+	return fmt.Sprintf("%v[%d]%v", nTabs(lvl), a.Size, a.Base.Type())
+}
 
 type ArrayLiteral []Value
 
@@ -37,6 +40,10 @@ func (v ArrayLiteral) Value() interface{} {
 
 func (v ArrayLiteral) String() string {
 	return fmt.Sprintf("ArrayLiteral{[%v]%v (%v)}", len(v), v[0].Type(), []Value(v))
+}
+
+func (v ArrayLiteral) PrettyPrint(lvl int) string {
+	panic("PrettyPrint not implemented")
 }
 
 type ArrayValue struct {
@@ -70,12 +77,19 @@ func (v ArrayValue) CanAssign() bool {
 	return true
 }
 
+func (v ArrayValue) PrettyPrint(lvl int) string {
+	return fmt.Sprintf("%v%v[%v]", nTabs(lvl), v.Base.Name, v.Index.PrettyPrint(0))
+}
+
 type SliceType struct {
 	Base Type
 }
 
 func (a SliceType) Type() string {
 	return fmt.Sprintf("[]%v", a.Base.Type())
+}
+func (a SliceType) PrettyPrint(lvl int) string {
+	return fmt.Sprintf("%v[]%v", nTabs(lvl), a.Base.Type())
 }
 
 func (a SliceType) Node() Node {

@@ -51,7 +51,7 @@ func compileAndTestWithArgs(t *testing.T, prog string, args []string, estdout, e
 		t.Error(err)
 	}
 	if string(stde) != estderr {
-		t.Errorf("Unexpected stdeut: got %s want %s", stde, estderr)
+		t.Errorf("Unexpected stderr: got %s want %s", stde, estderr)
 	}
 }
 
@@ -636,11 +636,11 @@ func TestEmptyReturn(t *testing.T) {
 }
 
 func TestAssertionFail(t *testing.T) {
-	compileAndTest(t, sampleprograms.AssertionFail, "", "assert failed")
+	compileAndTest(t, sampleprograms.AssertionFail, "", "assert false failed")
 }
 
 func TestAssertionFailWithMessage(t *testing.T) {
-	compileAndTest(t, sampleprograms.AssertionFailWithMessage, "", "assert failed: This always fails")
+	compileAndTest(t, sampleprograms.AssertionFailWithMessage, "", "assert false failed: This always fails")
 }
 
 func TestAssertionPass(t *testing.T) {
@@ -652,5 +652,5 @@ func TestAssertionPassWithMessage(t *testing.T) {
 }
 
 func TestAssertionFailWithVariable(t *testing.T) {
-	compileAndTest(t, sampleprograms.AssertionFailWithVariable, "", "assert failed")
+	compileAndTest(t, sampleprograms.AssertionFailWithVariable, "", "assert x > 3 failed")
 }

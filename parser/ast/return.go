@@ -13,3 +13,7 @@ func (rs ReturnStmt) Node() Node {
 func (rs ReturnStmt) String() string {
 	return fmt.Sprintf("ReturnStmt{ %v }", rs.Val)
 }
+
+func (rs ReturnStmt) PrettyPrint(lvl int) string {
+	panic("Not implemented")
+}

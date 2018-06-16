@@ -120,6 +120,10 @@ func (s StringLiteral) Type() string {
 	return "string"
 }
 
+func (s StringLiteral) PrettyPrint(lvl int) string {
+	return fmt.Sprintf(`%v"%v"`, nTabs(lvl), string(s))
+}
+
 type IntLiteral int64
 
 func (v IntLiteral) Value() interface{} {
@@ -136,6 +140,10 @@ func (i IntLiteral) String() string {
 
 func (i IntLiteral) Type() string {
 	return "int"
+}
+
+func (i IntLiteral) PrettyPrint(lvl int) string {
+	return fmt.Sprintf("%v%d", nTabs(lvl), int64(i))
 }
 
 type BoolLiteral bool
@@ -161,4 +169,8 @@ func (b BoolLiteral) String() string {
 
 func (b BoolLiteral) Type() string {
 	return "bool"
+}
+
+func (s BoolLiteral) PrettyPrint(lvl int) string {
+	return fmt.Sprintf("%v%v", nTabs(lvl), bool(s))
 }

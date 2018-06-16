@@ -1,8 +1,8 @@
 package ast
 
 import (
-	"fmt"
 	"bufio"
+	"fmt"
 	"io"
 	"os"
 	"reflect"
