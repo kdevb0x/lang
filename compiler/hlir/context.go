@@ -25,6 +25,7 @@ type variableLayout struct {
 	typeinfo     ast.TypeInformation
 	funcargs     []ast.VarWithType
 	rettypes     []ast.TypeInfo
+	retsumtypes  map[int]ast.Type
 	enumvalues   EnumMap
 	callables    ast.Callables
 	numLocals    uint
@@ -55,7 +56,7 @@ func (c *variableLayout) NextTempRegister() Register {
 
 // Reserves the next available register for varname
 func (c *variableLayout) NextLocalRegister(varname ast.VarWithType) Register {
-	if varname.Type() == "" {
+	if varname.Type() == nil || varname.Type().TypeName() == "" {
 		panic("No type for variable " + varname.Name + ".")
 	}
 
@@ -64,6 +65,13 @@ func (c *variableLayout) NextLocalRegister(varname ast.VarWithType) Register {
 	}
 
 	c.numLocals++
+
+	switch t := varname.Type().(type) {
+	case ast.SumType:
+		// Hack, since SumType is unhashable and can't
+		// be used as a key for c.values
+		varname.Typ = ast.TypeLiteral(t.TypeName())
+	}
 	// If this variable is shadowing another variable, increase tempVars to
 	// make sure the next calls increment the LocalVariable number and don't
 	// reuse the same variable.
@@ -75,7 +83,7 @@ func (c *variableLayout) NextLocalRegister(varname ast.VarWithType) Register {
 	}
 	c.registerInfo[lv] = RegisterInfo{
 		string(varname.Name),
-		c.typeinfo[varname.Type()],
+		c.typeinfo[varname.Type().TypeName()],
 		varname,
 		0,
 		ast.VarWithType{},
@@ -88,10 +96,16 @@ func (c *variableLayout) NextLocalRegister(varname ast.VarWithType) Register {
 func (c *variableLayout) FuncParamRegister(varname ast.VarWithType, i int) Register {
 	c.tempVars--
 	fa := FuncArg{uint(i), varname.Reference}
+	switch t := varname.Type().(type) {
+	case ast.SumType:
+		// Hack, since SumType is unhashable and can't
+		// be used as a key for c.values
+		varname.Typ = ast.TypeLiteral(t.TypeName())
+	}
 	c.values[varname] = fa
 	c.registerInfo[fa] = RegisterInfo{
 		string(varname.Name),
-		c.typeinfo[varname.Type()],
+		c.typeinfo[varname.Type().TypeName()],
 		varname,
 		0,
 		ast.VarWithType{},
@@ -110,8 +124,15 @@ func (c variableLayout) Get(varname ast.VarWithType) Register {
 	if varname.Name == "" {
 		panic("Can not get empty varname")
 	}
+	switch t := varname.Type().(type) {
+	case ast.SumType:
+		// Hack, since SumType is unhashable and can't
+		// be used as a key for c.values
+		varname.Typ = ast.TypeLiteral(t.TypeName())
+	}
 	val, ok := c.values[varname]
 	if !ok {
+		fmt.Printf("%v", c.values)
 		panic("Could not get variable named " + varname.Name)
 	}
 	return val

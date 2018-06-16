@@ -3482,3 +3482,113 @@ func TestCastBuiltin2(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 }
+
+func TestSumtypeFuncReturn(t *testing.T) {
+	as, ti, c, err := ast.Parse(sampleprograms.SumTypeFuncReturn)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if i.Name != "foo" {
+		t.Errorf("Unexpected name: got %v want %v", i.Name, "main")
+	}
+	expected := []Opcode{
+		// if x
+		JE{
+			ConditionalJump{
+				Label: "if0else",
+				Src:   FuncArg{0, ast.TypeInfo{1, false}, false},
+				Dst:   IntLiteral(0),
+			},
+		},
+		// return 3
+		MOV{
+			Src: IntLiteral(0),
+			Dst: FuncRetVal{0, ast.TypeInfo{8, false}},
+		},
+		MOV{
+			Src: IntLiteral(3),
+			Dst: FuncRetVal{1, ast.TypeInfo{8, false}},
+		},
+		RET{},
+		JMP{"if0elsedone"},
+		Label("if0else"),
+		Label("if0elsedone"),
+		// return "not3"
+		MOV{
+			Src: IntLiteral(1),
+			Dst: FuncRetVal{0, ast.TypeInfo{8, false}},
+		},
+		MOV{
+			Src: IntLiteral(4),
+			Dst: FuncRetVal{1, ast.TypeInfo{8, false}},
+		},
+		MOV{
+			Src: StringLiteral("not3"),
+			Dst: FuncRetVal{2, ast.TypeInfo{8, false}},
+		},
+		RET{},
+	}
+	if len(i.Body) != len(expected) {
+		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
+	}
+
+	for j := range expected {
+		if !compareOp(expected[j], i.Body[j]) {
+			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
+		}
+	}
+}
+
+func TestIfBool(t *testing.T) {
+	as, ti, c, err := ast.Parse(sampleprograms.IfBool)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if i.Name != "foo" {
+		t.Errorf("Unexpected name: got %v want %v", i.Name, "main")
+	}
+	expected := []Opcode{
+		// if x
+		JE{
+			ConditionalJump{
+				Label: "if0else",
+				Src:   FuncArg{0, ast.TypeInfo{1, false}, false},
+				Dst:   IntLiteral(0),
+			},
+		},
+		// return 3
+		MOV{
+			Src: IntLiteral(3),
+			Dst: FuncRetVal{0, ast.TypeInfo{8, true}},
+		},
+		RET{},
+		JMP{"if0elsedone"},
+		Label("if0else"),
+		Label("if0elsedone"),
+		// return 7
+		MOV{
+			Src: IntLiteral(7),
+			Dst: FuncRetVal{0, ast.TypeInfo{8, true}},
+		},
+		RET{},
+	}
+	if len(i.Body) != len(expected) {
+		t.Fatalf("Unexpected body: got %v want %v\n", i.Body, expected)
+	}
+
+	for j := range expected {
+		if !compareOp(expected[j], i.Body[j]) {
+			t.Errorf("Unexpected value for opcode %d: got %v want %v", j, i.Body[j], expected[j])
+		}
+	}
+}

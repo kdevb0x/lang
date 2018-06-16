@@ -4326,3 +4326,273 @@ func TestAssertionPassWithMessage(t *testing.T) {
 		t.Errorf("%v", err)
 	}
 }
+
+func TestSumTypeFuncCall(t *testing.T) {
+	as, ti, c, err := ast.Parse(sampleprograms.SumTypeFuncCall)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		JumpTable{
+			ControlFlow{
+				Condition: Condition{
+					Body: []Opcode{
+						EQ{
+							Left:  FuncArg{0, false},
+							Right: IntLiteral(0),
+							Dst:   TempValue(0),
+						},
+					},
+					Register: TempValue(0),
+				},
+				Body: []Opcode{
+					CALL{
+						FName: "PrintInt",
+						Args: []Register{
+							FuncArg{1, false},
+						},
+					},
+				},
+			},
+			ControlFlow{
+				Condition: Condition{
+					Body: []Opcode{
+						EQ{
+							Left:  FuncArg{0, false},
+							Right: IntLiteral(1),
+							Dst:   TempValue(1),
+						},
+					},
+					Register: TempValue(1),
+				},
+				Body: []Opcode{
+					CALL{
+						FName: "PrintString",
+						Args: []Register{
+							FuncArg{1, false},
+							FuncArg{2, false},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Errorf("%v", err)
+	}
+
+	i, _, _, err = Generate(as[1], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected = []Opcode{
+		CALL{
+			FName: "foo",
+			Args: []Register{
+				IntLiteral(1),
+				IntLiteral(3),
+				StringLiteral("bar"),
+			},
+		},
+		CALL{
+			FName: "foo",
+			Args: []Register{
+				IntLiteral(0),
+				IntLiteral(3),
+			},
+		},
+	}
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Errorf("%v", err)
+	}
+}
+
+func TestSumTypeFuncReturn(t *testing.T) {
+	as, ti, c, err := ast.Parse(sampleprograms.SumTypeFuncReturn)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i, _, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		IF{
+			ControlFlow: ControlFlow{
+				Condition: Condition{
+					Body:     []Opcode{},
+					Register: FuncArg{0, false},
+				},
+				Body: []Opcode{
+					MOV{
+						Src: IntLiteral(0),
+						Dst: FuncRetVal(0),
+					},
+					MOV{
+						Src: IntLiteral(3),
+						Dst: FuncRetVal(1),
+					},
+					RET{},
+				},
+			},
+			ElseBody: nil,
+		},
+		MOV{
+			Src: IntLiteral(1),
+			Dst: FuncRetVal(0),
+		},
+		MOV{
+			Src: IntLiteral(4),
+			Dst: FuncRetVal(1),
+		},
+		MOV{
+			Src: StringLiteral("not3"),
+			Dst: FuncRetVal(2),
+		},
+		RET{},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Errorf("%v", err)
+	}
+
+	i, _, _, err = Generate(as[1], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected = []Opcode{
+		CALL{
+			FName: "foo",
+			Args:  []Register{IntLiteral(0)},
+		},
+		MOV{
+			Src: LastFuncCallRetVal{0, 0},
+			Dst: LocalValue(0),
+		},
+		MOV{
+			Src: LastFuncCallRetVal{0, 1},
+			Dst: LocalValue(1),
+		},
+		MOV{
+			Src: LastFuncCallRetVal{0, 2},
+			Dst: LocalValue(2),
+		},
+		JumpTable{
+			ControlFlow{
+				Condition: Condition{
+					Body: []Opcode{
+						EQ{
+							Left:  LocalValue(0),
+							Right: IntLiteral(0),
+							Dst:   TempValue(0),
+						},
+					},
+					Register: TempValue(0),
+				},
+				Body: []Opcode{
+					CALL{
+						FName: "PrintInt",
+						Args: []Register{
+							LocalValue(1),
+						},
+					},
+				},
+			},
+			ControlFlow{
+				Condition: Condition{
+					Body: []Opcode{
+						EQ{
+							Left:  LocalValue(0),
+							Right: IntLiteral(1),
+							Dst:   TempValue(1),
+						},
+					},
+					Register: TempValue(1),
+				},
+				Body: []Opcode{
+					CALL{
+						FName: "PrintString",
+						Args: []Register{
+							LocalValue(1),
+							LocalValue(2),
+						},
+					},
+				},
+			},
+		},
+		CALL{
+			FName: "foo",
+			Args:  []Register{IntLiteral(1)},
+		},
+		MOV{
+			Src: LastFuncCallRetVal{3, 0},
+			Dst: LocalValue(3),
+		},
+		MOV{
+			Src: LastFuncCallRetVal{3, 1},
+			Dst: LocalValue(4),
+		},
+		MOV{
+			Src: LastFuncCallRetVal{3, 2},
+			Dst: LocalValue(5),
+		},
+		JumpTable{
+			ControlFlow{
+				Condition: Condition{
+					Body: []Opcode{
+						EQ{
+							Left:  LocalValue(3),
+							Right: IntLiteral(0),
+							Dst:   TempValue(2),
+						},
+					},
+					Register: TempValue(2),
+				},
+				Body: []Opcode{
+					CALL{
+						FName: "PrintInt",
+						Args: []Register{
+							LocalValue(4),
+						},
+					},
+				},
+			},
+			ControlFlow{
+				Condition: Condition{
+					Body: []Opcode{
+						EQ{
+							Left:  LocalValue(3),
+							Right: IntLiteral(1),
+							Dst:   TempValue(3),
+						},
+					},
+					Register: TempValue(3),
+				},
+				Body: []Opcode{
+					CALL{
+						FName: "PrintString",
+						Args: []Register{
+							LocalValue(4),
+							LocalValue(5),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Errorf("%v", err)
+	}
+
+}

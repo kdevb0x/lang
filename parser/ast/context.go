@@ -116,19 +116,19 @@ func NewContext() Context {
 		},
 		Mutables: make(map[string]VarWithType),
 		Types: map[string]TypeDefn{
-			"int":    TypeDefn{TypeLiteral("int"), TypeLiteral("int"), nil},
-			"uint":   TypeDefn{TypeLiteral("uint"), TypeLiteral("uint"), nil},
-			"uint8":  TypeDefn{TypeLiteral("uint8"), TypeLiteral("uint8"), nil},
-			"byte":   TypeDefn{TypeLiteral("byte"), TypeLiteral("byte"), nil},
-			"uint16": TypeDefn{TypeLiteral("uint16"), TypeLiteral("uint16"), nil},
-			"uint32": TypeDefn{TypeLiteral("uint32"), TypeLiteral("uint32"), nil},
-			"uint64": TypeDefn{TypeLiteral("uint64"), TypeLiteral("uint64"), nil},
-			"int8":   TypeDefn{TypeLiteral("int8"), TypeLiteral("int8"), nil},
-			"int16":  TypeDefn{TypeLiteral("int16"), TypeLiteral("int16"), nil},
-			"int32":  TypeDefn{TypeLiteral("int32"), TypeLiteral("int32"), nil},
-			"int64":  TypeDefn{TypeLiteral("int64"), TypeLiteral("int64"), nil},
-			"string": TypeDefn{TypeLiteral("string"), TypeLiteral("string"), nil},
-			"bool":   TypeDefn{TypeLiteral("bool"), TypeLiteral("bool"), nil},
+			"int":    TypeDefn{"int", TypeLiteral("int"), nil},
+			"uint":   TypeDefn{"uint", TypeLiteral("uint"), nil},
+			"uint8":  TypeDefn{"uint8", TypeLiteral("uint8"), nil},
+			"byte":   TypeDefn{"byte", TypeLiteral("byte"), nil},
+			"uint16": TypeDefn{"uint16", TypeLiteral("uint16"), nil},
+			"uint32": TypeDefn{"uint32", TypeLiteral("uint32"), nil},
+			"uint64": TypeDefn{"uint64", TypeLiteral("uint64"), nil},
+			"int8":   TypeDefn{"int8", TypeLiteral("int8"), nil},
+			"int16":  TypeDefn{"int16", TypeLiteral("int16"), nil},
+			"int32":  TypeDefn{"int32", TypeLiteral("int32"), nil},
+			"int64":  TypeDefn{"int64", TypeLiteral("int64"), nil},
+			"string": TypeDefn{"string", TypeLiteral("string"), nil},
+			"bool":   TypeDefn{"bool", TypeLiteral("bool"), nil},
 		},
 		PureContext: false,
 		EnumOptions: make(map[string]EnumOption),
@@ -191,7 +191,7 @@ func (c Context) IsFunction(s string) bool {
 }
 
 func (c Context) ValidType(t Type) bool {
-	if _, ok := c.Types[t.Type()]; ok {
+	if _, ok := c.Types[t.TypeName()]; ok {
 		return true
 	}
 	return false

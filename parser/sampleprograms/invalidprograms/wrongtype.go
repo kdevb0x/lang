@@ -14,7 +14,7 @@ const InvalidType = `func main() () {
 }
 `
 
-const WrongUserType = `type fint int
+const WrongUserType = `type fint = int
 func main() () -> affects(IO) {
 	let x int = 3
 	let y fint = x
@@ -33,7 +33,7 @@ func main() () {
 `
 
 const WrongArgUserType = `
-type fint int
+type fint = int
 
 func foo(s fint) (int) {
 	return s+5

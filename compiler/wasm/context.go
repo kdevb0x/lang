@@ -141,7 +141,7 @@ func (c *Context) GetSignature(fname string) Signature {
 		case ast.SliceType:
 			ret = append(ret, Variable{i32, Param, ""}, Variable{i32, Param, ""})
 		default:
-			words := strings.Fields(string(v.Type()))
+			words := strings.Fields(string(v.Type().TypeName()))
 			for wordi, word := range words {
 				typeinfo, ok := c.typeinfo[word]
 				if !ok {
@@ -173,7 +173,7 @@ func (c *Context) GetSignature(fname string) Signature {
 
 	rn := hlir.FuncRetVal(0)
 	for arg, v := range callable[0].ReturnTuple() {
-		words := strings.Fields(string(v.Type()))
+		words := strings.Fields(string(v.Type().TypeName()))
 		if len(words) > 1 || arg > 1 {
 			c.needsGlobal = true
 			c.curFuncRetNeedsMem = true

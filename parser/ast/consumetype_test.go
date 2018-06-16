@@ -17,6 +17,7 @@ func TestConsumeType(t *testing.T) {
 		{"int", TypeLiteral("int"), 1},
 		// Needs context:{"Maybe int", TypeLiteral("Maybe int"), 2},
 		{"[5]int", ArrayType{Base: TypeLiteral("int"), Size: IntLiteral(5)}, 4},
+		{"int | string", SumType{TypeLiteral("int"), TypeLiteral("string")}, 3},
 	}
 
 	for i, tc := range cases {

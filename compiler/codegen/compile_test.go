@@ -1017,3 +1017,24 @@ func ExampleEmptyReturn() {
 	}
 	// Output:
 }
+
+func ExampleSumTypeFuncCall() {
+	if err := RunProgram("sumtypefunccall", sampleprograms.SumTypeFuncCall); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: bar3
+}
+
+func ExampleSumTypeFuncReturn() {
+	if err := RunProgram("sumtypefunccall", sampleprograms.SumTypeFuncReturn); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: not33
+}
+
+func ExampleIfBool() {
+	if err := RunProgram("ifbool", sampleprograms.IfBool); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: 73
+}

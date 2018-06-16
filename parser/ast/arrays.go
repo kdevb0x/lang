@@ -9,8 +9,8 @@ type ArrayType struct {
 	Size IntLiteral
 }
 
-func (a ArrayType) Type() string {
-	return fmt.Sprintf("[%d]%v", a.Size, a.Base.Type())
+func (a ArrayType) TypeName() string {
+	return fmt.Sprintf("[%d]%v", a.Size, a.Base.TypeName())
 }
 
 func (a ArrayType) Node() Node {
@@ -18,15 +18,30 @@ func (a ArrayType) Node() Node {
 }
 
 func (a ArrayType) String() string {
-	return fmt.Sprintf("ArrayType{[%d]%v}", a.Size, a.Base.Type())
+	return fmt.Sprintf("ArrayType{[%d]%v}", a.Size, a.Base.TypeName())
 }
 func (a ArrayType) PrettyPrint(lvl int) string {
-	return fmt.Sprintf("%v[%d]%v", nTabs(lvl), a.Size, a.Base.Type())
+	return fmt.Sprintf("%v[%d]%v", nTabs(lvl), a.Size, a.Base.TypeName())
+}
+
+func (a ArrayType) Info() TypeInfo {
+	baseinfo := a.Base.Info()
+	return TypeInfo{
+		baseinfo.Size * int(a.Size),
+		baseinfo.Signed,
+	}
+}
+func (a ArrayType) Components() []Type {
+	var v []Type
+	for i := 0; i < int(a.Size); i++ {
+		v = append(v, a.Base)
+	}
+	return v
 }
 
 type ArrayLiteral []Value
 
-func (v ArrayLiteral) Type() string {
+func (v ArrayLiteral) TypeName() string {
 	return fmt.Sprintf("[%v]%v", len(v), v[0].Type())
 }
 
@@ -45,18 +60,24 @@ func (v ArrayLiteral) String() string {
 func (v ArrayLiteral) PrettyPrint(lvl int) string {
 	panic("PrettyPrint not implemented")
 }
+func (v ArrayLiteral) Type() Type {
+	return ArrayType{
+		Base: v[0].Type(),
+		Size: IntLiteral(len(v)),
+	}
+}
 
 type ArrayValue struct {
 	Base  VarWithType
 	Index Value
 }
 
-func (v ArrayValue) Type() string {
+func (v ArrayValue) TypeName() string {
 	switch bt := v.Base.Typ.(type) {
 	case ArrayType:
-		return bt.Base.Type()
+		return bt.Base.TypeName()
 	case SliceType:
-		return bt.Base.Type()
+		return bt.Base.TypeName()
 	default:
 		panic("Attempt to index on non-array")
 	}
@@ -81,20 +102,44 @@ func (v ArrayValue) PrettyPrint(lvl int) string {
 	return fmt.Sprintf("%v%v[%v]", nTabs(lvl), v.Base.Name, v.Index.PrettyPrint(0))
 }
 
+func (v ArrayValue) Type() Type {
+	t := v.Base.Type()
+	switch t2 := t.(type) {
+	case ArrayType:
+		return t2.Base
+	case SliceType:
+		return t2.Base
+	default:
+		panic("Attempt to use ArrayValue for non-indexable type")
+	}
+}
+
 type SliceType struct {
 	Base Type
 }
 
-func (a SliceType) Type() string {
-	return fmt.Sprintf("[]%v", a.Base.Type())
+func (a SliceType) TypeName() string {
+	return fmt.Sprintf("[]%v", a.Base.TypeName())
 }
 func (a SliceType) PrettyPrint(lvl int) string {
-	return fmt.Sprintf("%v[]%v", nTabs(lvl), a.Base.Type())
+	return fmt.Sprintf("%v[]%v", nTabs(lvl), a.Base.TypeName())
 }
 
 func (a SliceType) Node() Node {
 	return a
 }
 func (a SliceType) String() string {
-	return fmt.Sprintf("SliceType{[]%v}", a.Base.Type())
+	return fmt.Sprintf("SliceType{[]%v}", a.Base.TypeName())
+}
+func (a SliceType) Info() TypeInfo {
+	baseinfo := a.Base.Info()
+	return TypeInfo{
+		16, // 8 for size, 8 for base pointer
+		baseinfo.Signed,
+	}
+}
+
+func (a SliceType) Components() []Type {
+	// One int64 for the size, one int for the pointer
+	return []Type{TypeLiteral("uint64"), TypeLiteral("int")}
 }

@@ -23,7 +23,7 @@ func Parse(src string) (Module, error) {
 	enums := make(hlir.EnumMap)
 	for _, v := range nodes {
 		switch v.(type) {
-		case ast.SumTypeDefn:
+		case ast.EnumTypeDefn:
 			_, opts, _, err := hlir.Generate(v, ti, callables, enums)
 			if err != nil {
 				return Module{}, err
@@ -52,7 +52,7 @@ func Parse(src string) (Module, error) {
 				return Module{}, err
 			}
 			ctx.Functions = append(ctx.Functions, rfnc)
-		case ast.TypeDefn, ast.SumTypeDefn:
+		case ast.TypeDefn, ast.EnumTypeDefn:
 			// No IR for types, we've already verified them.
 		default:
 			panic("Unhandled AST node type for code generation")
@@ -216,7 +216,7 @@ func evaluateOp(opi hlir.Opcode, ctx *Context) ([]Instruction, error) {
 		ret := funcs[0].ReturnTuple()
 		switch {
 		case len(ret) == 1:
-			words := strings.Fields(ret[0].Type())
+			words := strings.Fields(ret[0].Type().TypeName())
 			if len(words) > 1 {
 				stackRet = true
 			}
@@ -255,7 +255,7 @@ func evaluateOp(opi hlir.Opcode, ctx *Context) ([]Instruction, error) {
 				}
 				idx += 2
 			default:
-				words := strings.Fields(string(v.Type()))
+				words := strings.Fields(string(v.Type().TypeName()))
 				for _, word := range words {
 					typeinfo, ok := ctx.typeinfo[word]
 					if !ok {

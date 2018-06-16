@@ -654,3 +654,15 @@ func TestAssertionPassWithMessage(t *testing.T) {
 func TestAssertionFailWithVariable(t *testing.T) {
 	compileAndTest(t, sampleprograms.AssertionFailWithVariable, "", "assert x > 3 failed")
 }
+
+func TestSumTypeFuncCall(t *testing.T) {
+	compileAndTest(t, sampleprograms.SumTypeFuncCall, "bar3", "")
+}
+
+func TestSumTypeFuncReturn(t *testing.T) {
+	compileAndTest(t, sampleprograms.SumTypeFuncReturn, "not33", "")
+}
+
+func TestIfBool(t *testing.T) {
+	compileAndTest(t, sampleprograms.IfBool, "73", "")
+}

@@ -148,6 +148,11 @@ func (ctx *Context) convertOp(op hlir.Opcode, conditionLabel Label, jt jumpType)
 		for _, op := range o.ControlFlow.Condition.Body {
 			ops = append(ops, ctx.convertOp(op, elselabel, jumpFailure)...)
 		}
+		if len(o.ControlFlow.Condition.Body) == 0 {
+			// Condition was of the form "if x" for a boolean variable x, so it's
+			// implicitly checking whether it's equal to true
+			ops = append(ops, ctx.convertOp(hlir.NEQ{Left: o.ControlFlow.Register, Right: hlir.IntLiteral(0)}, elselabel, jumpFailure)...)
+		}
 		for _, op := range o.Body {
 			ops = append(ops, ctx.convertOp(op, elselabel, notComparison)...)
 		}
@@ -204,10 +209,22 @@ func (ctx *Context) convertOp(op hlir.Opcode, conditionLabel Label, jt jumpType)
 			panic("Equals used outside of a comparison context")
 		}
 	case hlir.NEQ:
-		return []Opcode{JE{
-			ConditionalJump{
-				conditionLabel, ctx.convertRegister(o.Left), ctx.convertRegister(o.Right)},
-		},
+		switch jt {
+		case jumpSuccess:
+			return []Opcode{JNE{
+				ConditionalJump{
+					conditionLabel, ctx.convertRegister(o.Left), ctx.convertRegister(o.Right)},
+			},
+			}
+
+		case jumpFailure:
+			return []Opcode{JE{
+				ConditionalJump{
+					conditionLabel, ctx.convertRegister(o.Left), ctx.convertRegister(o.Right)},
+			},
+			}
+		default:
+			panic("NotEquals used outside of a comparison context")
 		}
 	case hlir.GT:
 		switch jt {

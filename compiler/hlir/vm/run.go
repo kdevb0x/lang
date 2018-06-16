@@ -113,10 +113,13 @@ func runOp(op hlir.Opcode, ctx *Context, allowed []ast.Effect) (stop bool, err e
 							fmt.Fprintf(ctx.stdout, "%s", s)
 							break
 						}
-						fmt.Fprintf(ctx.stdout, "%c", evalRegister(base, nctx))
+						if reg := evalRegister(base, nctx); reg != nil {
+							fmt.Fprintf(ctx.stdout, "%c", reg)
+						}
 						switch b := base.(type) {
 						case hlir.LocalValue:
 							base = b + 1
+						case hlir.FuncArg:
 						default:
 							panic("Unhandled register type in PrintByteSlice")
 						}
@@ -220,15 +223,12 @@ func runOp(op hlir.Opcode, ctx *Context, allowed []ast.Effect) (stop bool, err e
 			f := os.NewFile(uintptr(fd.(int)), "unknown")
 			f.Close()
 		default:
-
 			for i, r := range o.Args {
 				farg := hlir.FuncArg{uint(i), false}
-				if o.FName != "PrintInt" && o.FName != "PrintString" && o.FName != "len" && o.FName != "PrintByteSlice" {
-					if _, ok := rd[farg]; !ok {
-						farg.Reference = true
-						if _, okref := rd[farg]; !okref {
-							//panic(fmt.Sprintf("Function Argument %d does not have register data for %v", i, o.FName))
-						}
+				if _, ok := rd[farg]; !ok {
+					farg.Reference = true
+					if _, okref := rd[farg]; !okref {
+						panic(fmt.Sprintf("Function Argument %d does not have register data for %v", i, o.FName))
 					}
 				}
 				if !farg.Reference {
@@ -402,13 +402,11 @@ func runOp(op hlir.Opcode, ctx *Context, allowed []ast.Effect) (stop bool, err e
 			}
 		}
 	case hlir.ASSERT:
-		//fmt.Printf("Before: %v\n", ctx)
 		if !evalCondition(o.Predicate, ctx, []ast.Effect{}) {
 			err := assertionError{string(o.Message), o.Node}
 			ctx.writeStderr(err.Error())
 			return true, err
 		}
-		//fmt.Printf("After: %v\n", ctx)
 	default:
 		panic(fmt.Sprintf("Unrecognized op: %v", reflect.TypeOf(op).Name()))
 	}
@@ -472,9 +470,7 @@ func evalCondition(cond hlir.Condition, ctx *Context, allowed []ast.Effect) bool
 			panic(err)
 		}
 	}
-	//fmt.Printf("%v", cond.Register)
 	r := evalRegister(cond.Register, ctx)
-	//fmt.Printf("EVALED %v", r)
 	if r == true || r == false {
 		return r.(bool)
 	}

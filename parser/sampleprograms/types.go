@@ -1,7 +1,7 @@
 package sampleprograms
 
 const UserDefinedType = `
-type Foo int
+type Foo = int
 
 func main() () -> affects(IO) {
 	let x Foo = 4
@@ -9,7 +9,7 @@ func main() () -> affects(IO) {
 }`
 
 const EnumType = `
-data Foo = A | B
+enum Foo = A | B
 
 func main() () -> affects(IO) {
 	let a Foo = A
@@ -22,7 +22,7 @@ func main() () -> affects(IO) {
 }`
 
 const EnumTypeInferred = `
-data Foo = A | B
+enum Foo = A | B
 
 func main() () -> affects(IO) {
 	let a = B
@@ -35,7 +35,7 @@ func main() () -> affects(IO) {
 }`
 
 const GenericEnumType = `
-data Maybe a = Nothing | Just a
+enum Maybe a = Nothing | Just a
 
 func DoSomething(x int) (Maybe int) {
 	if x > 3 {

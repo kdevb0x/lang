@@ -6,6 +6,7 @@ about something.)
 - Need to enforce that effects are either handled or propagated from function
 - need to determine what effect parameters that are mutated should declare
 	- ReferenceParameter test
+- VM should use PrintByteSlice and PrintString from stdlib, not hack.
 
 # New features TODOs
 
@@ -14,6 +15,8 @@ about something.)
 	- refactor builtins into separate standard library package
 - Compile time evaluation of pure functions with constant arguments
 - Add comments and convert samples from Go strings to files
+- Need way to allocate/return variables on the heap
+	- Malloc/Free? GC? Ownership rules?
 
 # HLIR Optimization TODOs
 - Add optimization pass
@@ -61,3 +64,4 @@ about something.)
 - Add test cases for unsigned comparisons in wasm (all operators)
 - Add better test cases tail call optimization (esp. with different stack sizes)
 - Need better tests for invalid types.. ie typos like "let digits []buf = .." fail for the wrong reasons..
+- Need better tests for sum types that aren't passed as functions (ie mutable x string | int, then assign to both string and int )

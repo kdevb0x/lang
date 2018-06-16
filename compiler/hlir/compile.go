@@ -23,6 +23,7 @@ func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callabl
 		typeInfo,
 		nil,
 		nil,
+		nil,
 		enums,
 		callables,
 		0,
@@ -57,8 +58,23 @@ func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callabl
 					arg,
 				}
 				nargs++
+			case ast.SumType:
+				// Treat the same as a slice. Eventually these hacks should be removed
+				// and string should just be defined as type string []byte
+				components := arg.Typ.Components()
+				context.FuncParamRegister(arg, nargs)
+				for _, c := range components {
+					context.registerInfo[FuncArg{uint(nargs), arg.Reference}] = RegisterInfo{
+						"",
+						c.Info(),
+						arg,
+						0,
+						arg,
+					}
+					nargs++
+				}
 			default:
-				if arg.Type() == "string" {
+				if arg.Type().TypeName() == "string" {
 					// Treat the same as a slice. Eventually these hacks should be removed
 					// and string should just be defined as type string []byte
 					context.FuncParamRegister(arg, nargs)
@@ -78,10 +94,9 @@ func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callabl
 						arg,
 					}
 					nargs++
-
 				} else {
 					context.FuncParamRegister(arg, nargs)
-					words := strings.Fields(string(arg.Type()))
+					words := strings.Fields(string(arg.Type().TypeName()))
 					for _, typePiece := range words {
 						context.registerInfo[FuncArg{uint(nargs), arg.Reference}] = RegisterInfo{
 							"",
@@ -97,13 +112,27 @@ func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callabl
 		}
 
 		rn := FuncRetVal(0)
-		for _, rv := range n.Return {
-			words := strings.Fields(string(rv.Type()))
-			for _, typePiece := range words {
-				ti := context.GetTypeInfo(typePiece)
-				context.rettypes = append(context.rettypes, ti)
-				context.registerInfo[FuncRetVal(rn)] = RegisterInfo{"", ti, rv, 0, rv}
-				rn++
+		for i, rv := range n.Return {
+			switch rv.Typ.(type) {
+			case ast.SumType:
+				for _, c := range rv.Typ.Components() {
+					ti := c.Info()
+					context.rettypes = append(context.rettypes, ti)
+					if context.retsumtypes == nil {
+						context.retsumtypes = make(map[int]ast.Type)
+					}
+					context.retsumtypes[i] = rv.Typ
+					context.registerInfo[FuncRetVal(rn)] = RegisterInfo{"", ti, rv, 0, rv}
+					rn++
+				}
+			default:
+				words := strings.Fields(string(rv.Type().TypeName()))
+				for _, typePiece := range words {
+					ti := context.GetTypeInfo(typePiece)
+					context.rettypes = append(context.rettypes, ti)
+					context.registerInfo[FuncRetVal(rn)] = RegisterInfo{"", ti, rv, 0, rv}
+					rn++
+				}
 			}
 		}
 		body, err := compileBlock(n.Body, context)
@@ -143,6 +172,20 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]Opcode
 		funcArgs = signature.GetArgs()
 	}
 	for i, arg := range fc.UserArgs {
+		switch t := funcArgs[i].Type().(type) {
+		case ast.SumType:
+			isCompatible := false
+			for i, subtype := range t {
+				if subtype.TypeName() == arg.Type().TypeName() {
+					argRegs = append(argRegs, IntLiteral(i))
+					isCompatible = true
+					break
+				}
+			}
+			if !isCompatible {
+				return nil, fmt.Errorf("%v is not compatible with %v", arg, t)
+			}
+		}
 		switch a := arg.(type) {
 		case ast.EnumValue:
 			argRegs = append(argRegs, getRegister(a, context))
@@ -195,7 +238,7 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]Opcode
 						return nil, err
 					}
 					ops = append(ops, newops...)
-					if a.Typ.Type() == "string" {
+					if a.Typ.TypeName() == "string" {
 						// Hack to make sure casting between strings and bytes
 						// work.
 						switch lvl := r[0].(type) {
@@ -271,7 +314,7 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]Opcode
 				info := context.registerInfo[lv]
 				info.Creator = a
 				context.registerInfo[lv] = info
-				if a.Type() == "string" {
+				if a.Type().TypeName() == "string" {
 					switch lvl := lv.(type) {
 					case LocalValue:
 						argRegs = append(argRegs, lvl)
@@ -282,7 +325,7 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]Opcode
 						lvl.Id++
 						argRegs = append(argRegs, lvl)
 					default:
-						panic("Unhandled register type for string")
+						panic(fmt.Sprintf("Unhandled register type for string: %v", reflect.TypeOf(lvl)))
 					}
 				} else {
 					argRegs = append(argRegs, lv)
@@ -318,13 +361,23 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]Opcode
 
 	rv := 0
 	for _, ret := range signature.ReturnTuple() {
-		words := strings.Fields(string(ret.Type()))
-		for _, word := range words {
-			ti := context.GetTypeInfo(word)
-			v := LastFuncCallRetVal{callNum, uint(rv)}
-			context.registerInfo[v] = RegisterInfo{"", ti, ret, 0, ret}
+		switch t := ret.Type().(type) {
+		case ast.SumType:
+			comp := t.Components()
+			for _, v := range comp {
+				reg := LastFuncCallRetVal{callNum, uint(rv)}
+				context.registerInfo[reg] = RegisterInfo{"", v.Info(), ret, 0, ret}
+				rv++
+			}
+		default:
+			words := strings.Fields(string(ret.Type().TypeName()))
+			for _, word := range words {
+				ti := context.GetTypeInfo(word)
+				v := LastFuncCallRetVal{callNum, uint(rv)}
+				context.registerInfo[v] = RegisterInfo{"", ti, ret, 0, ret}
+			}
+			rv++
 		}
-		rv++
 	}
 	callNum++
 	ops = append(ops, CALL{FName: FName(fc.Name), Args: argRegs, TailCall: tailcall})
@@ -364,6 +417,13 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 			}
 			ops = append(ops, fc...)
 		case ast.LetStmt:
+			switch t := s.Var.Typ.(type) {
+			case ast.SumType:
+				// Hack, since SumType is unhashable and can't
+				// be used as a key for c.values
+				s.Var.Typ = ast.TypeLiteral(t.TypeName())
+			}
+
 			ov, oldval := context.values[s.Var]
 			if oldval {
 				// It's being shadowed, so the variable when evaluating the variable
@@ -451,6 +511,12 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 					})
 
 					if i == 0 {
+						switch t := s.Var.Type().(type) {
+						case ast.SumType:
+							// Hack, since SumType is unhashable and can't
+							// be used as a key for c.values
+							s.Var.Typ = ast.TypeLiteral(t.TypeName())
+						}
 						context.values[s.Var] = reg
 						if !oldval {
 							context.tempVars--
@@ -481,7 +547,7 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 			switch v := s.Var.Typ.(type) {
 			case ast.ArrayType:
 				for i, r := range rvs {
-					entryVar := ast.VarWithType{ast.Variable(fmt.Sprintf("%s[%d]", s.Var.Name, i)), ast.TypeLiteral(v.Base.Type()), false}
+					entryVar := ast.VarWithType{ast.Variable(fmt.Sprintf("%s[%d]", s.Var.Name, i)), ast.TypeLiteral(v.Base.TypeName()), false}
 					reg := context.NextLocalRegister(entryVar)
 					ops = append(ops, MOV{
 						Src: r,
@@ -495,7 +561,7 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 				}
 			case ast.SliceType:
 				for i, r := range rvs {
-					entryVar := ast.VarWithType{ast.Variable(fmt.Sprintf("%s[%d]", s.Var.Name, i)), ast.TypeLiteral(v.Base.Type()), false}
+					entryVar := ast.VarWithType{ast.Variable(fmt.Sprintf("%s[%d]", s.Var.Name, i)), v.Base, false}
 					reg := context.NextLocalRegister(entryVar)
 					ops = append(ops, MOV{
 						Src: r,
@@ -561,10 +627,42 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 				})
 			default:
 				if len(context.rettypes) != 0 {
-					ops = append(ops, MOV{
-						Src: getRegister(arg, context),
-						Dst: FuncRetVal(0),
-					})
+					switch t := context.retsumtypes[0].(type) {
+					case ast.SumType:
+						matched := false
+						for j, subtype := range t {
+							if arg.Type().TypeName() == subtype.TypeName() {
+								// Variant
+								ops = append(ops, MOV{
+									Src: IntLiteral(j),
+									Dst: FuncRetVal(0),
+								})
+								matched = true
+								break
+							}
+						}
+						if !matched {
+							return nil, fmt.Errorf("Invalid value for sum type %v", t.TypeName())
+						}
+
+						body, r, err := evaluateValue(arg, context)
+						if err != nil {
+							return nil, err
+						}
+						ops = append(ops, body...)
+						for j, v := range r {
+							ops = append(ops, MOV{
+								Src: v,
+								Dst: FuncRetVal(j + 1),
+							})
+
+						}
+					default:
+						ops = append(ops, MOV{
+							Src: getRegister(arg, context),
+							Dst: FuncRetVal(0),
+						})
+					}
 				}
 			}
 			ops = append(ops, RET{})
@@ -602,13 +700,13 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 				switch bt := v.Base.Typ.(type) {
 				case ast.ArrayType:
 					base = context.Get(v.Base)
-					typeInfo = context.GetTypeInfo(bt.Base.Type())
+					typeInfo = bt.Base.Info()
 				case ast.SliceType:
 					base = context.Get(v.Base)
 					bl := base.(LocalValue)
 					bl++
 					base = bl
-					typeInfo = context.GetTypeInfo(bt.Base.Type())
+					typeInfo = bt.Base.Info()
 				}
 				ibody, index, err := evaluateValue(v.Index, context)
 				if err != nil {
@@ -684,81 +782,146 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 			ops = append(ops, l)
 		case ast.MatchStmt:
 			var jt JumpTable
-			body, condleft, err := evaluateValue(s.Condition, context)
-			if err != nil {
-				return nil, err
+			var condleft []Register
+			switch s.Condition.Type().(type) {
+			//case ast.SumType:
+			// Don't evaluate it if it's a sum type, because it needs
+			// to be destructured
+			default:
+				body, condleft2, err := evaluateValue(s.Condition, context)
+				if err != nil {
+					return nil, err
+				}
+				condleft = condleft2
+				ops = append(ops, body...)
 			}
-			ops = append(ops, body...)
 
 			// Generate jump table
 			for i := range s.Cases {
-				// Generate the comparison
 				var casestmt ControlFlow
-				body, condright, err := evaluateValue(s.Cases[i].Variable, context)
-				if err != nil {
-					return nil, err
-				}
-				if s.Condition == ast.BoolLiteral(true) {
-					casestmt.Condition = Condition{
-						Body:     body,
-						Register: condright[0],
+				switch t := s.Condition.Type().(type) {
+				case ast.SumType:
+					// Type destructuring of sum type.
+					matched := false
+					// Shadow the variable with the destructured version for the
+					// duration of the case statement.
+					oldVals := make(map[ast.VarWithType]Register)
+					for k, v := range context.values {
+						oldVals[k] = v
 					}
-				} else {
+
 					r := context.NextTempRegister()
-					casestmt.Condition.Body = append(
-						body,
-						EQ{Left: condleft[0], Right: condright[0], Dst: r},
-					)
-					casestmt.Condition.Register = r
-				}
+					for j, subtype := range t {
+						if subtype.TypeName() == s.Cases[i].Variable.Type().TypeName() {
+							matched = true
+							casestmt.Condition.Body = []Opcode{
+								EQ{
+									Left:  condleft[0],
+									Right: IntLiteral(j),
+									Dst:   r,
+								},
+							}
+							casestmt.Condition.Register = r
 
-				// Generate the bodies
-
-				// Store the old values of variables for enum options that get
-				// shadowed, and ensure they don't leak outside of the case
-				oldVals := make(map[ast.VarWithType]Register)
-				for k, v := range context.values {
-					oldVals[k] = v
-				}
-
-				switch ev := s.Cases[i].Variable.(type) {
-				case ast.EnumOption:
-					// If the case was an EnumOption, it means the MatchStmt
-					// variable was an enumerated data type. The index of the
-					// original variable + i is the i'th parameter, so set
-					// the appropriate LocalVariables in the context for
-					// the case.
-					val, ok := s.Condition.(ast.VarWithType)
-					if !ok {
-						panic("Unexpected pattern matching on non-variable")
-					}
-					vreg := context.Get(val)
-					switch lv := vreg.(type) {
-					case FuncArg:
-						for j := range ev.Parameters {
-							lv.Id += 1
-							context.SetLocalRegister(s.Cases[i].LocalVariables[j], lv)
+							switch v := s.Cases[i].Variable.(type) {
+							case ast.VarWithType:
+								switch lv := condleft[0].(type) {
+								case FuncArg:
+									lv.Id++
+									context.values[v] = lv
+								case LocalValue:
+									lv++
+									context.values[v] = lv
+								default:
+									panic(fmt.Sprintf("Unhandled register type for type destructuring: %v", reflect.TypeOf(condleft[0])))
+								}
+							default:
+								panic("Bad type destructuring")
+							}
+							break
 						}
-
-					case LocalValue:
-						for j := range ev.Parameters {
-							lv += 1
-							context.SetLocalRegister(s.Cases[i].LocalVariables[j], lv)
-						}
-					default:
-						panic(fmt.Sprintf("Expected enumeration to be a local variable or function argument: got %v", reflect.TypeOf(vreg)))
 					}
-				}
+					if !matched {
+						return nil, fmt.Errorf("No match for type in sum type destructuring")
+					}
 
-				body, err = compileBlock(s.Cases[i].Body, context)
-				if err != nil {
-					return nil, err
-				}
-				casestmt.Body = body
+					body, err := compileBlock(s.Cases[i].Body, context)
+					if err != nil {
+						return nil, err
+					}
 
-				// Finally, add the case to the jumptable and restore the context.
-				jt = append(jt, casestmt)
-				context.values = oldVals
+					casestmt.Body = body
+					// Finally, add the case to the jumptable and restore the context.
+					jt = append(jt, casestmt)
+					context.values = oldVals
+				default:
+					// Generate the comparison
+					body, condright, err := evaluateValue(s.Cases[i].Variable, context)
+					if err != nil {
+						return nil, err
+					}
+					if s.Condition == ast.BoolLiteral(true) {
+						casestmt.Condition = Condition{
+							Body:     body,
+							Register: condright[0],
+						}
+					} else {
+						r := context.NextTempRegister()
+						casestmt.Condition.Body = append(
+							body,
+							EQ{Left: condleft[0], Right: condright[0], Dst: r},
+						)
+						casestmt.Condition.Register = r
+					}
+
+					// Generate the bodies
+					//
+					// Store the old values of variables for enum options that get
+					// shadowed, and ensure they don't leak outside of the case
+					oldVals := make(map[ast.VarWithType]Register)
+					for k, v := range context.values {
+						oldVals[k] = v
+					}
+
+					switch ev := s.Cases[i].Variable.(type) {
+					case ast.EnumOption:
+						// If the case was an EnumOption, it means the MatchStmt
+						// variable was an enumerated data type. The index of the
+						// original variable + i is the i'th parameter, so set
+						// the appropriate LocalVariables in the context for
+						// the case.
+						val, ok := s.Condition.(ast.VarWithType)
+						if !ok {
+							panic("Unexpected pattern matching on non-variable")
+						}
+						vreg := context.Get(val)
+						switch lv := vreg.(type) {
+						case FuncArg:
+							for j := range ev.Parameters {
+								lv.Id += 1
+								context.SetLocalRegister(s.Cases[i].LocalVariables[j], lv)
+							}
+
+						case LocalValue:
+							for j := range ev.Parameters {
+								lv += 1
+								context.SetLocalRegister(s.Cases[i].LocalVariables[j], lv)
+							}
+						default:
+							panic(fmt.Sprintf("Expected enumeration to be a local variable or function argument: got %v", reflect.TypeOf(vreg)))
+						}
+					}
+
+					body, err = compileBlock(s.Cases[i].Body, context)
+					if err != nil {
+						return nil, err
+					}
+					casestmt.Body = body
+
+					// Finally, add the case to the jumptable and restore the context.
+					jt = append(jt, casestmt)
+					context.values = oldVals
+				}
 			}
 			ops = append(ops, jt)
 		case ast.Assertion:
@@ -899,9 +1062,9 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, []Register
 				var offsetInfo ast.TypeInfo
 				switch bt := s.Base.Typ.(type) {
 				case ast.ArrayType:
-					offsetInfo = context.GetTypeInfo(bt.Base.Type())
+					offsetInfo = bt.Base.Info()
 				case ast.SliceType:
-					offsetInfo = context.GetTypeInfo(bt.Base.Type())
+					offsetInfo = bt.Base.Info()
 					reg++
 				default:
 					panic("Can only index into arrays or slices")
@@ -925,9 +1088,9 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, []Register
 				var offsetInfo ast.TypeInfo
 				switch bt := s.Base.Typ.(type) {
 				case ast.ArrayType:
-					offsetInfo = context.GetTypeInfo(bt.Base.Type())
+					offsetInfo = bt.Base.Info()
 				case ast.SliceType:
-					offsetInfo = context.GetTypeInfo(bt.Base.Type())
+					offsetInfo = bt.Base.Info()
 					reg++
 				default:
 					panic("Can only index into arrays or slices")
@@ -949,9 +1112,9 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, []Register
 				var offsetInfo ast.TypeInfo
 				switch bt := s.Base.Typ.(type) {
 				case ast.ArrayType:
-					offsetInfo = context.GetTypeInfo(bt.Base.Type())
+					offsetInfo = bt.Base.Info()
 				case ast.SliceType:
-					offsetInfo = context.GetTypeInfo(bt.Base.Type())
+					offsetInfo = bt.Base.Info()
 					reg.Id++
 				default:
 					panic("Can only index into arrays or slices")
@@ -976,9 +1139,9 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, []Register
 				var offsetInfo ast.TypeInfo
 				switch bt := s.Base.Typ.(type) {
 				case ast.ArrayType:
-					offsetInfo = context.GetTypeInfo(bt.Base.Type())
+					offsetInfo = bt.Base.Info()
 				case ast.SliceType:
-					offsetInfo = context.GetTypeInfo(bt.Base.Type())
+					offsetInfo = bt.Base.Info()
 					reg.Id++
 				default:
 					panic("Can only index into arrays or slices")
@@ -1124,13 +1287,24 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, []Register
 		var regs []Register
 		i := 0
 		for _, v := range s.Returns {
-			words := strings.Fields(string(v.Type()))
-			for _, word := range words {
-				ti := context.GetTypeInfo(word)
-				reg := LastFuncCallRetVal{callNum - 1, uint(i)}
-				context.registerInfo[reg] = RegisterInfo{"", ti, v, 0, v}
-				regs = append(regs, reg)
-				i++
+			switch t := v.Typ.(type) {
+			case ast.SumType:
+				comp := t.Components()
+				for _, s := range comp {
+					reg := LastFuncCallRetVal{callNum - 1, uint(i)}
+					context.registerInfo[reg] = RegisterInfo{"", s.Info(), v, 0, v}
+					regs = append(regs, reg)
+					i++
+				}
+			default:
+				words := strings.Fields(string(v.Type().TypeName()))
+				for _, word := range words {
+					ti := context.GetTypeInfo(word)
+					reg := LastFuncCallRetVal{callNum - 1, uint(i)}
+					context.registerInfo[reg] = RegisterInfo{"", ti, v, 0, v}
+					regs = append(regs, reg)
+					i++
+				}
 			}
 		}
 		return ops, regs, nil

@@ -19,12 +19,13 @@ func (ec EqualityComparison) Value() interface{} {
 func (n EqualityComparison) Node() Node {
 	return n
 }
-func (c EqualityComparison) Type() string {
-	return "bool"
-}
 
 func (n EqualityComparison) String() string {
 	return fmt.Sprintf("EqualityComparison{%v == %v}", n.Left, n.Right)
+}
+
+func (c EqualityComparison) Type() Type {
+	return TypeLiteral("bool")
 }
 
 func (c EqualityComparison) PrettyPrint(lvl int) string {
@@ -55,8 +56,8 @@ func (n NotEqualsComparison) PrettyPrint(lvl int) string {
 	return fmt.Sprintf("%v%v != %v", nTabs(lvl), n.Left.PrettyPrint(0), n.Right.PrettyPrint(0))
 }
 
-func (c NotEqualsComparison) Type() string {
-	return "bool"
+func (c NotEqualsComparison) Type() Type {
+	return TypeLiteral("bool")
 }
 
 type GreaterComparison struct {
@@ -77,8 +78,12 @@ func (n GreaterComparison) Value() interface{} {
 	return n.BoolValue()
 }
 
-func (c GreaterComparison) Type() string {
+func (c GreaterComparison) TypeName() string {
 	return "bool"
+}
+
+func (c GreaterComparison) Type() Type {
+	return TypeLiteral("bool")
 }
 
 func (c GreaterComparison) String() string {
@@ -98,8 +103,8 @@ func (gc GreaterOrEqualComparison) BoolValue() bool {
 	return true //gc.Left >= gc.Right
 }
 
-func (c GreaterOrEqualComparison) Type() string {
-	return "bool"
+func (n GreaterOrEqualComparison) Type() Type {
+	return TypeLiteral("bool")
 }
 
 func (n GreaterOrEqualComparison) Node() Node {
@@ -132,8 +137,8 @@ func (gc LessThanOrEqualComparison) BoolValue() bool {
 	return true //gc.Left >= gc.Right
 }
 
-func (c LessThanOrEqualComparison) Type() string {
-	return "bool"
+func (c LessThanOrEqualComparison) Type() Type {
+	return TypeLiteral("bool")
 }
 
 func (n LessThanOrEqualComparison) PrettyPrint(lvl int) string {
@@ -155,11 +160,11 @@ func (n LessThanComparison) Value() interface{} {
 func (gc LessThanComparison) BoolValue() bool {
 	// This method is mostly a sentinal, the value returned doesn't matter
 	// and since left and right are interfaces, > doesn't exist.
-	return true //gc.Left >= gc.Right
+	return true
 }
 
-func (c LessThanComparison) Type() string {
-	return "bool"
+func (c LessThanComparison) Type() Type {
+	return TypeLiteral("bool")
 }
 
 func (c LessThanComparison) String() string {

@@ -21,11 +21,11 @@ func (f FuncCall) String() string {
 }
 
 // FIXME: This needs to be updated to work with multiple return functions
-func (f FuncCall) Type() string {
-	if len(f.Returns) == 0 {
-		return "(none)"
+func (f FuncCall) Type() Type {
+	if len(f.Returns) == 1 {
+		return f.Returns[0].Type()
 	}
-	return f.Returns[0].Type()
+	return f.Returns.Type()
 }
 
 func (f FuncCall) PrettyPrint(lvl int) string {

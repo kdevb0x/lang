@@ -2,6 +2,7 @@ package ast
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/driusan/lang/parser/token"
@@ -67,34 +68,43 @@ func consumeMatchStmt(start int, tokens []token.Token, c *Context) (int, MatchSt
 		return 0, MatchStmt{}, fmt.Errorf("Invalid match statement")
 	}
 
-	concreteMap := make(map[Type]Type)
+	concreteMap := make(map[string]Type)
 	for i := start + cn + 2; i < len(tokens); {
 		c2 := c.Clone()
-
-		if concretes := strings.Fields(string(l.Condition.Type())); len(concretes) > 1 {
-			// Convert the generic type's parameters to the concrete typename,
-			// not the generic type, so that the case can look them up properly.
-			// FIXME: There should be a better way than splitting the type name
-			// on whitespace
-			td, ok := c.Types[concretes[0]]
-			if !ok {
-				panic("Expected parameterized enumerated option")
+		switch l.Condition.Type().(type) {
+		case SumType:
+			n, cs, err := consumeTypeCase(i, tokens, &c2, l.Condition)
+			if err != nil {
+				return 0, MatchStmt{}, err
 			}
-			for i, v := range concretes[1:] {
-				concreteMap[td.Parameters[i]] = TypeLiteral(v)
+			l.Cases = append(l.Cases, cs)
+			i += n
+		default:
+			if concretes := strings.Fields(string(l.Condition.Type().TypeName())); len(concretes) > 1 {
+				// Convert the generic type's parameters to the concrete typename,
+				// not the generic type, so that the case can look them up properly.
+				// FIXME: There should be a better way than splitting the type name
+				// on whitespace
+				td, ok := c.Types[concretes[0]]
+				if !ok {
+					panic("Expected parameterized enumerated option")
+				}
+				for i, v := range concretes[1:] {
+					concreteMap[td.Parameters[i]] = TypeLiteral(v)
+				}
 			}
-		}
 
-		n, cs, err := consumeCase(i, tokens, &c2, concreteMap)
-		if err != nil {
-			return 0, MatchStmt{}, err
+			n, cs, err := consumeCase(i, tokens, &c2, concreteMap)
+			if err != nil {
+				return 0, MatchStmt{}, err
+			}
+			l.Cases = append(l.Cases, cs)
+			i += n
 		}
-		l.Cases = append(l.Cases, cs)
-		i += n
 		if tokens[i] == token.Char("}") {
-			ct := c.Types[l.Condition.Type()].ConcreteType
-			if ct != nil && c.Types[l.Condition.Type()].ConcreteType.Type() == "sumtype" {
-				if err := checkExhaustiveness(l.Condition, l.Cases, c); err != nil {
+			ct := c.Types[l.Condition.Type().TypeName()].ConcreteType
+			if ct != nil && ct.TypeName() == "enumtype" {
+				if err := checkExhaustiveness(l.Condition.Type(), l.Cases, c); err != nil {
 					return 0, MatchStmt{}, err
 				}
 			}
@@ -104,7 +114,7 @@ func consumeMatchStmt(start int, tokens []token.Token, c *Context) (int, MatchSt
 	return 0, MatchStmt{}, fmt.Errorf("Invalid match statement")
 }
 
-func consumeCase(start int, tokens []token.Token, c *Context, genericMap map[Type]Type) (int, MatchCase, error) {
+func consumeCase(start int, tokens []token.Token, c *Context, genericMap map[string]Type) (int, MatchCase, error) {
 	l := MatchCase{}
 	var n int
 	if tokens[start] != token.Keyword("case") {
@@ -148,10 +158,47 @@ func consumeCase(start int, tokens []token.Token, c *Context, genericMap map[Typ
 	return 0, MatchCase{}, fmt.Errorf("Unterminated case statement")
 }
 
+func consumeTypeCase(start int, tokens []token.Token, c *Context, condition Value) (int, MatchCase, error) {
+	l := MatchCase{}
+	var n int
+	if tokens[start] != token.Keyword("case") {
+		return 0, MatchCase{}, fmt.Errorf("Invalid case statement. Unexpected '%v' at %d", tokens[start], start)
+	}
+	n2, t, err := consumeType(start+1, tokens, c)
+	if err != nil {
+		return 0, MatchCase{}, err
+	}
+	n = n2
+
+	switch v := condition.(type) {
+	case VarWithType:
+		v.Typ = t
+		c.Variables[string(v.Name)] = v
+		l.Variable = v
+	default:
+		panic(fmt.Sprintf("Can only destructure single variable sum types, got %v", reflect.TypeOf(v)))
+	}
+	if tokens[start+n+1] != token.Char(":") {
+		return 0, MatchCase{}, fmt.Errorf("Invalid case statement at token %v. Expected ':', not '%v'", start, tokens[start+n+1])
+	}
+	for i := start + n + 2; i < len(tokens); {
+		if tokens[i] == token.Keyword("case") || tokens[i] == token.Char("}") {
+			return i - start, l, nil
+		}
+		n, stmt, err := consumeStmt(i, tokens, c)
+		if err != nil {
+			return 0, MatchCase{}, err
+		}
+		l.Body.Stmts = append(l.Body.Stmts, stmt)
+		i += n
+	}
+	return 0, MatchCase{}, fmt.Errorf("Unterminated case statement")
+}
+
 func checkExhaustiveness(t Type, mc []MatchCase, c *Context) error {
 	allcases := make(map[string]bool)
 	for _, eo := range c.EnumOptions {
-		if eo.Type() == t.Type() {
+		if eo.Type().TypeName() == t.TypeName() {
 			allcases[eo.Constructor] = false
 		}
 	}
@@ -163,7 +210,7 @@ func checkExhaustiveness(t Type, mc []MatchCase, c *Context) error {
 	}
 	for c, v := range allcases {
 		if v == false {
-			return fmt.Errorf(`Inexhaustive match for enum type "%v": Missing case "%v".`, t.Type(), c)
+			return fmt.Errorf(`Inexhaustive match for enum type "%v": Missing case "%v".`, t.TypeName(), c)
 		}
 	}
 	return nil

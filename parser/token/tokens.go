@@ -17,7 +17,7 @@ func (k Keyword) IsValid() bool {
 	switch k {
 	case "while", "mutable", "let", "func",
 		"if", "else", "else if", "return",
-		"type", "match", "data", "case",
+		"type", "match", "enum", "case",
 		"affects", "assert":
 		return true
 	}

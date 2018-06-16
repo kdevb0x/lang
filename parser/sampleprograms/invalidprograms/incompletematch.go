@@ -1,7 +1,7 @@
 package invalidprograms
 
 const IncompleteMatch = `
-data Foo = A | B | C
+enum Foo = A | B | C
 
 func main() () -> affects(IO) {
 	let x = A

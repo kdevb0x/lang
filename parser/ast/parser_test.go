@@ -11,19 +11,34 @@ import (
 )
 
 func compare(v1, v2 Node) bool {
+	if v1 == nil && v2 == nil {
+		return true
+	}
 	// Easy types that don't have anything preventing them from being compared
 	// with ==
 	switch v1.(type) {
 	case StringLiteral, BoolLiteral, IntLiteral,
-		Variable, VarWithType,
+		Variable,
 		AdditionOperator, SubtractionOperator, AssignmentOperator,
 		MulOperator, DivOperator,
 		EqualityComparison, NotEqualsComparison,
 		GreaterOrEqualComparison, LessThanOrEqualComparison,
-		TypeLiteral:
+		TypeLiteral, nil:
 		return v1 == v2
 	}
 
+	if v1a, ok := v1.(VarWithType); ok {
+		if v2a, ok := v2.(VarWithType); ok {
+			return v1a.Name == v2a.Name && v1a.Reference == v2a.Reference && compare(v1a.Typ, v2a.Typ)
+		}
+		return false
+	}
+	if v1a, ok := v1.(SliceType); ok {
+		if v2a, ok := v2.(SliceType); ok {
+			return compare(v1a.Base, v2a.Base)
+		}
+		return false
+	}
 	if v1a, ok := v1.(LessThanComparison); ok {
 		if v2a, ok := v2.(LessThanComparison); ok {
 			return compare(v1a.Left, v2a.Left) && compare(v1a.Right, v2a.Right)
@@ -224,7 +239,7 @@ func compare(v1, v2 Node) bool {
 				return false
 			}
 		}
-		return v1a.ConcreteType == v2a.ConcreteType
+		return compare(v1a.ConcreteType, v2a.ConcreteType)
 	}
 	if v1a, ok := v1.(MatchStmt); ok {
 		v2a, ok := v2.(MatchStmt)
@@ -358,6 +373,21 @@ func compare(v1, v2 Node) bool {
 			return false
 		}
 		return v1a.Message == v2a.Message
+	}
+	if v1a, ok := v1.(SumType); ok {
+		v2a, ok := v2.(SumType)
+		if !ok {
+			return false
+		}
+		if len(v1a) != len(v2a) {
+			return false
+		}
+		for i := range v1a {
+			if !compare(v1a[i], v2a[i]) {
+				return false
+			}
+		}
+		return true
 	}
 	panic(fmt.Sprintf("Unimplemented type for compare %v vs %v", reflect.TypeOf(v1), reflect.TypeOf(v2)))
 }
@@ -1805,7 +1835,7 @@ func TestUserDefinedType(t *testing.T) {
 	}
 	expected := []Node{
 		TypeDefn{
-			Name:         TypeLiteral("Foo"),
+			Name:         "Foo",
 			ConcreteType: TypeLiteral("int"),
 		},
 		FuncDecl{
@@ -1955,7 +1985,7 @@ func TestEnumType(t *testing.T) {
 	}
 	expected := []Node{
 		EnumTypeDefn{
-			TypeLiteral("Foo"),
+			"Foo",
 			[]EnumOption{
 				EnumOption{"A", nil, TypeLiteral("Foo")},
 				EnumOption{"B", nil, TypeLiteral("Foo")},
@@ -2032,7 +2062,7 @@ func TestEnumTypeInferred(t *testing.T) {
 	}
 	expected := []Node{
 		EnumTypeDefn{
-			TypeLiteral("Foo"),
+			"Foo",
 			[]EnumOption{
 				EnumOption{"A", nil, TypeLiteral("Foo")},
 				EnumOption{"B", nil, TypeLiteral("Foo")},
@@ -2203,10 +2233,10 @@ func TestGenericEnumType(t *testing.T) {
 	}
 	expected := []Node{
 		EnumTypeDefn{
-			TypeLiteral("Maybe"),
+			"Maybe",
 			[]EnumOption{
 				EnumOption{"Nothing", nil, TypeLiteral("Maybe")},
-				EnumOption{"Just", []Type{TypeLiteral("a")}, TypeLiteral("Maybe")},
+				EnumOption{"Just", []string{"a"}, TypeLiteral("Maybe")},
 			},
 			nil,
 		},
@@ -2234,7 +2264,7 @@ func TestGenericEnumType(t *testing.T) {
 						},
 					},
 					ReturnStmt{EnumValue{
-						Constructor: EnumOption{"Just", []Type{TypeLiteral("a")}, TypeLiteral("Maybe")},
+						Constructor: EnumOption{"Just", []string{"a"}, TypeLiteral("Maybe")},
 						Parameters:  []Value{IntLiteral(5)},
 					},
 					},
@@ -2279,7 +2309,7 @@ func TestGenericEnumType(t *testing.T) {
 								LocalVariables: []VarWithType{
 									VarWithType{"n", TypeLiteral("int"), false},
 								},
-								Variable: EnumOption{"Just", []Type{TypeLiteral("a")}, TypeLiteral("Maybe")},
+								Variable: EnumOption{"Just", []string{"a"}, TypeLiteral("Maybe")},
 								Body: BlockStmt{
 									[]Node{
 										FuncCall{
@@ -2328,7 +2358,7 @@ func TestGenericEnumType(t *testing.T) {
 								LocalVariables: []VarWithType{
 									VarWithType{"n", TypeLiteral("int"), false},
 								},
-								Variable: EnumOption{"Just", []Type{TypeLiteral("a")}, TypeLiteral("Maybe")},
+								Variable: EnumOption{"Just", []string{"a"}, TypeLiteral("Maybe")},
 								Body: BlockStmt{
 									[]Node{
 										FuncCall{
@@ -2377,10 +2407,10 @@ func TestMatchParam(t *testing.T) {
 	}
 	expected := []Node{
 		EnumTypeDefn{
-			TypeLiteral("Maybe"),
+			"Maybe",
 			[]EnumOption{
 				EnumOption{"Nothing", nil, TypeLiteral("Maybe")},
-				EnumOption{"Just", []Type{TypeLiteral("x")}, TypeLiteral("Maybe")},
+				EnumOption{"Just", []string{"x"}, TypeLiteral("Maybe")},
 			},
 			nil,
 		},
@@ -2403,7 +2433,7 @@ func TestMatchParam(t *testing.T) {
 								LocalVariables: []VarWithType{
 									VarWithType{"n", TypeLiteral("int"), false},
 								},
-								Variable: EnumOption{"Just", []Type{TypeLiteral("x")}, TypeLiteral("Maybe")},
+								Variable: EnumOption{"Just", []string{"x"}, TypeLiteral("Maybe")},
 								Body: BlockStmt{
 									[]Node{
 										ReturnStmt{VarWithType{"n", TypeLiteral("int"), false}},
@@ -2440,7 +2470,7 @@ func TestMatchParam(t *testing.T) {
 
 								UserArgs: []Value{
 									EnumValue{
-										Constructor: EnumOption{"Just", []Type{TypeLiteral("x")}, TypeLiteral("Maybe")},
+										Constructor: EnumOption{"Just", []string{"x"}, TypeLiteral("Maybe")},
 										Parameters:  []Value{IntLiteral(5)},
 									},
 								},
@@ -2474,10 +2504,10 @@ func TestMatchParam2(t *testing.T) {
 	}
 	expected := []Node{
 		EnumTypeDefn{
-			TypeLiteral("Maybe"),
+			"Maybe",
 			[]EnumOption{
 				EnumOption{"Nothing", nil, TypeLiteral("Maybe")},
-				EnumOption{"Just", []Type{TypeLiteral("x")}, TypeLiteral("Maybe")},
+				EnumOption{"Just", []string{"x"}, TypeLiteral("Maybe")},
 			},
 			nil,
 		},
@@ -2507,7 +2537,7 @@ func TestMatchParam2(t *testing.T) {
 								LocalVariables: []VarWithType{
 									VarWithType{"n", TypeLiteral("int"), false},
 								},
-								Variable: EnumOption{"Just", []Type{TypeLiteral("x")}, TypeLiteral("Maybe")},
+								Variable: EnumOption{"Just", []string{"x"}, TypeLiteral("Maybe")},
 								Body: BlockStmt{
 									[]Node{
 										ReturnStmt{VarWithType{"n", TypeLiteral("int"), false}},
@@ -2543,7 +2573,7 @@ func TestMatchParam2(t *testing.T) {
 
 								UserArgs: []Value{
 									EnumValue{
-										Constructor: EnumOption{"Just", []Type{TypeLiteral("x")}, TypeLiteral("Maybe")},
+										Constructor: EnumOption{"Just", []string{"x"}, TypeLiteral("Maybe")},
 										Parameters:  []Value{IntLiteral(5)},
 									},
 								},
@@ -4754,6 +4784,268 @@ func TestAssertionPassWithMessage(t *testing.T) {
 	for i, v := range expected {
 		if !compare(ast[i], v) {
 			t.Errorf("got %v want %v", ast[i], v)
+		}
+	}
+}
+
+func TestSumTypeDefn(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.SumTypeDefn))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Node{
+		TypeDefn{
+			Name: "Foo",
+			ConcreteType: SumType{
+				TypeLiteral("int"),
+				TypeLiteral("string"),
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("got %v want %v", ast[i], v)
+		}
+	}
+}
+
+func TestSumTypeFuncCall(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.SumTypeFuncCall))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Node{
+		FuncDecl{
+			Name: "foo",
+			Args: []VarWithType{
+				VarWithType{Name: "x", Typ: SumType{TypeLiteral("int"), TypeLiteral("string")}},
+			},
+			Return:  nil,
+			Effects: []Effect{"IO"},
+			Body: BlockStmt{
+				[]Node{
+					MatchStmt{
+						Condition: VarWithType{Name: "x", Typ: SumType{TypeLiteral("int"), TypeLiteral("string")}},
+						Cases: []MatchCase{
+							MatchCase{
+								Variable: VarWithType{Name: "x", Typ: TypeLiteral("int")},
+								Body: BlockStmt{
+									[]Node{
+
+										FuncCall{
+											Name: "PrintInt",
+											UserArgs: []Value{
+												VarWithType{"x", TypeLiteral("int"), false},
+											},
+										},
+									},
+								},
+							},
+							MatchCase{
+								Variable: VarWithType{Name: "x", Typ: TypeLiteral("string")},
+								Body: BlockStmt{
+									[]Node{
+										FuncCall{
+											Name: "PrintString",
+											UserArgs: []Value{
+												VarWithType{"x", TypeLiteral("string"), false},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: nil,
+			Body: BlockStmt{
+				[]Node{
+					FuncCall{
+						Name: "foo",
+						UserArgs: []Value{
+							StringLiteral("bar"),
+						},
+					},
+					FuncCall{
+						Name: "foo",
+						UserArgs: []Value{
+							IntLiteral(3),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("got %v want %v", ast[i], v)
+		}
+	}
+}
+
+func TestSumTypeFuncReturn(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.SumTypeFuncReturn))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Node{
+		FuncDecl{
+			Name: "foo",
+			Args: []VarWithType{
+				VarWithType{Name: "x", Typ: TypeLiteral("bool")},
+			},
+			Return: []VarWithType{
+				VarWithType{Name: "", Typ: SumType{TypeLiteral("int"), TypeLiteral("string")}},
+			},
+			Effects: nil,
+			Body: BlockStmt{
+				[]Node{
+					IfStmt{
+						Condition: VarWithType{"x", TypeLiteral("bool"), false},
+						Body: BlockStmt{
+							[]Node{
+								ReturnStmt{
+									Val: IntLiteral(3),
+								},
+							},
+						},
+					},
+					ReturnStmt{
+						Val: StringLiteral("not3"),
+					},
+				},
+			},
+		},
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: nil,
+			Body: BlockStmt{
+				[]Node{
+					LetStmt{
+						Var: VarWithType{
+							"x",
+							SumType{
+								TypeLiteral("int"),
+								TypeLiteral("string"),
+							},
+							false,
+						},
+						Val: FuncCall{
+							Name:     "foo",
+							UserArgs: []Value{BoolLiteral(false)},
+						},
+					},
+					MatchStmt{
+						Condition: VarWithType{Name: "x", Typ: SumType{TypeLiteral("int"), TypeLiteral("string")}},
+
+						Cases: []MatchCase{
+							MatchCase{
+								Variable: VarWithType{Name: "x", Typ: TypeLiteral("int")},
+								Body: BlockStmt{
+									[]Node{
+										FuncCall{
+											Name: "PrintInt",
+											UserArgs: []Value{
+												VarWithType{"x", TypeLiteral("int"), false},
+											},
+										},
+									},
+								},
+							},
+							MatchCase{
+								Variable: VarWithType{Name: "x", Typ: TypeLiteral("string")},
+								Body: BlockStmt{
+									[]Node{
+										FuncCall{
+											Name: "PrintString",
+											UserArgs: []Value{
+												VarWithType{"x", TypeLiteral("string"), false},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					LetStmt{
+						Var: VarWithType{
+							"x",
+							SumType{
+								TypeLiteral("int"),
+								TypeLiteral("string"),
+							},
+							false,
+						},
+						Val: FuncCall{
+							Name:     "foo",
+							UserArgs: []Value{BoolLiteral(true)},
+						},
+					},
+					MatchStmt{
+						Condition: VarWithType{Name: "x", Typ: SumType{TypeLiteral("int"), TypeLiteral("string")}},
+
+						Cases: []MatchCase{
+							MatchCase{
+								Variable: VarWithType{Name: "x", Typ: TypeLiteral("int")},
+								Body: BlockStmt{
+									[]Node{
+										FuncCall{
+											Name: "PrintInt",
+											UserArgs: []Value{
+												VarWithType{"x", TypeLiteral("int"), false},
+											},
+										},
+									},
+								},
+							},
+							MatchCase{
+								Variable: VarWithType{Name: "x", Typ: TypeLiteral("string")},
+								Body: BlockStmt{
+									[]Node{
+										FuncCall{
+											Name: "PrintString",
+											UserArgs: []Value{
+												VarWithType{"x", TypeLiteral("string"), false},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("Node %d: got %v want %v", i, ast[i], v)
 		}
 	}
 }

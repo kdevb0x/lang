@@ -13,15 +13,59 @@ func IsLiteral(v Value) bool {
 	}
 }
 
-func IsCompatibleType(t TypeDefn, v Value) error {
+func (c *Context) IsCompatibleType(typ Type, v Value) error {
+	switch t := typ.(type) {
+	case SumType:
+		// A SumType is compatible if the value is compatible with
+		// at least one option.
+		for _, subtype := range t {
+			if err := c.IsCompatibleType(subtype, v); err == nil {
+				// If it's compatible with one of the options for a sum
+				// type, it's compatible
+				return nil
+			}
+		}
+		return fmt.Errorf("Value %v is not compatible with sum type %v", v, typ.TypeName())
+	case ArrayType:
+		// Easy case, for variables
+		if v.Type().TypeName() == t.TypeName() {
+			return nil
+		}
+
+		// Otherwise, an array type with a literal of the same size
+		// where every member is compatible with the base type
+		v2, ok := v.(ArrayLiteral)
+		if !ok {
+			return fmt.Errorf("%v is not compatible with %v", v, typ.TypeName())
+		}
+		if len(v2) != int(t.Size) {
+			return fmt.Errorf("%v is not compatible with %v", v.Type().TypeName(), typ.TypeName())
+		}
+
+		for _, val := range v2 {
+			if err := c.IsCompatibleType(t.Base, val); err != nil {
+				return fmt.Errorf("Array Type error: %v", err)
+			}
+		}
+		return nil
+	}
+	t, ok := c.Types[typ.TypeName()]
+	if !ok {
+		panic(fmt.Sprintf("Could not find type information for %v", typ.TypeName()))
+	}
+
 	switch t2 := v.(type) {
 	case BoolLiteral:
+
 		if t.ConcreteType == TypeLiteral("bool") {
 			return nil
 		}
 		return fmt.Errorf("Can not assign bool to %v", t.Name)
 	case IntLiteral:
-		switch t.ConcreteType.Type() {
+		if t.ConcreteType == nil {
+			panic(fmt.Sprintf("No concrete type for literal: %v", t))
+		}
+		switch t.ConcreteType.TypeName() {
 		case "int":
 			return nil
 		case "uint8", "byte":
@@ -78,24 +122,23 @@ func IsCompatibleType(t TypeDefn, v Value) error {
 		if t.ConcreteType == nil {
 			return fmt.Errorf("%v does not have a concrete type", t)
 		}
-		if t.ConcreteType.Type() == v.Type() {
+		if t.ConcreteType.TypeName() == v.Type().TypeName() {
 			return nil
 		}
 
-		// Check if each element in te literal is compatible.
+		// Check if each element in the literal is compatible.
 		if st, ok := t.ConcreteType.(SliceType); ok {
 			// Fake an array type comparison instead of a slice type.
-			return IsCompatibleType(TypeDefn{t.Name, ArrayType{st.Base, IntLiteral(len(t2))}, nil}, v)
+			return c.IsCompatibleType(ArrayType{st.Base, IntLiteral(len(t2))}, v)
 		}
 		for _, el := range t2 { // t2=ArrayLiteral
-			if err := IsCompatibleType(TypeDefn{t.Name, el, nil}, el); err != nil {
+			if err := c.IsCompatibleType(el.Type(), el); err != nil {
 				return err
 			}
 		}
 		return nil
 	default:
-
-		if v.Type() == t.Name.Type() {
+		if v.Type().TypeName() == t.Name {
 			return nil
 		}
 		return fmt.Errorf("Incompatible type for non-literal")
@@ -116,8 +159,11 @@ func (s StringLiteral) String() string {
 	return fmt.Sprintf("StringLiteral(%v)", string(s))
 }
 
-func (s StringLiteral) Type() string {
+func (s StringLiteral) TypeName() string {
 	return "string"
+}
+func (s StringLiteral) Type() Type {
+	return TypeLiteral("string")
 }
 
 func (s StringLiteral) PrettyPrint(lvl int) string {
@@ -138,8 +184,8 @@ func (i IntLiteral) String() string {
 	return fmt.Sprintf("IntLiteral(%d)", i)
 }
 
-func (i IntLiteral) Type() string {
-	return "int"
+func (i IntLiteral) Type() Type {
+	return TypeLiteral("int")
 }
 
 func (i IntLiteral) PrettyPrint(lvl int) string {
@@ -167,8 +213,8 @@ func (b BoolLiteral) String() string {
 	return "BoolLiteral(false)"
 }
 
-func (b BoolLiteral) Type() string {
-	return "bool"
+func (b BoolLiteral) Type() Type {
+	return TypeLiteral("bool")
 }
 
 func (s BoolLiteral) PrettyPrint(lvl int) string {

@@ -28,7 +28,7 @@ const IfElseMatch = `func main () () -> affects(IO) {
 }
 `
 
-const MatchParam = `data Maybe x = Nothing | Just x
+const MatchParam = `enum Maybe x = Nothing | Just x
 
 func foo (x Maybe int) (int) {
 	match x {
@@ -46,7 +46,7 @@ func main () () -> affects(IO) {
 // Same as above, but print "x".
 //
 // (There was a bug where func calls didn't work if the string param was a single character long.)
-const MatchParam2 = `data Maybe x = Nothing | Just x
+const MatchParam2 = `enum Maybe x = Nothing | Just x
 
 func foo (x Maybe int) (int) -> affects(IO) {
 	PrintString("x")

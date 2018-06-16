@@ -25,7 +25,7 @@ func TestConsumeEnumTypeList(t *testing.T) {
 		},
 		{"Just a | B",
 			[]EnumOption{
-				{Constructor: "Just", Parameters: []Type{TypeLiteral("a")}},
+				{Constructor: "Just", Parameters: []string{"a"}},
 				{Constructor: "B"},
 			},
 			4,

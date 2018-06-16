@@ -371,7 +371,7 @@ func TestTwoProcs(t *testing.T) {
 func TestMatchParam2(t *testing.T) {
 	tokens, err := Tokenize(strings.NewReader(sampleprograms.MatchParam2))
 	expected := []Token{
-		Keyword("data"),
+		Keyword("enum"),
 		Whitespace(" "),
 		Unknown("Maybe"),
 		Whitespace(" "),

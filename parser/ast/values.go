@@ -342,15 +342,15 @@ func consumeValue(start int, tokens []token.Token, c *Context) (int, Value, erro
 			case token.Char(`{`):
 				tn, v, err := consumeCommaSeparatedValues(i+1, tokens, c)
 				al := ArrayLiteral(v)
-				at := al.Type()
+				at := al.Type().TypeName()
 				if _, ok := c.Types[at]; !ok {
 					typdef := ArrayType{
-						Base: TypeLiteral(v[0].Type()),
+						Base: v[0].Type(),
 						Size: IntLiteral(len(v)),
 					}
 
 					c.Types[at] = TypeDefn{
-						Name:         TypeLiteral(at),
+						Name:         at,
 						ConcreteType: typdef,
 					}
 				}

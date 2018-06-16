@@ -35,7 +35,7 @@ func consumeAssertStmt(start int, tokens []token.Token, c *Context) (int, Assert
 	if err != nil {
 		return 0, Assertion{}, err
 	}
-	if v.Type() != "bool" {
+	if v.Type().TypeName() != "bool" {
 		return 0, Assertion{}, fmt.Errorf("Assertion predicate must be a bool")
 	}
 	a.Predicate = v

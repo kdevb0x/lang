@@ -23,7 +23,7 @@ func topLevelNode(T token.Token) (Node, error) {
 			return FuncDecl{}, nil
 		case "type":
 			return TypeDefn{}, nil
-		case "data":
+		case "enum":
 			return EnumTypeDefn{}, nil
 		}
 		return nil, fmt.Errorf("Invalid top level keyword: %v", t)
@@ -75,20 +75,19 @@ func stripWhitespace(tokens []token.Token) []token.Token {
 func Construct(tokens []token.Token) ([]Node, TypeInformation, Callables, error) {
 	var nodes []Node
 	ti := TypeInformation{
-		("int"):     TypeInfo{0, true},
-		("uint"):    TypeInfo{0, false},
-		("int8"):    TypeInfo{1, true},
-		("uint8"):   TypeInfo{1, false},
-		("byte"):    TypeInfo{1, false},
-		("int16"):   TypeInfo{2, true},
-		("uint16"):  TypeInfo{2, false},
-		("int32"):   TypeInfo{4, true},
-		("uint32"):  TypeInfo{4, false},
-		("int64"):   TypeInfo{8, true},
-		("uint64"):  TypeInfo{8, false},
-		("bool"):    TypeInfo{1, false},
-		("string"):  TypeInfo{0, false},
-		("sumtype"): TypeInfo{4, false},
+		("int"):    TypeInfo{0, true},
+		("uint"):   TypeInfo{0, false},
+		("int8"):   TypeInfo{1, true},
+		("uint8"):  TypeInfo{1, false},
+		("byte"):   TypeInfo{1, false},
+		("int16"):  TypeInfo{2, true},
+		("uint16"): TypeInfo{2, false},
+		("int32"):  TypeInfo{4, true},
+		("uint32"): TypeInfo{4, false},
+		("int64"):  TypeInfo{8, true},
+		("uint64"): TypeInfo{8, false},
+		("bool"):   TypeInfo{1, false},
+		("string"): TypeInfo{0, false},
 	}
 
 	c := NewContext()
@@ -156,17 +155,25 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, Callables, error)
 			nodes = append(nodes, cur)
 			callables[cur.Name] = append(callables[cur.Name], cur)
 		case TypeDefn:
-			typeName := tokens[i+1].String()
-			nodes = append(nodes, c.Types[typeName])
-			switch concrete := c.Types[typeName].ConcreteType.Type(); concrete {
-			case "int", "uint", "int8", "uint8", "int16", "uint16",
-				"int32", "uint32", "int64", "uint64", "bool", "string",
-				"sumtype", "byte":
-				ti[typeName] = ti[c.Types[typeName].ConcreteType.Type()]
-			default:
-				panic("Unhandled concrete type: " + string(c.Types[typeName].ConcreteType.Type()))
+			n, params, err := consumeIdentifiersUntilEquals(i+1, tokens, &c)
+			if err != nil {
+				return nil, nil, nil, err
 			}
-			i += 2
+			i += n + 1
+			if len(params) != 1 {
+				panic("Generic types not implemented")
+			}
+			cur.Name = params[0].String()
+
+			n, ty, err := consumeType(i+1, tokens, &c)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			cur.ConcreteType = ty
+			c.Types[cur.Name] = cur
+			ti[cur.Name] = ty.Info()
+			i += n
+			nodes = append(nodes, cur)
 		case EnumTypeDefn:
 			n, typeNames, err := consumeIdentifiersUntilEquals(i+1, tokens, &c)
 			if err != nil {
@@ -174,17 +181,17 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, Callables, error)
 			}
 			i += n + 1
 
-			cur.Name = TypeLiteral(typeNames[0].String())
+			cur.Name = typeNames[0].String()
 			n, options, err := consumeEnumTypeList(i+1, tokens, &c)
 			if err != nil {
 				return nil, nil, nil, err
 			}
 			for _, constructor := range options {
-				constructor.ParentType = cur.Name
+				constructor.ParentType = TypeLiteral(cur.Name)
 				cur.Options = append(cur.Options, constructor)
 			}
 
-			ti[cur.Name.Type()] = TypeInfo{0, false}
+			ti[cur.Name] = TypeInfo{0, false}
 
 			i += n
 			nodes = append(nodes, cur)
@@ -242,12 +249,24 @@ func extractPrototypes(tokens []token.Token, c *Context) error {
 
 			c.Functions[cur.Name] = cur
 		case TypeDefn:
-			i++
+			n, params, err := consumeIdentifiersUntilEquals(i+1, tokens, c)
+			if err != nil {
+				return err
+			}
+			i += n + 1
+			if len(params) != 1 {
+				panic("Generic types not implemented2")
+			}
+			cur.Name = params[0].String()
 
-			cur.Name = TypeLiteral(tokens[i].String())
-			i++
-			cur.ConcreteType = TypeLiteral(tokens[i].String())
-			c.Types[cur.Name.Type()] = cur
+			n, ty, err := consumeType(i+1, tokens, c)
+			if err != nil {
+				return err
+			}
+			cur.ConcreteType = ty
+
+			c.Types[cur.Name] = cur
+			i += n
 		case EnumTypeDefn:
 			n, typeNames, err := consumeIdentifiersUntilEquals(i+1, tokens, c)
 			if err != nil {
@@ -255,15 +274,23 @@ func extractPrototypes(tokens []token.Token, c *Context) error {
 			}
 			i += n + 1
 
-			cur.Name = TypeLiteral(typeNames[0].String())
+			cur.Name = typeNames[0].String()
 
-			n, _, err = consumeEnumTypeList(i+1, tokens, c)
+			n, options, err := consumeEnumTypeList(i+1, tokens, c)
 			if err != nil {
 				return err
 			}
 
+			for _, constructor := range options {
+				constructor.ParentType = TypeLiteral(cur.Name)
+				cur.Options = append(cur.Options, constructor)
+			}
+
 			// FIXME: This TypeLiteral is stupid and inaccurate now that Type() is an interface
-			c.Types[cur.Name.Type()] = TypeDefn{ConcreteType: TypeLiteral("sumtype")}
+			c.Types[cur.Name] = TypeDefn{
+				Name:         cur.Name,
+				ConcreteType: TypeLiteral("enumtype"),
+			}
 
 			i += n
 		}
@@ -302,12 +329,22 @@ func extractPrototypes(tokens []token.Token, c *Context) error {
 
 			c.Functions[cur.Name] = cur
 		case TypeDefn:
-			i++
+			n, params, err := consumeIdentifiersUntilEquals(i+1, tokens, c)
+			if err != nil {
+				return err
+			}
+			i += n + 1
+			if len(params) > 1 {
+				panic("Generic types not implemented2")
+			}
+			cur.Name = params[0].String()
 
-			cur.Name = TypeLiteral(tokens[i].String())
-			i++
-			cur.ConcreteType = TypeLiteral(tokens[i].String())
-			c.Types[cur.Name.Type()] = cur
+			n, _, err = consumeType(i+1, tokens, c)
+			if err != nil {
+				return err
+			}
+			i += n
+			c.Types[cur.Name] = cur
 		case EnumTypeDefn:
 			n, typeNames, err := consumeIdentifiersUntilEquals(i+1, tokens, c)
 			if err != nil {
@@ -315,24 +352,22 @@ func extractPrototypes(tokens []token.Token, c *Context) error {
 			}
 			i += n + 1
 
-			cur.Name = TypeLiteral(typeNames[0].String())
-			var pv []Type
+			cur.Name = typeNames[0].String()
+			var pv []string
 			for _, param := range typeNames[1:] {
-				pv = append(pv, TypeLiteral(param.String()))
+				pv = append(pv, param.String())
 			}
 			n, options, err := consumeEnumTypeList(i+1, tokens, c)
 			if err != nil {
 				return err
 			}
-
 			for _, o := range options {
-				o.ParentType = cur.Name
+				o.ParentType = TypeLiteral(cur.Name)
 				c.EnumOptions[o.Constructor] = o
 			}
-
-			c.Types[cur.Name.Type()] = TypeDefn{
+			c.Types[cur.Name] = TypeDefn{
 				Name:         cur.Name,
-				ConcreteType: TypeLiteral("sumtype"),
+				ConcreteType: TypeLiteral("enumtype"),
 				Parameters:   pv,
 			}
 
@@ -535,11 +570,11 @@ argLoop:
 	if name != "PrintInt" && name != "len" {
 		for i, arg := range args {
 			if IsLiteral(f.UserArgs[i]) {
-				if err := IsCompatibleType(c.Types[arg.Type()], f.UserArgs[i]); err != nil {
+				if err := c.IsCompatibleType(arg.Type(), f.UserArgs[i]); err != nil {
 					return 0, FuncCall{}, fmt.Errorf("Incompatible call to %v: argument %v must be of type %v (got %v)", name, arg.Name, arg.Type(), f.UserArgs[i].Type())
 				}
 			} else {
-				if arg.Type() != f.UserArgs[i].Type() {
+				if arg.Type().TypeName() != f.UserArgs[i].Type().TypeName() {
 					return 0, FuncCall{}, fmt.Errorf("Incompatible call to %v: argument %v must be of type %v (got %v)", name, arg.Name, arg.Type(), f.UserArgs[i].Type())
 				}
 			}
@@ -568,6 +603,7 @@ func consumeLetStmt(start int, tokens []token.Token, c *Context) (int, Value, er
 			} else if l.Var.Typ == nil {
 				l.Var.Typ = TypeLiteral(t.String())
 				if !c.ValidType(l.Var.Typ) {
+					//return 0, nil, fmt.Errorf("Invalid type: %v (%v)", t.String(), c.Types)
 					return 0, nil, fmt.Errorf("Invalid type: %v", t.String())
 				}
 
@@ -599,21 +635,28 @@ func consumeLetStmt(start int, tokens []token.Token, c *Context) (int, Value, er
 					return 0, nil, err
 				}
 				if l.Var.Typ == nil {
-					td := c.Types[v.Type()]
-					switch td.ConcreteType.(type) {
-					case ArrayType, SliceType:
-						l.Var.Typ = td.ConcreteType
-					default:
-						l.Var.Typ = TypeLiteral(v.Type())
-					}
+					/*
+						td := c.Types[v.Type().TypeName()]
+						switch td.ConcreteType.(type) {
+						case ArrayType:
+							l.Var.Typ = ArrayType{
+								Base:td.ConcreteType
+							}
+						case	SliceType:
+							l.Var.Typ = td.ConcreteType
+						default:
+							l.Var.Typ = v.Type()
+						}
+					*/
+					l.Var.Typ = v.Type()
 				}
 
 				if IsLiteral(v) {
-					if err := IsCompatibleType(c.Types[l.Type()], v); err != nil {
+					if err := c.IsCompatibleType(l.Type(), v); err != nil {
 						return 0, nil, fmt.Errorf(`Incompatible assignment for variable "%v": %v.`, l.Var.Name, err)
 					}
 				} else {
-					if v.Type() != l.Type() {
+					if v.Type().TypeName() != l.TypeName() {
 						return 0, nil, fmt.Errorf(`Incompatible assignment for variable "%v": can not assign %v to %v.`, l.Var.Name, v.Type(), l.Type())
 					}
 				}
@@ -682,21 +725,21 @@ func consumeMutStmt(start int, tokens []token.Token, c *Context) (int, Node, err
 					return 0, nil, err
 				}
 				if l.Var.Typ == nil {
-					td := c.Types[v.Type()]
+					td := c.Types[v.Type().TypeName()]
 					switch td.ConcreteType.(type) {
 					case ArrayType, SliceType:
 						l.Var.Typ = td.ConcreteType
 					default:
-						l.Var.Typ = TypeLiteral(v.Type())
+						l.Var.Typ = v.Type()
 					}
 				}
 
 				if IsLiteral(v) {
-					if err := IsCompatibleType(c.Types[string(l.Type())], v); err != nil {
+					if err := c.IsCompatibleType(l.Type(), v); err != nil {
 						return 0, nil, fmt.Errorf(`Incompatible assignment for variable "%v": %v.`, l.Var.Name, err)
 					}
 				} else {
-					if v.Type() != l.Type() {
+					if v.Type().TypeName() != l.TypeName() {
 						return 0, nil, fmt.Errorf(`Incompatible assignment for variable "%v": can not assign %v to %v.`, l.Var.Name, v.Type(), l.Type())
 					}
 				}
@@ -783,10 +826,16 @@ func consumeArgs(start int, tokens []token.Token, c *Context) (int, []VarWithTyp
 			if parsingNames {
 				return 0, nil, fmt.Errorf("Expected name, got type")
 			}
+			n, tk, err := consumeType(i, tokens, c)
+			if err != nil {
+				return 0, nil, err
+			}
+			i += n - 1
+
 			for _, n := range names {
 				args = append(args, VarWithType{
 					Name:      n,
-					Typ:       TypeLiteral(t.String()),
+					Typ:       tk,
 					Reference: mutable,
 				})
 			}
@@ -800,7 +849,7 @@ func consumeArgs(start int, tokens []token.Token, c *Context) (int, []VarWithTyp
 			}
 			mutable = true
 		default:
-			return 0, nil, fmt.Errorf("Invalid token in argument list: %v %v", t, started)
+			return 0, nil, fmt.Errorf("Invalid token in argument list: %v", t)
 		}
 	}
 	return 0, nil, fmt.Errorf("Could not parse arguments")
@@ -861,7 +910,12 @@ func consumeEffectList(start int, tokens []token.Token, c *Context) (int, []Effe
 	}
 	return 0, nil, fmt.Errorf("Effect lists must end with a block start.")
 }
+
 func consumeType(start int, tokens []token.Token, c *Context) (int, Type, error) {
+	if start >= len(tokens) {
+		return 0, nil, fmt.Errorf("Invalid consumeType start")
+	}
+
 	nm := tokens[start].String()
 	if nm == "[" {
 		if tokens[start+1] == token.Char("]") {
@@ -874,7 +928,7 @@ func consumeType(start int, tokens []token.Token, c *Context) (int, Type, error)
 			t := SliceType{
 				Base: base,
 			}
-			c.Types[tn] = TypeDefn{t, t, nil}
+			c.Types[tn] = TypeDefn{tn, t, nil}
 			return n + 2, t, nil
 		}
 		// It is an array
@@ -898,19 +952,35 @@ func consumeType(start int, tokens []token.Token, c *Context) (int, Type, error)
 			Base: base,
 			Size: sz,
 		}
-		c.Types[tn] = TypeDefn{t, t, nil}
+		c.Types[tn] = TypeDefn{tn, t, nil}
 		return n + in + 2, t, nil
 	}
 	consumed := 1
 	typedef := c.Types[nm]
-	rv := TypeLiteral(nm)
+	rvl := TypeLiteral(nm)
+	var rv Type = rvl
 	for range typedef.Parameters {
 		n, t, err := consumeType(start+consumed, tokens, c)
 		if err != nil {
 			return 0, nil, err
 		}
 		consumed += n
-		rv += TypeLiteral(" ") + TypeLiteral(t.Type())
+		rvl += TypeLiteral(" ") + TypeLiteral(t.TypeName())
+		rv = rvl
+	}
+	if len(tokens) > start+consumed && tokens[start+consumed] == token.Operator("|") {
+		n, moretypes, err := consumeType(start+consumed+1, tokens, c)
+		consumed += 1
+		if err != nil {
+			return 0, nil, err
+		}
+		switch mt := moretypes.(type) {
+		case SumType:
+			rv = append(SumType{rvl}, mt...)
+		default:
+			rv = append(SumType{rvl}, mt)
+		}
+		consumed += n
 	}
 	return consumed, rv, nil
 }
@@ -940,7 +1010,7 @@ func consumeEnumTypeList(start int, tokens []token.Token, c *Context) (int, []En
 		switch t := tokens[i].(type) {
 		case token.Unknown:
 			if val.Constructor != "" {
-				val.Parameters = append(val.Parameters, TypeLiteral(t.String()))
+				val.Parameters = append(val.Parameters, t.String())
 			} else {
 				val = EnumOption{Constructor: t.String()}
 			}

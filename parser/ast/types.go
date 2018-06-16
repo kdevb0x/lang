@@ -2,25 +2,26 @@ package ast
 
 import (
 	"fmt"
+	"strings"
 )
 
-// FIXME: This should be eliminated
 type Type interface {
 	Node
-	Type() string
+	TypeName() string
+	Info() TypeInfo
+	Components() []Type
 }
 
 type TypeDef interface {
 	TypeDefn() TypeDef
 }
-
 type Assignable interface {
 	CanAssign() bool
 }
 
 type EnumOption struct {
 	Constructor string
-	Parameters  []Type
+	Parameters  []string
 	ParentType  Type
 }
 
@@ -31,12 +32,16 @@ func (eo EnumOption) Node() Node {
 func (eo EnumOption) Value() interface{} {
 	return eo.Constructor
 }
-func (eo EnumOption) Type() string {
-	return eo.ParentType.Type()
+
+func (eo EnumOption) Type() Type {
+	return eo.ParentType
 }
 
 func (eo EnumOption) String() string {
 	return fmt.Sprintf("EnumOption{%v, Parameters: %v ParentType: %v}", eo.Constructor, eo.Parameters, eo.ParentType)
+}
+func (eo EnumOption) Info() TypeInfo {
+	panic("Unhandled info")
 }
 
 func (e EnumOption) PrettyPrint(lvl int) string {
@@ -49,20 +54,27 @@ type EnumValue struct {
 }
 
 func (ev EnumValue) Value() interface{} {
-	return ev.Constructor
+	return ev.Constructor.Type()
 }
 
 func (ev EnumValue) Node() Node {
 	return ev
 }
-func (ev EnumValue) Type() string {
-	base := ev.Constructor.Type()
+func (ev EnumValue) TypeName() string {
+	base := ev.Constructor.Type().TypeName()
 	for _, a := range ev.Parameters {
-		base += " " + a.Type()
+		base += " " + a.Type().TypeName()
 	}
 	return base
 }
 
+func (ev EnumValue) Type() Type {
+	return TypeLiteral(ev.TypeName())
+}
+
+func (ev EnumValue) Info() TypeInfo {
+	panic("Not implemented")
+}
 func (ev EnumValue) String() string {
 	return fmt.Sprintf("EnumValue{%v, Parameters: %v}", ev.Constructor, ev.Parameters)
 }
@@ -81,12 +93,10 @@ func (vt VarWithType) CanAssign() bool {
 	return true
 }
 
-func (vt VarWithType) Type() string {
-	if vt.Typ == nil {
-		return ""
-	}
-	return vt.Typ.Type()
+func (vt VarWithType) Type() Type {
+	return vt.Typ
 }
+
 func (vt VarWithType) Node() Node {
 	return vt
 }
@@ -118,9 +128,9 @@ type MutStmt struct {
 }
 
 type TypeDefn struct {
-	Name         Type
+	Name         string
 	ConcreteType Type
-	Parameters   []Type
+	Parameters   []string
 }
 
 func (t TypeDefn) Node() Node {
@@ -136,7 +146,7 @@ func (t TypeDefn) PrettyPrint(lvl int) string {
 }
 
 type EnumTypeDefn struct {
-	Name       Type
+	Name       string
 	Options    []EnumOption
 	Parameters []Type
 }
@@ -154,11 +164,33 @@ func (t EnumTypeDefn) TypeDefn() TypeDef {
 	return t
 }
 
+func (t EnumTypeDefn) Type() Type {
+	return t
+}
+
+func (t EnumTypeDefn) Info() TypeInfo {
+	panic("Unhandled info")
+	// FIXME: This is not accurate
+	return TypeInfo{8, false}
+}
+
+func (t EnumTypeDefn) TypeName() string {
+	ret := t.Name
+	for _, p := range t.Parameters {
+		ret += " " + p.TypeName()
+	}
+	return ret
+}
+
 func (t EnumTypeDefn) PrettyPrint(lvl int) string {
 	panic("Not implemented")
 }
 
-func (m MutStmt) Type() string {
+func (t EnumTypeDefn) Components() []Type {
+	panic("Not implemented")
+}
+
+func (m MutStmt) Type() Type {
 	return m.Var.Type()
 }
 func (m MutStmt) PrettyPrint(lvl int) string {
@@ -174,8 +206,12 @@ func (s LetStmt) Node() Node {
 	return s
 }
 
-func (l LetStmt) Type() string {
+func (l LetStmt) Type() Type {
 	return l.Var.Type()
+}
+
+func (l LetStmt) TypeName() string {
+	return l.Var.Type().TypeName()
 }
 
 func (ls LetStmt) String() string {
@@ -221,13 +257,18 @@ func (ms MutStmt) Node() Node {
 	return ms
 }
 
+func (ms MutStmt) TypeName() string {
+	return ms.Var.Type().TypeName()
+}
+
 type BoolValue interface {
 	Value
 	BoolValue() bool
 }
 
 type Value interface {
-	Type
+	Node
+	Type() Type
 	Value() interface{}
 }
 
@@ -263,7 +304,7 @@ func (ao AdditionOperator) String() string {
 	return fmt.Sprintf("(%v + %v)", ao.Left, ao.Right)
 }
 
-func (ao AdditionOperator) Type() string {
+func (ao AdditionOperator) Type() Type {
 	return ao.Left.Type()
 }
 
@@ -287,7 +328,7 @@ func (o SubtractionOperator) String() string {
 	return fmt.Sprintf("(%v - %v)", o.Left, o.Right)
 }
 
-func (o SubtractionOperator) Type() string {
+func (o SubtractionOperator) Type() Type {
 	return o.Left.Type()
 }
 
@@ -311,11 +352,8 @@ func (o MulOperator) String() string {
 	return fmt.Sprintf("(%v * %v)", o.Left, o.Right)
 }
 
-func (o MulOperator) Type() string {
-	if lt := o.Left.Type(); lt != "" {
-		return lt
-	}
-	return o.Right.Type()
+func (o MulOperator) Type() Type {
+	return o.Left.Type()
 }
 
 func (o MulOperator) PrettyPrint(lvl int) string {
@@ -337,7 +375,7 @@ func (o DivOperator) String() string {
 	return fmt.Sprintf("(%v / %v)", o.Left, o.Right)
 }
 
-func (o DivOperator) Type() string {
+func (o DivOperator) Type() Type {
 	return o.Left.Type()
 }
 
@@ -361,7 +399,7 @@ func (m ModOperator) String() string {
 	return fmt.Sprintf("ModOperator{%v mod %v}", m.Left, m.Right)
 }
 
-func (m ModOperator) Type() string {
+func (m ModOperator) Type() Type {
 	return m.Left.Type()
 }
 func (o ModOperator) PrettyPrint(lvl int) string {
@@ -385,8 +423,39 @@ func (v Variable) PrettyPrint(lvl int) string {
 
 type TypeLiteral string
 
-func (tl TypeLiteral) Type() string {
+func (tl TypeLiteral) TypeName() string {
 	return string(tl)
+}
+func (tl TypeLiteral) Info() TypeInfo {
+	switch tl {
+	case "bool":
+		return TypeInfo{1, false}
+	case "byte", "uint8":
+		return TypeInfo{1, false}
+	case "int8":
+		return TypeInfo{1, true}
+	case "uint16":
+		return TypeInfo{2, false}
+	case "int16":
+		return TypeInfo{2, true}
+	case "uint32":
+		return TypeInfo{4, false}
+	case "int32":
+		return TypeInfo{4, true}
+	case "uint64":
+		return TypeInfo{8, false}
+	case "int64":
+		return TypeInfo{8, true}
+	case "uint":
+		return TypeInfo{0, false}
+	case "int":
+		return TypeInfo{0, true}
+	case "string":
+		// 8 for length, 8 for ptr
+		return TypeInfo{16, false}
+	default:
+		panic("Unhandled type literal " + string(tl))
+	}
 }
 
 func (tl TypeLiteral) Node() Node {
@@ -395,6 +464,14 @@ func (tl TypeLiteral) Node() Node {
 
 func (tl TypeLiteral) PrettyPrint(lvl int) string {
 	return nTabs(lvl) + string(tl)
+}
+
+func (tl TypeLiteral) Components() []Type {
+	if tl == "string" {
+		// One length, one pointer
+		return []Type{TypeLiteral("uint64"), TypeLiteral("uint")}
+	}
+	return []Type{tl}
 }
 
 type Brackets struct {
@@ -408,7 +485,7 @@ func (b Brackets) Node() Node {
 	return b
 }
 
-func (b Brackets) Type() string {
+func (b Brackets) Type() Type {
 	return b.Val.Type()
 }
 func (b Brackets) String() string {
@@ -431,10 +508,68 @@ func (c Cast) Node() Node {
 	return c
 }
 
-func (c Cast) Type() string {
-	return c.Typ.Type()
+func (c Cast) Type() Type {
+	return c.Typ
 }
 
 func (c Cast) PrettyPrint(lvl int) string {
 	return fmt.Sprintf("%vcast (%v) as %v", nTabs(lvl), c.Val.PrettyPrint(0), c.Typ.PrettyPrint(0))
+}
+
+type SumType []Type
+
+func (s SumType) TypeName() string {
+	if len(s) == 0 {
+		return ""
+	}
+	var ret strings.Builder
+	for i, o := range s {
+		if i == 0 {
+			fmt.Fprintf(&ret, "%v", o.TypeName())
+		} else {
+			fmt.Fprintf(&ret, " | %v", o.TypeName())
+		}
+	}
+	return ret.String()
+}
+
+func (s SumType) Node() Node {
+	return s
+}
+
+func (s SumType) String() string {
+	return fmt.Sprintf("SumType{%v}", s.TypeName())
+}
+
+func (s SumType) PrettyPrint(lvl int) string {
+	return nTabs(lvl) + s.TypeName()
+}
+
+func (s SumType) Info() TypeInfo {
+	// Sum types are the size of the largest possible type, plus 1 word to hold the variant
+	// that's currently being worked with.
+	ti := TypeInfo{8, false}
+	var max TypeInfo
+	for _, v := range s {
+		subtype := v.Info()
+		if subtype.Size > max.Size {
+			max = subtype
+		}
+	}
+	if max.Size == 0 {
+		max.Size = 8
+	}
+	ti.Size += max.Size
+	return ti
+}
+
+func (s SumType) Components() []Type {
+	var possible []Type
+	for _, subtype := range s {
+		if sub := subtype.Components(); len(sub) >= len(possible) {
+			possible = sub
+		}
+	}
+	// One for the variant stored, then the biggest possible variant
+	return append([]Type{TypeLiteral("uint64")}, possible...)
 }
