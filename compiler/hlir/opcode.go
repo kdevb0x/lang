@@ -352,3 +352,19 @@ func (o LTE) Registers() []Register {
 func (o LTE) ModifiedRegisters() []Register {
 	return []Register{o.Dst}
 }
+
+type ASSERT struct {
+	Predicate Condition
+	Message   StringLiteral
+}
+
+func (o ASSERT) Registers() []Register {
+	return []Register{o.Predicate}
+}
+func (o ASSERT) ModifiedRegisters() []Register {
+	return nil
+}
+
+func (o ASSERT) String() string {
+	return fmt.Sprintf("ASSERT %v, %v", o.Predicate, o.Message)
+}

@@ -3,10 +3,16 @@ package vm
 import (
 	"github.com/driusan/lang/compiler/hlir"
 	"github.com/driusan/lang/parser/ast"
+	"io"
+	"strings"
 )
 
 func Parse(val string) (*Context, error) {
-	as, ti, c, err := ast.Parse(val)
+	return ParseFromReader(strings.NewReader(val))
+}
+
+func ParseFromReader(src io.Reader) (*Context, error) {
+	as, ti, c, err := ast.ParseFromReader(src)
 	if err != nil {
 		return nil, err
 	}

@@ -86,6 +86,15 @@ func compareOp(a, b Opcode) bool {
 			}
 		}
 		return true
+	case ASSERT:
+		b1, ok := b.(ASSERT)
+		if !ok {
+			return false
+		}
+		if !compareOp(a1.Predicate, b1.Predicate) {
+			return false
+		}
+		return a1.Message == b1.Message
 	default:
 		return a == b
 	}
@@ -4227,5 +4236,93 @@ func TestCastIntVariable(t *testing.T) {
 	}
 	if got := rd[LocalValue(0)].TypeInfo; got != (ast.TypeInfo{0, true}) {
 		t.Errorf("Incorrect type info for uncast integer: got %v", got)
+	}
+}
+
+func TestAssertionFail(t *testing.T) {
+	as, ti, c, err := ast.Parse(sampleprograms.AssertionFail)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		ASSERT{
+			Predicate: Condition{nil, IntLiteral(0)},
+			Message:   "",
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Errorf("%v", err)
+	}
+}
+
+func TestAssertionPass(t *testing.T) {
+	as, ti, c, err := ast.Parse(sampleprograms.AssertionPass)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		ASSERT{
+			Predicate: Condition{nil, IntLiteral(1)},
+			Message:   "",
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Errorf("%v", err)
+	}
+}
+
+func TestAssertionFailWithMessage(t *testing.T) {
+	as, ti, c, err := ast.Parse(sampleprograms.AssertionFailWithMessage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		ASSERT{
+			Predicate: Condition{nil, IntLiteral(0)},
+			Message:   "This always fails",
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Errorf("%v", err)
+	}
+}
+
+func TestAssertionPassWithMessage(t *testing.T) {
+	as, ti, c, err := ast.Parse(sampleprograms.AssertionPassWithMessage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, _, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		ASSERT{
+			Predicate: Condition{nil, IntLiteral(1)},
+			Message:   "You should never see this",
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Errorf("%v", err)
 	}
 }

@@ -349,6 +349,16 @@ func compare(v1, v2 Node) bool {
 		}
 		return true
 	}
+	if v1a, ok := v1.(Assertion); ok {
+		v2a, ok := v2.(Assertion)
+		if !ok {
+			return false
+		}
+		if !compare(v1a.Predicate, v2a.Predicate) {
+			return false
+		}
+		return v1a.Message == v2a.Message
+	}
 	panic(fmt.Sprintf("Unimplemented type for compare %v vs %v", reflect.TypeOf(v1), reflect.TypeOf(v2)))
 }
 
@@ -4597,6 +4607,144 @@ func TestCastBuiltin(t *testing.T) {
 								Typ: TypeLiteral("string"),
 							},
 						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("got %v want %v", ast[i], v)
+		}
+	}
+}
+
+func TestAssertionFail(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.AssertionFail))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Node{
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					Assertion{
+						Predicate: BoolLiteral(false),
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("got %v want %v", ast[i], v)
+		}
+	}
+}
+
+func TestAssertionPass(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.AssertionPass))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Node{
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					Assertion{
+						Predicate: BoolLiteral(true),
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("got %v want %v", ast[i], v)
+		}
+	}
+}
+
+func TestAssertionFailWithMessage(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.AssertionFailWithMessage))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Node{
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					Assertion{
+						Predicate: BoolLiteral(false),
+						Message:   "This always fails",
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("got %v want %v", ast[i], v)
+		}
+	}
+}
+
+func TestAssertionPassWithMessage(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.AssertionPassWithMessage))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Node{
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					Assertion{
+						Predicate: BoolLiteral(true),
+						Message:   "You should never see this",
 					},
 				},
 			},

@@ -82,7 +82,7 @@ func runOp(op hlir.Opcode, ctx *Context, allowed []ast.Effect) (stop bool, err e
 					}
 				}
 			case 2:
-				fmt.Fprintf(ctx.stderr, "%s", s)
+				ctx.writeStderr(s.(string))
 			default:
 				if s2, ok := s.(string); ok {
 					Write(fd.(int), l.(int), &([]byte(s2)[0]))
@@ -401,6 +401,14 @@ func runOp(op hlir.Opcode, ctx *Context, allowed []ast.Effect) (stop bool, err e
 				break jumptable
 			}
 		}
+	case hlir.ASSERT:
+		//fmt.Printf("Before: %v\n", ctx)
+		if !evalCondition(o.Predicate, ctx, []ast.Effect{}) {
+			err := assertionError(o.Message)
+			ctx.writeStderr(err.Error())
+			return true, err
+		}
+		//fmt.Printf("After: %v\n", ctx)
 	default:
 		panic(fmt.Sprintf("Unrecognized op: %v", reflect.TypeOf(op).Name()))
 	}
@@ -464,11 +472,13 @@ func evalCondition(cond hlir.Condition, ctx *Context, allowed []ast.Effect) bool
 			panic(err)
 		}
 	}
+	//fmt.Printf("%v", cond.Register)
 	r := evalRegister(cond.Register, ctx)
+	//fmt.Printf("EVALED %v", r)
 	if r == true || r == false {
 		return r.(bool)
 	}
-	return r == 0
+	return r != 0
 }
 
 func resolveOffset(o hlir.Offset, ctx *Context) (hlir.Register, *Context) {
@@ -518,4 +528,13 @@ func dereferencePointer(r hlir.Register, ctx *Context) (hlir.Register, *Context)
 		}
 		return r, ctx
 	}
+}
+
+type assertionError string
+
+func (a assertionError) Error() string {
+	if a == "" {
+		return fmt.Sprintf("assert failed")
+	}
+	return fmt.Sprintf("assert failed: %s", string(a))
 }

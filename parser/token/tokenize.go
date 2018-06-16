@@ -18,7 +18,7 @@ const (
 func addToken(cur []Token, val string) []Token {
 	switch val {
 	case "func", "mutable", "let", "while", "if", "else", "return", "type",
-		"data", "match", "case", "cast", "as", "affects":
+		"data", "match", "case", "cast", "as", "affects", "assert":
 		return append(cur, Keyword(val))
 	case "(", ")", "{", "}", `"`, `,`, ":", ".":
 		return append(cur, Char(val))

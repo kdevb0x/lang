@@ -2,6 +2,8 @@ package ast
 
 import (
 	"fmt"
+	"bufio"
+	"io"
 	"os"
 	"reflect"
 	"strings"
@@ -40,6 +42,14 @@ type Callables map[string][]Callable
 
 func Parse(val string) ([]Node, TypeInformation, Callables, error) {
 	tokens, err := token.Tokenize(strings.NewReader(val))
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return Construct(tokens)
+}
+
+func ParseFromReader(r io.Reader) ([]Node, TypeInformation, Callables, error) {
+	tokens, err := token.Tokenize(bufio.NewReader(r))
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -461,6 +471,8 @@ func consumeStmt(start int, tokens []token.Token, c *Context) (int, Node, error)
 			return consumeIfStmt(start, tokens, c)
 		case "match":
 			return consumeMatchStmt(start, tokens, c)
+		case "assert":
+			return consumeAssertStmt(start, tokens, c)
 		default:
 			panic(fmt.Sprintf("Unimplemented keyword: %v at %v", tokens[start], start))
 		}

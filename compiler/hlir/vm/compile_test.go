@@ -35,7 +35,9 @@ func compileAndTestWithArgs(t *testing.T, prog string, args []string, estdout, e
 
 	stdout, stderr, err := RunWithSideEffects("main", ctx)
 	if err != nil {
-		t.Fatal(err)
+		if _, assert := err.(assertionError); !assert {
+			t.Fatal(err)
+		}
 	}
 	stdo, err := ioutil.ReadAll(stdout)
 	if err != nil {
@@ -631,4 +633,24 @@ func TestCastIntVariable(t *testing.T) {
 
 func TestEmptyReturn(t *testing.T) {
 	compileAndTest(t, sampleprograms.EmptyReturn, "", "")
+}
+
+func TestAssertionFail(t *testing.T) {
+	compileAndTest(t, sampleprograms.AssertionFail, "", "assert failed")
+}
+
+func TestAssertionFailWithMessage(t *testing.T) {
+	compileAndTest(t, sampleprograms.AssertionFailWithMessage, "", "assert failed: This always fails")
+}
+
+func TestAssertionPass(t *testing.T) {
+	compileAndTest(t, sampleprograms.AssertionPass, "", "")
+}
+
+func TestAssertionPassWithMessage(t *testing.T) {
+	compileAndTest(t, sampleprograms.AssertionPassWithMessage, "", "")
+}
+
+func TestAssertionFailWithVariable(t *testing.T) {
+	compileAndTest(t, sampleprograms.AssertionFailWithVariable, "", "assert failed")
 }

@@ -761,6 +761,16 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 				context.values = oldVals
 			}
 			ops = append(ops, jt)
+		case ast.Assertion:
+			pbody, pregister, err := evaluateValue(s.Predicate, context)
+			if err != nil {
+				return nil, err
+			}
+			ops = append(ops, ASSERT{
+				Predicate: Condition{pbody, pregister[0]},
+				Message:   StringLiteral(s.Message),
+			})
+
 		default:
 			panic(fmt.Sprintf("Statement type not implemented: %v", reflect.TypeOf(s)))
 		}

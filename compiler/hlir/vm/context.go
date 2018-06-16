@@ -85,3 +85,7 @@ func (c *Context) SetRegister(r hlir.Register, val interface{}) error {
 	}
 	return nil
 }
+
+func (c *Context) writeStderr(msg string) {
+	fmt.Fprintf(c.stderr, "%s", msg)
+}

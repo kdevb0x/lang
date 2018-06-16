@@ -671,3 +671,60 @@ func TestSimpleArray(t *testing.T) {
 	}
 
 }
+
+func TestAssertion(t *testing.T) {
+	tokens, err := Tokenize(strings.NewReader(sampleprograms.AssertionFail))
+	expected := []Token{
+		Keyword("func"),
+		Whitespace(" "),
+		Unknown("main"),
+		Whitespace(" "),
+		Char("("),
+		Char(")"),
+		Whitespace(" "),
+		Char("("),
+		Char(")"),
+		Whitespace(" "),
+		Char("{"),
+		Whitespace("\n\t"),
+		Keyword("assert"),
+		Char("("),
+		Unknown("false"),
+		Char(")"),
+		Whitespace("\n"),
+		Char("}"),
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// We ensure that both there are no tokens that
+	// were parsed that shouldn't have been, and no tokens
+	// that weren't parsed by ranging through both what
+	// we got and what we expected separately.
+	for i, tok := range tokens {
+		if i >= len(expected) {
+			t.Errorf("Not enough tokens parsed")
+			break
+		}
+		if !tok.IsValid() {
+			t.Errorf("Invalid token %v", tok)
+		}
+		if tokens[i] != expected[i] {
+			t.Errorf(`Unexpected token %d: got "%v" want "%v"`, i, tokens[i], expected[i])
+		}
+	}
+	for i, tok := range expected {
+		if i >= len(tokens) {
+			t.Errorf("Missing %d tokens", (i - len(tokens) + 1))
+			break
+		}
+		if !tok.IsValid() {
+			t.Errorf("Invalid token %v", tok)
+		}
+		if tokens[i] != expected[i] {
+			t.Errorf(`Unexpected token %d: got "%v" want "%v"`, i, tokens[i], expected[i])
+		}
+	}
+
+}
