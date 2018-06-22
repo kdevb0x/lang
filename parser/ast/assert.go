@@ -31,7 +31,7 @@ func consumeAssertStmt(start int, tokens []token.Token, c *Context) (int, Assert
 	if tokens[start+1] != token.Char("(") {
 		return 0, Assertion{}, fmt.Errorf("Invalid assertion statement: Missing opening bracket")
 	}
-	vn, v, err := consumeValue(start+2, tokens, c)
+	vn, v, err := consumeValue(start+2, tokens, c, false)
 	if err != nil {
 		return 0, Assertion{}, err
 	}
@@ -43,7 +43,7 @@ func consumeAssertStmt(start int, tokens []token.Token, c *Context) (int, Assert
 	case token.Char(")"):
 		return vn + 3, a, nil
 	case token.Char(","):
-		mn, m, err := consumeValue(start+vn+3, tokens, c)
+		mn, m, err := consumeValue(start+vn+3, tokens, c, false)
 		if err != nil {
 			return 0, Assertion{}, err
 		}

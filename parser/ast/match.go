@@ -57,7 +57,7 @@ func consumeMatchStmt(start int, tokens []token.Token, c *Context) (int, MatchSt
 		cn = 0
 		cv = BoolLiteral(true)
 	} else {
-		cn, cv, err = consumeValue(start+1, tokens, c)
+		cn, cv, err = consumeValue(start+1, tokens, c, true)
 		if err != nil {
 			return 0, MatchStmt{}, err
 		}
@@ -103,7 +103,7 @@ func consumeMatchStmt(start int, tokens []token.Token, c *Context) (int, MatchSt
 		}
 		if tokens[i] == token.Char("}") {
 			ct := c.Types[l.Condition.Type().TypeName()].ConcreteType
-			if ct != nil && ct.TypeName() == "enumtype" {
+			if _, ok := ct.(EnumTypeDefn); ok {
 				if err := checkExhaustiveness(l.Condition.Type(), l.Cases, c); err != nil {
 					return 0, MatchStmt{}, err
 				}
@@ -133,7 +133,7 @@ func consumeCase(start int, tokens []token.Token, c *Context, genericMap map[str
 		}
 		l.Variable = *eo
 	} else {
-		n2, v, err := consumeValue(start+1, tokens, c)
+		n2, v, err := consumeValue(start+1, tokens, c, false)
 		if err != nil {
 			return 0, MatchCase{}, err
 		}

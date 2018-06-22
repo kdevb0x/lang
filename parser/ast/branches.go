@@ -30,7 +30,7 @@ func consumeWhileLoop(start int, tokens []token.Token, c *Context) (int, Node, e
 }
 
 func consumeCondition(start int, tokens []token.Token, c *Context) (int, BoolValue, error) {
-	n, cond, err := consumeValue(start, tokens, c)
+	n, cond, err := consumeValue(start, tokens, c, true)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -53,15 +53,6 @@ func consumeCondition(start int, tokens []token.Token, c *Context) (int, BoolVal
 		if val.Type().TypeName() == "bool" {
 			return n, val, nil
 		}
-		/*
-			defn, ok := c.Types[val.Type()]
-			if !ok {
-				return 0, nil, fmt.Errorf("Undefined variable %v", val.Name)
-			}
-			if defn.ConcreteType.Type() == "bool" {
-				return n, val, nil
-			}
-		*/
 		return 0, nil, fmt.Errorf("%s is not a boolean variable", val)
 	default:
 		return 0, nil, fmt.Errorf("Unsupported comparison %s", reflect.TypeOf(val))

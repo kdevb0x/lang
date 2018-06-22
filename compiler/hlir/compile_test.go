@@ -4596,3 +4596,93 @@ func TestSumTypeFuncReturn(t *testing.T) {
 	}
 
 }
+
+func TestProductTypeValue(t *testing.T) {
+	as, ti, c, err := ast.Parse(sampleprograms.ProductTypeValue)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i, _, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		MOV{
+			Src: IntLiteral(3),
+			Dst: LocalValue(0),
+		},
+		MOV{
+			Src: IntLiteral(0),
+			Dst: LocalValue(1),
+		},
+		CALL{
+			FName: "PrintInt",
+			Args: []Register{
+				LocalValue(0),
+			},
+		},
+		CALL{
+			FName: "PrintString",
+			Args: []Register{
+				IntLiteral(1),
+				StringLiteral(`\n`),
+			},
+		},
+		CALL{
+			FName: "PrintInt",
+			Args: []Register{
+				LocalValue(1),
+			},
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Errorf("%v", err)
+	}
+}
+
+func TestUserProductTypeValue(t *testing.T) {
+	as, ti, c, err := ast.Parse(sampleprograms.UserProductTypeValue)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i, _, _, err := Generate(as[1], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		MOV{
+			Src: IntLiteral(3),
+			Dst: LocalValue(0),
+		},
+		MOV{
+			Src: IntLiteral(6),
+			Dst: LocalValue(1),
+		},
+		MOV{
+			Src: StringLiteral(`hello\n`),
+			Dst: LocalValue(2),
+		},
+		CALL{
+			FName: "PrintString",
+			Args: []Register{
+				LocalValue(1),
+				LocalValue(2),
+			},
+		},
+		CALL{
+			FName: "PrintInt",
+			Args: []Register{
+				LocalValue(0),
+			},
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Errorf("%v", err)
+	}
+}

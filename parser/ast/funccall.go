@@ -5,7 +5,7 @@ import "fmt"
 type FuncCall struct {
 	Name     string
 	UserArgs []Value
-	Returns  Tuple
+	Returns  TupleType
 }
 
 func (f FuncCall) Node() Node {

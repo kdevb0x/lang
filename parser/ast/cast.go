@@ -12,7 +12,7 @@ func consumeCastStmt(start int, tokens []token.Token, c *Context) (int, Cast, er
 
 	}
 	// +2 to skip past the bracket
-	vn, v, err := consumeValue(start+2, tokens, c)
+	vn, v, err := consumeValue(start+2, tokens, c, false)
 	if err != nil {
 		return 0, Cast{}, err
 	}

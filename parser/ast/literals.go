@@ -5,8 +5,15 @@ import (
 )
 
 func IsLiteral(v Value) bool {
-	switch v.(type) {
+	switch t := v.(type) {
 	case IntLiteral, BoolLiteral, StringLiteral, ArrayLiteral:
+		return true
+	case TupleValue:
+		for _, c := range t {
+			if !IsLiteral(c) {
+				return false
+			}
+		}
 		return true
 	default:
 		return false
@@ -48,6 +55,27 @@ func (c *Context) IsCompatibleType(typ Type, v Value) error {
 			}
 		}
 		return nil
+	case UserType:
+		if IsLiteral(v) {
+			return c.IsCompatibleType(t.Type, v)
+		}
+		if v.Type().TypeName() != typ.TypeName() {
+			return fmt.Errorf("%v is not compatible with %v", v, typ.TypeName())
+		}
+	case TupleType:
+		tv, ok := v.(TupleValue)
+		if !ok {
+			return fmt.Errorf("tuples is not compatible with non-tuple value")
+		}
+		if len(tv) != len(t) {
+			return fmt.Errorf("incorrect size for tuple value")
+		}
+		for i, comp := range t {
+			if err := c.IsCompatibleType(comp.Type(), tv[i]); err != nil {
+				return fmt.Errorf("tuple component %d: %v", i, err)
+			}
+		}
+		return nil
 	}
 	t, ok := c.Types[typ.TypeName()]
 	if !ok {
@@ -56,7 +84,6 @@ func (c *Context) IsCompatibleType(typ Type, v Value) error {
 
 	switch t2 := v.(type) {
 	case BoolLiteral:
-
 		if t.ConcreteType == TypeLiteral("bool") {
 			return nil
 		}

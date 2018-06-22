@@ -389,6 +389,44 @@ func compare(v1, v2 Node) bool {
 		}
 		return true
 	}
+
+	if v1a, ok := v1.(TupleType); ok {
+		if v2a, ok := v2.(TupleType); ok {
+			if len(v1a) != len(v2a) {
+				return false
+			}
+			for i := range v1a {
+				if !compare(v1a[i], v2a[i]) {
+					return false
+				}
+			}
+			return true
+		}
+		return false
+	}
+	if v1a, ok := v1.(TupleValue); ok {
+		if v2a, ok := v2.(TupleValue); ok {
+			if len(v1a) != len(v2a) {
+				return false
+			}
+			for i := range v1a {
+				if !compare(v1a[i], v2a[i]) {
+					return false
+				}
+			}
+			return true
+		}
+		return false
+	}
+	if v1a, ok := v1.(UserType); ok {
+		if v2a, ok := v2.(UserType); ok {
+			if v1a.Name != v2a.Name {
+				return false
+			}
+			return compare(v1a.Type, v2a.Type)
+		}
+		return false
+	}
 	panic(fmt.Sprintf("Unimplemented type for compare %v vs %v", reflect.TypeOf(v1), reflect.TypeOf(v2)))
 }
 
@@ -1847,12 +1885,12 @@ func TestUserDefinedType(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					LetStmt{
-						Var: VarWithType{"x", TypeLiteral("Foo"), false},
+						Var: VarWithType{"x", UserType{TypeLiteral("int"), "Foo"}, false},
 						Val: IntLiteral(4),
 					},
 					FuncCall{
 						Name:     "PrintInt",
-						UserArgs: []Value{VarWithType{"x", TypeLiteral("Foo"), false}},
+						UserArgs: []Value{VarWithType{"x", UserType{TypeLiteral("int"), "Foo"}, false}},
 					},
 				},
 			},
@@ -2002,11 +2040,32 @@ func TestEnumType(t *testing.T) {
 				[]Node{
 
 					LetStmt{
-						Var: VarWithType{"a", TypeLiteral("Foo"), false},
+						Var: VarWithType{
+							"a",
+							EnumTypeDefn{
+								"Foo",
+								[]EnumOption{
+									EnumOption{"A", nil, TypeLiteral("Foo")},
+									EnumOption{"B", nil, TypeLiteral("Foo")},
+								},
+								nil,
+							},
+							false,
+						},
 						Val: EnumValue{Constructor: EnumOption{"A", nil, TypeLiteral("Foo")}},
 					},
 					MatchStmt{
-						Condition: VarWithType{"a", TypeLiteral("Foo"), false},
+						Condition: VarWithType{
+							"a",
+							EnumTypeDefn{
+								"Foo",
+								[]EnumOption{
+									EnumOption{"A", nil, TypeLiteral("Foo")},
+									EnumOption{"B", nil, TypeLiteral("Foo")},
+								},
+								nil,
+							},
+							false},
 						Cases: []MatchCase{
 							MatchCase{
 								Variable: EnumOption{"A", nil, TypeLiteral("Foo")},
@@ -5126,6 +5185,138 @@ func TestBlockComment(t *testing.T) {
 						Name: "PrintInt",
 						UserArgs: []Value{
 							VarWithType{"x", TypeLiteral("int"), false},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("Node %d: got %v want %v", i, ast[i], v)
+		}
+	}
+}
+
+func TestProductTypeValue(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.ProductTypeValue))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Node{
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: nil,
+			Body: BlockStmt{
+				[]Node{
+					LetStmt{
+						Var: VarWithType{
+							"x",
+							TupleType{
+								VarWithType{"x", TypeLiteral("int"), false},
+								VarWithType{"y", TypeLiteral("bool"), false},
+							},
+							false,
+						},
+						Val: TupleValue{
+							IntLiteral(3),
+							BoolLiteral(false),
+						},
+					},
+					FuncCall{
+						Name: "PrintInt",
+						UserArgs: []Value{
+							// FIXME: Decide what this should really be.
+							// Special case of VarWithType or a new node type?
+							VarWithType{"x.x", TypeLiteral("int"), false},
+						},
+					},
+					FuncCall{
+						Name:     "PrintString",
+						UserArgs: []Value{StringLiteral(`\n`)},
+					},
+					FuncCall{
+						Name: "PrintInt",
+						UserArgs: []Value{
+							// FIXME: Decide what this should really be.
+							// Special case of VarWithType or a new node type?
+							VarWithType{"x.y", TypeLiteral("bool"), false},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("Node %d: got %v want %v", i, ast[i], v)
+		}
+	}
+}
+
+func TestUserProductTypeValue(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.UserProductTypeValue))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Node{
+		TypeDefn{
+			Name: "Foo",
+			ConcreteType: TupleType{
+				VarWithType{"x", TypeLiteral("int"), false},
+				VarWithType{"y", TypeLiteral("string"), false},
+			},
+		},
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: nil,
+			Body: BlockStmt{
+				[]Node{
+					LetStmt{
+						Var: VarWithType{
+							"x",
+							UserType{
+								TupleType{
+									VarWithType{"x", TypeLiteral("int"), false},
+									VarWithType{"y", TypeLiteral("string"), false},
+								},
+								"Foo",
+							},
+							false,
+						},
+						Val: TupleValue{
+							IntLiteral(3),
+							StringLiteral(`hello\n`),
+						},
+					},
+					FuncCall{
+						Name: "PrintString",
+						UserArgs: []Value{
+							VarWithType{"x.y", TypeLiteral("string"), false},
+						},
+					},
+					FuncCall{
+						Name: "PrintInt",
+						UserArgs: []Value{
+							// FIXME: Decide what this should really be.
+							// Special case of VarWithType or a new node type?
+							VarWithType{"x.x", TypeLiteral("int"), false},
 						},
 					},
 				},

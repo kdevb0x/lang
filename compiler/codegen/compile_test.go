@@ -1045,3 +1045,19 @@ func ExampleLineComment() {
 	}
 	// Output: 3
 }
+
+func ExampleProductTypeValue() {
+	if err := RunProgram("producttypevalue", sampleprograms.ProductTypeValue); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: 3
+	// 0
+}
+
+func ExampleUserProductTypeValue() {
+	if err := RunProgram("userproducttypevalue", sampleprograms.UserProductTypeValue); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: hello
+	// 3
+}

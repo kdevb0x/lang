@@ -182,6 +182,11 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, Callables, error)
 			i += n + 1
 
 			cur.Name = typeNames[0].String()
+
+			var pv []string
+			for _, param := range typeNames[1:] {
+				pv = append(pv, param.String())
+			}
 			n, options, err := consumeEnumTypeList(i+1, tokens, &c)
 			if err != nil {
 				return nil, nil, nil, err
@@ -193,6 +198,12 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, Callables, error)
 
 			ti[cur.Name] = TypeInfo{0, false}
 
+			c.Types[cur.Name] = TypeDefn{
+				Name:         cur.Name,
+				ConcreteType: cur,
+				Parameters:   pv,
+			}
+
 			i += n
 			nodes = append(nodes, cur)
 		}
@@ -201,7 +212,7 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, Callables, error)
 }
 
 func consumePrototype(start int, tokens []token.Token, c *Context) (n int, args []VarWithType, retn []VarWithType, effects []Effect, err error) {
-	n, argsDefn, err := consumeArgs(start, tokens, c)
+	n, argsDefn, err := consumeTupleType(start, tokens, c)
 	if err != nil {
 		return 0, nil, nil, nil, err
 	}
@@ -276,6 +287,10 @@ func extractPrototypes(tokens []token.Token, c *Context) error {
 
 			cur.Name = typeNames[0].String()
 
+			var pv []string
+			for _, param := range typeNames[1:] {
+				pv = append(pv, param.String())
+			}
 			n, options, err := consumeEnumTypeList(i+1, tokens, c)
 			if err != nil {
 				return err
@@ -286,10 +301,10 @@ func extractPrototypes(tokens []token.Token, c *Context) error {
 				cur.Options = append(cur.Options, constructor)
 			}
 
-			// FIXME: This TypeLiteral is stupid and inaccurate now that Type() is an interface
 			c.Types[cur.Name] = TypeDefn{
 				Name:         cur.Name,
-				ConcreteType: TypeLiteral("enumtype"),
+				ConcreteType: cur,
+				Parameters:   pv,
 			}
 
 			i += n
@@ -367,7 +382,7 @@ func extractPrototypes(tokens []token.Token, c *Context) error {
 			}
 			c.Types[cur.Name] = TypeDefn{
 				Name:         cur.Name,
-				ConcreteType: TypeLiteral("enumtype"),
+				ConcreteType: cur,
 				Parameters:   pv,
 			}
 
@@ -437,7 +452,7 @@ func consumeStmt(start int, tokens []token.Token, c *Context) (int, Node, error)
 			// We're indexing into an array (probably)
 			// use consumeValue to get the ArrayValue for the index
 			// that we're checking.
-			n, v, err := consumeValue(start, tokens, c)
+			n, v, err := consumeValue(start, tokens, c, true)
 			if err != nil {
 				return 0, BlockStmt{}, err
 			}
@@ -454,7 +469,7 @@ func consumeStmt(start int, tokens []token.Token, c *Context) (int, Node, error)
 				return 0, BlockStmt{}, fmt.Errorf("Can not index non-array value")
 			}
 
-			valn, val, err := consumeValue(start+n+1, tokens, c)
+			valn, val, err := consumeValue(start+n+1, tokens, c, true)
 			if err != nil {
 				return 0, BlockStmt{}, err
 			}
@@ -471,7 +486,7 @@ func consumeStmt(start int, tokens []token.Token, c *Context) (int, Node, error)
 				return 0, nil, fmt.Errorf(`Can not assign to immutable let variable "%v".`, tokens[start])
 			}
 
-			n, val, err := consumeValue(start+2, tokens, c)
+			n, val, err := consumeValue(start+2, tokens, c, false)
 			if err != nil {
 				return 0, nil, err
 			}
@@ -495,7 +510,7 @@ func consumeStmt(start int, tokens []token.Token, c *Context) (int, Node, error)
 				return 1, ReturnStmt{}, nil
 			}
 
-			n, nd, err := consumeValue(start+1, tokens, c)
+			n, nd, err := consumeValue(start+1, tokens, c, false)
 			if err != nil {
 				return 0, ReturnStmt{}, err
 			}
@@ -514,8 +529,8 @@ func consumeStmt(start int, tokens []token.Token, c *Context) (int, Node, error)
 	default:
 		panic(fmt.Sprintf("Unhandled token type in block %v for token %v [%v]", tokens[start].String(), start, tokens[start:]))
 	}
-
 }
+
 func consumeFuncCall(start int, tokens []token.Token, c *Context, mvals []Value) (int, FuncCall, error) {
 	name := tokens[start].String()
 	f := FuncCall{
@@ -543,7 +558,7 @@ func consumeFuncCall(start int, tokens []token.Token, c *Context, mvals []Value)
 	argStart := start + 2 // start = name, +1 = "(", +2 = the first param..
 argLoop:
 	for {
-		n, val, err := consumeValue(argStart, tokens, c)
+		n, val, err := consumeValue(argStart, tokens, c, false)
 		if err != nil {
 			return 0, FuncCall{}, err
 		}
@@ -601,12 +616,16 @@ func consumeLetStmt(start int, tokens []token.Token, c *Context) (int, Value, er
 					return 0, nil, fmt.Errorf("Can not shadow mutable variable \"%v\".", t.String())
 				}
 			} else if l.Var.Typ == nil {
-				l.Var.Typ = TypeLiteral(t.String())
-				if !c.ValidType(l.Var.Typ) {
-					//return 0, nil, fmt.Errorf("Invalid type: %v (%v)", t.String(), c.Types)
-					return 0, nil, fmt.Errorf("Invalid type: %v", t.String())
+				tn := t.String()
+				ct, ok := c.Types[tn]
+				if !ok {
+					return 0, nil, fmt.Errorf("Invalid type: %v", tn)
 				}
-
+				if et, ok := ct.ConcreteType.(EnumTypeDefn); ok {
+					l.Var.Typ = et
+				} else {
+					l.Var.Typ = UserType{ct.ConcreteType, tn}
+				}
 			} else {
 				return 0, nil, fmt.Errorf("Invalid name for let statement")
 			}
@@ -618,7 +637,9 @@ func consumeLetStmt(start int, tokens []token.Token, c *Context) (int, Value, er
 
 			}
 		case token.Char:
-			if l.Var.Typ == nil && t == "[" {
+			if l.Var.Typ == nil && (t == "[" || t == "(") {
+				// It's either an array, slice, or tuple. Either way, we
+				// need to consume a type
 				n, ty, err := consumeType(i, tokens, c)
 				if err != nil {
 					return 0, nil, err
@@ -630,24 +651,19 @@ func consumeLetStmt(start int, tokens []token.Token, c *Context) (int, Value, er
 			}
 		case token.Operator:
 			if t == token.Operator("=") {
-				n, v, err := consumeValue(i+1, tokens, c)
+				n, v, err := consumeValue(i+1, tokens, c, false)
 				if err != nil {
 					return 0, nil, err
 				}
+				switch val := v.(type) {
+				case EnumValue:
+					if l.Var.Typ == nil {
+						l.Var.Typ = val.Constructor.ParentType
+					}
+				default:
+					//fmt.Printf("%v\n", v.Type())
+				}
 				if l.Var.Typ == nil {
-					/*
-						td := c.Types[v.Type().TypeName()]
-						switch td.ConcreteType.(type) {
-						case ArrayType:
-							l.Var.Typ = ArrayType{
-								Base:td.ConcreteType
-							}
-						case	SliceType:
-							l.Var.Typ = td.ConcreteType
-						default:
-							l.Var.Typ = v.Type()
-						}
-					*/
 					l.Var.Typ = v.Type()
 				}
 
@@ -657,7 +673,7 @@ func consumeLetStmt(start int, tokens []token.Token, c *Context) (int, Value, er
 					}
 				} else {
 					if v.Type().TypeName() != l.TypeName() {
-						return 0, nil, fmt.Errorf(`Incompatible assignment for variable "%v": can not assign %v to %v.`, l.Var.Name, v.Type(), l.Type())
+						return 0, nil, fmt.Errorf(`Incompatible assignment for variable "%v": can not assign %v to %v.`, l.Var.Name, v.Type().TypeName(), l.Type().TypeName())
 					}
 				}
 				l.Val = v
@@ -668,7 +684,6 @@ func consumeLetStmt(start int, tokens []token.Token, c *Context) (int, Value, er
 		default:
 			return 0, nil, fmt.Errorf("Invalid let statement: %v", t)
 		}
-
 	}
 	return 0, nil, fmt.Errorf("Invalid let statement")
 }
@@ -693,7 +708,7 @@ func consumeMutStmt(start int, tokens []token.Token, c *Context) (int, Node, err
 					return 0, nil, fmt.Errorf("Can not shadow mutable variable \"%v\".", t.String())
 				}
 			} else if l.Var.Typ == nil {
-				l.Var.Typ = TypeLiteral(t.String())
+				l.Var.Typ = UserType{Type: nil, Name: t.String()}
 				if !c.ValidType(l.Var.Typ) {
 					return 0, nil, fmt.Errorf("Invalid type: %v", t.String())
 				}
@@ -720,7 +735,7 @@ func consumeMutStmt(start int, tokens []token.Token, c *Context) (int, Node, err
 			}
 		case token.Operator:
 			if t == token.Operator("=") {
-				n, v, err := consumeValue(i+1, tokens, c)
+				n, v, err := consumeValue(i+1, tokens, c, false)
 				if err != nil {
 					return 0, nil, err
 				}
@@ -757,7 +772,7 @@ func consumeMutStmt(start int, tokens []token.Token, c *Context) (int, Node, err
 	return 0, nil, fmt.Errorf("Invalid mutable declaration")
 }
 
-func consumeArgs(start int, tokens []token.Token, c *Context) (int, []VarWithType, error) {
+func consumeTupleType(start int, tokens []token.Token, c *Context) (int, TupleType, error) {
 	var args []VarWithType
 	started := false
 	parsingNames := true
@@ -918,6 +933,7 @@ func consumeType(start int, tokens []token.Token, c *Context) (int, Type, error)
 
 	nm := tokens[start].String()
 	if nm == "[" {
+		// We're indexing something, so it's either a slice or an array
 		if tokens[start+1] == token.Char("]") {
 			// It is a slice.
 			n, base, err := consumeType(start+2, tokens, c)
@@ -932,7 +948,7 @@ func consumeType(start int, tokens []token.Token, c *Context) (int, Type, error)
 			return n + 2, t, nil
 		}
 		// It is an array
-		in, size, err := consumeValue(start+1, tokens, c)
+		in, size, err := consumeValue(start+1, tokens, c, false)
 		if err != nil {
 			return 0, nil, err
 		}
@@ -954,6 +970,8 @@ func consumeType(start int, tokens []token.Token, c *Context) (int, Type, error)
 		}
 		c.Types[tn] = TypeDefn{tn, t, nil}
 		return n + in + 2, t, nil
+	} else if nm == "(" {
+		return consumeTupleType(start, tokens, c)
 	}
 	consumed := 1
 	typedef := c.Types[nm]

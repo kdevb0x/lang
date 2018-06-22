@@ -242,6 +242,31 @@ func TestConsumeValue(t *testing.T) {
 			ArrayLiteral{IntLiteral(1), IntLiteral(2)},
 			5,
 		},
+		{
+			"( 1 + 3 )",
+			Brackets{
+				Val: AdditionOperator{
+					Left:  IntLiteral(1),
+					Right: IntLiteral(3),
+				},
+			},
+			5,
+		},
+		{
+			"( 1,  3 )",
+			TupleValue{IntLiteral(1), IntLiteral(3)},
+			5,
+		},
+		{
+			`"hello\n"`,
+			StringLiteral(`hello\n`),
+			3,
+		},
+		{
+			`( 1,   "hello\n")`,
+			TupleValue{IntLiteral(1), StringLiteral(`hello\n`)},
+			7,
+		},
 	}
 
 	for i, tc := range cases {
@@ -249,7 +274,7 @@ func TestConsumeValue(t *testing.T) {
 		tokens = stripWhitespaceAndComments(tokens)
 
 		c := NewContext()
-		n, value, err := consumeValue(0, tokens, &c)
+		n, value, err := consumeValue(0, tokens, &c, false)
 		if err != nil {
 			t.Fatalf("Case %d:  %v", i, err)
 		}

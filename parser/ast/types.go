@@ -573,3 +573,44 @@ func (s SumType) Components() []Type {
 	// One for the variant stored, then the biggest possible variant
 	return append([]Type{TypeLiteral("uint64")}, possible...)
 }
+
+type TupleValue []Value
+
+func (tv TupleValue) Node() Node {
+	return tv
+}
+
+func (tv TupleValue) PrettyPrint(lvl int) string {
+	rv := nTabs(lvl) + "("
+	for i, v := range tv {
+		rv += v.PrettyPrint(0)
+		if i != len(tv)-1 {
+			rv += ", "
+		}
+	}
+	return rv + ")"
+}
+
+func (tv TupleValue) Type() Type {
+	var rv TupleType
+	for _, c := range tv {
+		rv = append(rv, VarWithType{"", c.Type(), false})
+	}
+	return rv
+}
+func (tv TupleValue) Value() interface{} {
+	return nil
+}
+
+type UserType struct {
+	Type
+	Name string
+}
+
+func (ut UserType) String() string {
+	return fmt.Sprintf("UserType{Name: %v, Type: %v}", ut.Name, ut.Type)
+}
+
+func (ut UserType) TypeName() string {
+	return ut.Name
+}

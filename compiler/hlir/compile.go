@@ -417,11 +417,49 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 			}
 			ops = append(ops, fc...)
 		case ast.LetStmt:
+		hack:
 			switch t := s.Var.Typ.(type) {
 			case ast.SumType:
 				// Hack, since SumType is unhashable and can't
 				// be used as a key for c.values
 				s.Var.Typ = ast.TypeLiteral(t.TypeName())
+			case ast.UserType:
+				switch t.Type.(type) {
+				case ast.TupleType:
+					// We can't fallthrough a type switch, so if it's
+					// a user tuple type change it to the underlying tuple
+					// type and go back to the start
+					s.Var.Typ = t.Type
+					goto hack
+				}
+			case ast.TupleType:
+				val, ok := s.Val.(ast.TupleValue)
+				if !ok {
+					return nil, fmt.Errorf("Tuple must be assigned to a tuple value")
+				}
+				basename := s.Var.Name
+				var vr ast.VarWithType
+				for i := range t {
+					vr.Name = basename + "." + ast.Variable(t[i].Name)
+					vr.Typ = t[i].Typ
+					body, rvs, err := evaluateValue(val[i], context)
+					if err != nil {
+						return nil, err
+					}
+					ops = append(ops, body...)
+					for i, v := range rvs {
+						if i > 0 {
+							vr.Name = ast.Variable(fmt.Sprintf("%s.%s[%d]", basename, t[i].Name, i))
+						}
+						reg := context.NextLocalRegister(vr)
+						ops = append(ops, MOV{
+							Src: v,
+							Dst: reg,
+						})
+					}
+				}
+				s.Var.Typ = ast.TypeLiteral(t.TypeName())
+				continue
 			}
 
 			ov, oldval := context.values[s.Var]
@@ -512,7 +550,7 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 
 					if i == 0 {
 						switch t := s.Var.Type().(type) {
-						case ast.SumType:
+						case ast.SumType, ast.EnumTypeDefn, ast.TupleType, ast.UserType:
 							// Hack, since SumType is unhashable and can't
 							// be used as a key for c.values
 							s.Var.Typ = ast.TypeLiteral(t.TypeName())
@@ -1047,7 +1085,8 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, []Register
 		})
 		return ops, []Register{dst}, nil
 	case ast.StringLiteral:
-		return nil, []Register{getRegister(ast.IntLiteral(len(s)), context), getRegister(s, context)}, nil
+		length := len(strings.Replace(string(s), `\n`, "x", -1))
+		return nil, []Register{getRegister(ast.IntLiteral(length), context), getRegister(s, context)}, nil
 	case ast.VarWithType, ast.IntLiteral, ast.BoolLiteral, ast.EnumOption:
 		return nil, []Register{getRegister(s, context)}, nil
 	case ast.ArrayValue:
@@ -1371,6 +1410,17 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, []Register
 
 		ops = append(ops, MOV{Src: r[0], Dst: lv})
 		return ops, []Register{lv}, nil
+	case ast.TupleValue:
+		var rv []Register
+		for _, c := range s {
+			subops, subr, err := evaluateValue(c, context)
+			if err != nil {
+				return nil, nil, err
+			}
+			ops = append(ops, subops...)
+			rv = append(rv, subr...)
+		}
+		return ops, rv, nil
 	default:
 		panic(fmt.Errorf("Unhandled value type: %v", reflect.TypeOf(s)))
 	}

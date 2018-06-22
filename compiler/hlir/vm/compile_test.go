@@ -670,3 +670,11 @@ func TestIfBool(t *testing.T) {
 func TestLineComment(t *testing.T) {
 	compileAndTest(t, sampleprograms.LineComment, "3", "")
 }
+
+func TestProductTypeValue(t *testing.T) {
+	compileAndTest(t, sampleprograms.ProductTypeValue, "3\n0", "")
+}
+
+func TestUserProductTypeValue(t *testing.T) {
+	compileAndTest(t, sampleprograms.UserProductTypeValue, "hello\n3", "")
+}

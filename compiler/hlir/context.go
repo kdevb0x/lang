@@ -67,7 +67,7 @@ func (c *variableLayout) NextLocalRegister(varname ast.VarWithType) Register {
 	c.numLocals++
 
 	switch t := varname.Type().(type) {
-	case ast.SumType:
+	case ast.SumType, ast.EnumTypeDefn, ast.TupleType, ast.UserType:
 		// Hack, since SumType is unhashable and can't
 		// be used as a key for c.values
 		varname.Typ = ast.TypeLiteral(t.TypeName())
@@ -125,7 +125,7 @@ func (c variableLayout) Get(varname ast.VarWithType) Register {
 		panic("Can not get empty varname")
 	}
 	switch t := varname.Type().(type) {
-	case ast.SumType:
+	case ast.SumType, ast.EnumTypeDefn, ast.TupleType, ast.UserType:
 		// Hack, since SumType is unhashable and can't
 		// be used as a key for c.values
 		varname.Typ = ast.TypeLiteral(t.TypeName())

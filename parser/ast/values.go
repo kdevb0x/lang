@@ -278,7 +278,7 @@ func createOperatorNode(op token.Token, left, right Value) Value {
 	return invertPrecedence(v)
 }
 
-func consumeValue(start int, tokens []token.Token, c *Context) (int, Value, error) {
+func consumeValue(start int, tokens []token.Token, c *Context, forcebrackets bool) (int, Value, error) {
 	for i := start; i < len(tokens); i++ {
 		switch t := tokens[i].(type) {
 		case token.Unknown:
@@ -298,7 +298,7 @@ func consumeValue(start int, tokens []token.Token, c *Context) (int, Value, erro
 				ev := EnumValue{Constructor: *eo}
 				i += 1
 				for j := 0; j < len(eo.Parameters); j++ {
-					n, param, err := consumeValue(i, tokens, c)
+					n, param, err := consumeValue(i, tokens, c, forcebrackets)
 					if err != nil {
 						return 0, nil, err
 					}
@@ -358,7 +358,7 @@ func consumeValue(start int, tokens []token.Token, c *Context) (int, Value, erro
 			case token.Char(`[`):
 				return 0, nil, fmt.Errorf("Indexing not yet implemented")
 			case token.Char(`(`):
-				tn, partial, err := consumeBrackets(i, tokens, c)
+				tn, partial, err := consumeBracketsOrTupleValue(i, tokens, c, forcebrackets)
 				if err != nil {
 					return 0, nil, err
 				}
@@ -378,7 +378,7 @@ func consumeValue(start int, tokens []token.Token, c *Context) (int, Value, erro
 			}
 		case token.Operator:
 			if t == token.Operator("-") {
-				n, inverse, err := consumeValue(i+1, tokens, c)
+				n, inverse, err := consumeValue(i+1, tokens, c, forcebrackets)
 				if err != nil {
 					return 0, nil, err
 				}
@@ -414,7 +414,7 @@ func consumeCommaSeparatedValues(start int, tokens []token.Token, c *Context) (i
 		case token.Char("}"):
 			return i - start, v, nil
 		case token.Char(","):
-			n, val, err := consumeValue(i+1, tokens, c)
+			n, val, err := consumeValue(i+1, tokens, c, false)
 			if err != nil {
 				return 0, nil, err
 			}
@@ -422,7 +422,7 @@ func consumeCommaSeparatedValues(start int, tokens []token.Token, c *Context) (i
 			i += n
 		default:
 			if i == start {
-				n, val, err := consumeValue(i, tokens, c)
+				n, val, err := consumeValue(i, tokens, c, false)
 				if err != nil {
 					return 0, nil, err
 				}
@@ -445,14 +445,14 @@ func consumeInfix(start int, tokens []token.Token, c *Context, left Value) (int,
 		token.Operator("<"), token.Operator("<="),
 		token.Operator("=="), token.Operator("!="),
 		token.Operator(">"), token.Operator(">="):
-		n, right, err := consumeValue(start+1, tokens, c)
+		n, right, err := consumeValue(start+1, tokens, c, true)
 		if err != nil {
 			return 0, nil, err
 		}
 
 		return n, createOperatorNode(tokens[start], left, right), nil
 	case token.Char("["):
-		n, index, err := consumeValue(start+1, tokens, c)
+		n, index, err := consumeValue(start+1, tokens, c, true)
 		if err != nil {
 			return 0, nil, err
 		}
@@ -467,27 +467,118 @@ func consumeInfix(start int, tokens []token.Token, c *Context, left Value) (int,
 	case token.Operator("="):
 		return 0, left, nil
 	case token.Char("."):
-		nm, fc, err := consumeFuncCall(start+1, tokens, c, []Value{left})
-		if err != nil {
-			return 0, nil, err
+		switch ty := left.Type().(type) {
+		case TupleType:
+			vr, ok := left.(VarWithType)
+			if !ok {
+				return 0, nil, fmt.Errorf("Attempt to index on non-variable tuple type %v currently unsupported", reflect.TypeOf(vr))
+			}
+			elem := Variable(tokens[start+1].String())
+
+			for i := range ty {
+				if ty[i].Name == elem {
+					return 1,
+						VarWithType{
+							vr.Name + "." + elem,
+							ty[i].Type(),
+							vr.Reference,
+						},
+						nil
+				}
+			}
+			return 0, nil, fmt.Errorf("Tuple does not have component named %v", elem)
+		case UserType:
+			switch tty := ty.Type.(type) {
+			case TupleType:
+				vr, ok := left.(VarWithType)
+				if !ok {
+					return 0, nil, fmt.Errorf("Attempt to index on non-variable tuple type %v currently unsupported", reflect.TypeOf(vr))
+				}
+				elem := Variable(tokens[start+1].String())
+
+				for i := range tty {
+					if tty[i].Name == elem {
+						return 1,
+							VarWithType{
+								vr.Name + "." + elem,
+								tty[i].Type(),
+								vr.Reference,
+							},
+							nil
+					}
+				}
+				return 0, nil, fmt.Errorf("Tuple does not have component named %v", elem)
+			default:
+				nm, fc, err := consumeFuncCall(start+1, tokens, c, []Value{left})
+				if err != nil {
+					return 0, nil, err
+				}
+				return nm + 1, fc, nil
+			}
+		default:
+			nm, fc, err := consumeFuncCall(start+1, tokens, c, []Value{left})
+			if err != nil {
+				return 0, nil, err
+			}
+			return nm + 1, fc, nil
 		}
-		return nm + 1, fc, nil
 	default:
 		panic(fmt.Sprintf("Unhandled infix operator %v at %v", tokens[start].String(), start))
 	}
 }
 
-func consumeBrackets(start int, tokens []token.Token, c *Context) (int, Value, error) {
+func consumeBracketsOrTupleValue(start int, tokens []token.Token, c *Context, forceBrackets bool) (int, Value, error) {
+	var ret TupleValue
+	tuple := false
 	switch tokens[start] {
 	case token.Char("("):
-		n, val, err := consumeValue(start+1, tokens, c)
-		if err != nil {
-			return 0, nil, err
+		i := 1
+		if tokens[start+i] == token.Char(")") {
+			// () is an empty tuple
+			return 2, ret, nil
 		}
-		if tokens[start+1+n] != token.Char(")") {
-			return 0, nil, fmt.Errorf("Unbalanced parenthesis at %d", start)
+		if tokens[start+i] == token.Keyword("let") {
+			n, v, err := consumeLetStmt(start+i, tokens, c)
+			if err != nil {
+				return 0, nil, err
+			}
+			if tokens[start+i+n] != token.Char(")") {
+				return 0, nil, fmt.Errorf("Unbalanced parenthesis for let condition")
+			}
+			return n + 1, Brackets{v}, nil
 		}
-		return n + 1, Brackets{Val: val}, nil
+		for {
+			n, val, err := consumeValue(start+i, tokens, c, forceBrackets)
+			if err != nil {
+				return 0, nil, err
+			}
+			ret = append(ret, val)
+
+			i += n
+			if tokens[start+i] == token.Char(",") {
+				// If there's a comma, it's always a tuple even if it's
+				// a tuple of 1 value
+				tuple = true
+				i++
+			}
+			if tokens[start+i] == token.Char(")") {
+				i++
+				break
+			}
+		}
+
+		if tuple || len(ret) > 1 {
+			return i - 1, ret, nil
+		}
+
+		if forceBrackets {
+			return i - 1, Brackets{Val: ret[0]}, nil
+		}
+		if len(ret) == 1 {
+			return i - 1, Brackets{Val: ret[0]}, nil
+		} else {
+			panic("Unhandled scenerio while consuming tuple")
+		}
 	default:
 		return 0, nil, fmt.Errorf("Brackets must start with a bracket")
 	}

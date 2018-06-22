@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestConsumeArgs(t *testing.T) {
+func TestConsumeTypeTuple(t *testing.T) {
 	tests := []struct {
 		Val       string
 		Expected  []VarWithType
@@ -32,7 +32,7 @@ func TestConsumeArgs(t *testing.T) {
 		}
 
 		tokens = stripWhitespaceAndComments(tokens)
-		n, vt, err := consumeArgs(0, tokens, &c)
+		n, vt, err := consumeTupleType(0, tokens, &c)
 		if n != tc.ExpectedN {
 			t.Errorf("Unexpected number of values returned: got %v want %v", n, tc.ExpectedN)
 		}

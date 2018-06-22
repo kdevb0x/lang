@@ -6,20 +6,20 @@ import (
 
 type Callable interface {
 	Type
-	GetArgs() Tuple
-	ReturnTuple() Tuple
+	GetArgs() TupleType
+	ReturnTuple() TupleType
 }
 
-type Tuple []VarWithType
+type TupleType []VarWithType
 
-func (t Tuple) Type() Type {
+func (t TupleType) Type() Type {
 	if len(t) == 0 {
 		return nil
 	}
 	return t //t[0].Type()
 }
 
-func (t Tuple) Info() TypeInfo {
+func (t TupleType) Info() TypeInfo {
 	ti := TypeInfo{}
 	for _, piece := range t {
 		ti.Size += piece.Type().Info().Size
@@ -27,7 +27,7 @@ func (t Tuple) Info() TypeInfo {
 	return ti
 }
 
-func (t Tuple) TypeName() string {
+func (t TupleType) TypeName() string {
 	ret := "("
 	for i, piece := range t {
 		if i == 0 {
@@ -39,13 +39,13 @@ func (t Tuple) TypeName() string {
 	ret += ")"
 	return ret
 }
-func (t Tuple) Node() Node {
+func (t TupleType) Node() Node {
 	return t
 }
-func (t Tuple) PrettyPrint(lvl int) string {
+func (t TupleType) PrettyPrint(lvl int) string {
 	panic("Not implemented")
 }
-func (t Tuple) Components() []Type {
+func (t TupleType) Components() []Type {
 	var v []Type
 	for _, sub := range t {
 		v = append(v, sub.Type())
@@ -57,8 +57,8 @@ func (t Tuple) Components() []Type {
 // until the statements are settled we're just have Funcedure
 type FuncDecl struct {
 	Name    string
-	Args    Tuple
-	Return  Tuple
+	Args    TupleType
+	Return  TupleType
 	Effects []Effect
 
 	Body BlockStmt
@@ -68,7 +68,7 @@ func (pd FuncDecl) Node() Node {
 	return pd
 }
 
-func (pd FuncDecl) GetArgs() Tuple {
+func (pd FuncDecl) GetArgs() TupleType {
 	return pd.Args
 }
 
@@ -87,7 +87,7 @@ func (fd FuncDecl) Info() TypeInfo {
 	return fd.Return.Info()
 }
 
-func (fd FuncDecl) ReturnTuple() Tuple {
+func (fd FuncDecl) ReturnTuple() TupleType {
 	return fd.Return
 }
 

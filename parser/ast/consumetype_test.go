@@ -18,6 +18,14 @@ func TestConsumeType(t *testing.T) {
 		// Needs context:{"Maybe int", TypeLiteral("Maybe int"), 2},
 		{"[5]int", ArrayType{Base: TypeLiteral("int"), Size: IntLiteral(5)}, 4},
 		{"int | string", SumType{TypeLiteral("int"), TypeLiteral("string")}, 3},
+		{
+			"(x int, y bool)",
+			TupleType{
+				VarWithType{"x", TypeLiteral("int"), false},
+				VarWithType{"y", TypeLiteral("bool"), false},
+			},
+			7,
+		},
 	}
 
 	for i, tc := range cases {

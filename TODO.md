@@ -1,12 +1,20 @@
 (Note: If you've stumbled across this file, it will likely only make sense to @driusan. Ask if you're curious
 about something.)
 
+Priorities (in order):
+0. Bugs (any that are found preventing the below)
+2. Heap allocation (required for both PrintInt and token package)
+3. Enforce effects
+4. Import (required for ast package)
+
 # Bugfix TODOs
 - can not return []byte -- claims "invalid argument"
 - Need to enforce that effects are either handled or propagated from function
 - need to determine what effect parameters that are mutated should declare
 	- ReferenceParameter test
 - VM should use PrintByteSlice and PrintString from stdlib, not hack.
+- User types in sum types blow up
+- Types need refactoring into another package and enum types need a real type class.
 
 # New features TODOs
 
@@ -59,3 +67,6 @@ about something.)
 - Add better test cases tail call optimization (esp. with different stack sizes)
 - Need better tests for invalid types.. ie typos like "let digits []buf = .." fail for the wrong reasons..
 - Need better tests for sum types that aren't passed as functions (ie mutable x string | int, then assign to both string and int )
+- Better tests for incompatible tuple values (wrong types, wrong size, access member that doesn't exist, assign to element in mutable tuple, etc.)
+- Need tests for tuples in mutable variables and not just let, also as function call parameters
+
