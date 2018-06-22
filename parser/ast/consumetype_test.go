@@ -22,7 +22,7 @@ func TestConsumeType(t *testing.T) {
 
 	for i, tc := range cases {
 		tokens, err := token.Tokenize(strings.NewReader(tc.Code))
-		tokens = stripWhitespace(tokens)
+		tokens = stripWhitespaceAndComments(tokens)
 
 		c := NewContext()
 		n, value, err := consumeType(0, tokens, &c)

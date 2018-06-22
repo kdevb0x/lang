@@ -728,3 +728,158 @@ func TestAssertion(t *testing.T) {
 	}
 
 }
+
+func TestLineComment(t *testing.T) {
+	tokens, err := Tokenize(strings.NewReader(sampleprograms.LineComment))
+	expected := []Token{
+		Whitespace("\n"),
+		CommentDelimiter("//"),
+		LineComment(" I am the documentation for main."),
+		Keyword("func"),
+		Whitespace(" "),
+		Unknown("main"),
+		Whitespace(" "),
+		Char("("),
+		Char(")"),
+		Whitespace(" "),
+		Char("("),
+		Char(")"),
+		Whitespace(" "),
+		Char("{"),
+		Whitespace(" "),
+		CommentDelimiter("//"),
+		LineComment(" Hello I am a comment"),
+		Whitespace("\t"),
+		Keyword("let"),
+		Whitespace(" "),
+		Unknown("x"),
+		Whitespace(" "),
+		Operator("="),
+		Whitespace(" "),
+		Unknown("3"),
+		Whitespace("\n\t"),
+		Unknown("PrintInt"),
+		Char("("),
+		Unknown("x"),
+		Char(")"),
+		Whitespace(" "),
+		CommentDelimiter("//"),
+		LineComment(" This is a comment about PrintInt"),
+		Char("}"),
+		Whitespace("\n"),
+		CommentDelimiter("//"),
+		LineComment("} // (This would be invalid if it wasn't commented)"),
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// We ensure that both there are no tokens that
+	// were parsed that shouldn't have been, and no tokens
+	// that weren't parsed by ranging through both what
+	// we got and what we expected separately.
+	for i, tok := range tokens {
+		if i >= len(expected) {
+			t.Errorf("Not enough tokens parsed")
+			break
+		}
+		if !tok.IsValid() {
+			t.Errorf("Invalid token %v", tok)
+		}
+		if tokens[i] != expected[i] {
+			t.Errorf(`Unexpected token %d: got "%v" want "%v"`, i, tokens[i], expected[i])
+		}
+	}
+	for i, tok := range expected {
+		if i >= len(tokens) {
+			t.Errorf("Missing %d tokens", (i - len(tokens) + 1))
+			break
+		}
+		if !tok.IsValid() {
+			t.Errorf("Invalid token %v", tok)
+		}
+		if tokens[i] != expected[i] {
+			t.Errorf(`Unexpected token %d: got "%v" want "%v"`, i, tokens[i], expected[i])
+		}
+	}
+
+}
+
+func TestBlockComment(t *testing.T) {
+	tokens, err := Tokenize(strings.NewReader(sampleprograms.BlockComment))
+	expected := []Token{
+		Whitespace("\n"),
+		CommentDelimiter("/*"),
+		BlockComment(" I am the documentation for main. "),
+		CommentDelimiter("*/"),
+		Whitespace("\n"),
+		Keyword("func"),
+		Whitespace(" "),
+		Unknown("main"),
+		Whitespace(" "),
+		Char("("),
+		Char(")"),
+		Whitespace(" "),
+		Char("("),
+		Char(")"),
+		Whitespace(" "),
+		Char("{"),
+		Whitespace("\n\t"),
+		Keyword("let"),
+		Whitespace(" "),
+		Unknown("x"),
+		Whitespace(" "),
+		Operator("="),
+		Whitespace(" "),
+		CommentDelimiter("/*"),
+		BlockComment(" I am inline 4 + "),
+		CommentDelimiter("*/"),
+		Whitespace(" "),
+		Unknown("3"),
+		Whitespace("\n\t"),
+		Unknown("PrintInt"),
+		Char("("),
+		Unknown("x"),
+		Char(")"),
+		Whitespace("\n\t"),
+		CommentDelimiter("/*"),
+		BlockComment(" I\n\tspan\n\tmultiple\n\tlines\n\t"),
+		CommentDelimiter("*/"),
+		Whitespace("\n"),
+		Char("}"),
+		Whitespace("\n"),
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// We ensure that both there are no tokens that
+	// were parsed that shouldn't have been, and no tokens
+	// that weren't parsed by ranging through both what
+	// we got and what we expected separately.
+	for i, tok := range tokens {
+		if i >= len(expected) {
+			t.Errorf("Not enough tokens parsed")
+			break
+		}
+		if !tok.IsValid() {
+			t.Errorf("Invalid token %v", tok)
+		}
+		if tokens[i] != expected[i] {
+			t.Errorf(`Unexpected token %d: got "%v" want "%v"`, i, tokens[i], expected[i])
+		}
+	}
+	for i, tok := range expected {
+		if i >= len(tokens) {
+			t.Errorf("Missing %d tokens", (i - len(tokens) + 1))
+			break
+		}
+		if !tok.IsValid() {
+			t.Errorf("Invalid token %v", tok)
+		}
+		if tokens[i] != expected[i] {
+			t.Errorf(`Unexpected token %d: got "%v" want "%v"`, i, tokens[i], expected[i])
+		}
+	}
+
+}

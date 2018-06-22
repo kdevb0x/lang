@@ -31,7 +31,7 @@ func TestConsumeArgs(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		tokens = stripWhitespace(tokens)
+		tokens = stripWhitespaceAndComments(tokens)
 		n, vt, err := consumeArgs(0, tokens, &c)
 		if n != tc.ExpectedN {
 			t.Errorf("Unexpected number of values returned: got %v want %v", n, tc.ExpectedN)

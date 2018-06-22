@@ -1038,3 +1038,10 @@ func ExampleIfBool() {
 	}
 	// Output: 73
 }
+
+func ExampleLineComment() {
+	if err := RunProgram("ifbool", sampleprograms.LineComment); err != nil {
+		fmt.Println(err.Error())
+	}
+	// Output: 3
+}

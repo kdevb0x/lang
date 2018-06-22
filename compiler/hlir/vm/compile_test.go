@@ -666,3 +666,7 @@ func TestSumTypeFuncReturn(t *testing.T) {
 func TestIfBool(t *testing.T) {
 	compileAndTest(t, sampleprograms.IfBool, "73", "")
 }
+
+func TestLineComment(t *testing.T) {
+	compileAndTest(t, sampleprograms.LineComment, "3", "")
+}

@@ -34,7 +34,7 @@ func TestConsumeEnumTypeList(t *testing.T) {
 
 	for i, tc := range cases {
 		tokens, err := token.Tokenize(strings.NewReader(tc.Code))
-		tokens = stripWhitespace(tokens)
+		tokens = stripWhitespaceAndComments(tokens)
 
 		n, value, err := consumeEnumTypeList(0, tokens, &Context{})
 		if err != nil {

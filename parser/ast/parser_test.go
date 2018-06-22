@@ -5049,3 +5049,93 @@ func TestSumTypeFuncReturn(t *testing.T) {
 		}
 	}
 }
+
+func TestLineComment(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.LineComment))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Node{
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: nil,
+			Body: BlockStmt{
+				[]Node{
+					LetStmt{
+						Var: VarWithType{
+							"x",
+							TypeLiteral("int"),
+							false,
+						},
+						Val: IntLiteral(3),
+					},
+
+					FuncCall{
+						Name: "PrintInt",
+						UserArgs: []Value{
+							VarWithType{"x", TypeLiteral("int"), false},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("Node %d: got %v want %v", i, ast[i], v)
+		}
+	}
+}
+
+func TestBlockComment(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.BlockComment))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Node{
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: nil,
+			Body: BlockStmt{
+				[]Node{
+					LetStmt{
+						Var: VarWithType{
+							"x",
+							TypeLiteral("int"),
+							false,
+						},
+						Val: IntLiteral(3),
+					},
+
+					FuncCall{
+						Name: "PrintInt",
+						UserArgs: []Value{
+							VarWithType{"x", TypeLiteral("int"), false},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("Node %d: got %v want %v", i, ast[i], v)
+		}
+	}
+}

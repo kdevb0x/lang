@@ -94,6 +94,35 @@ type Unknown string
 func (i Unknown) IsValid() bool {
 	return true
 }
+
 func (t Unknown) String() string {
+	return string(t)
+}
+
+type CommentDelimiter string
+
+func (cd CommentDelimiter) String() string {
+	return string(cd)
+}
+
+func (cd CommentDelimiter) IsValid() bool {
+	return cd == "//" || cd == "/*" || cd == "*/"
+}
+
+type LineComment string
+
+func (i LineComment) IsValid() bool {
+	return true
+}
+func (t LineComment) String() string {
+	return string(t)
+}
+
+type BlockComment string
+
+func (i BlockComment) IsValid() bool {
+	return true
+}
+func (t BlockComment) String() string {
 	return string(t)
 }

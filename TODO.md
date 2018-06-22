@@ -10,13 +10,12 @@ about something.)
 
 # New features TODOs
 
-- Implement multiple dispatch
+- Implement type based function overloading
 - Implement "import" / package namespaces
 	- refactor builtins into separate standard library package
 - Compile time evaluation of pure functions with constant arguments
-- Add comments and convert samples from Go strings to files
-- Need way to allocate/return variables on the heap
-	- Malloc/Free? GC? Ownership rules?
+- Add product type / tuple support
+- Add interfaces/polymorphism
 
 # HLIR Optimization TODOs
 - Add optimization pass
@@ -32,7 +31,7 @@ about something.)
 	- if(true) { .. } else { ..2} => ..
 	- while(false) { .. } => eliminate
 - Pure function evaluation for constant arguments
-- Inline functions
+- Inline function calls
 	- Small functions
 	- Functions with at least 1 constant argument
 
@@ -49,13 +48,8 @@ about something.)
 # Design TODOs
 
 - Generic functions/macros?
-- Investigate and decide on what other types should be implemented:
-	- tuples
-		- Implement multiple return values from a function.
-	- (singly linked) lists?
-	- interfaces?
-	- structs? (are 2 product types necessary if there's already a tuple?)
-	- float? dec64?
+- Need way to allocate/return variables on the heap
+	- Malloc/Free? GC? Ownership rules?
 
 # Tests TODO
 - Add better tests for invalid shadowing or assignments inside conditionals

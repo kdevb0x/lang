@@ -13,6 +13,8 @@ const (
 	DefaultContext = context(iota)
 	WhiteSpaceContext
 	StringContext
+	LineCommentContext
+	BlockCommentContext
 )
 
 func addToken(cur []Token, val string) []Token {
@@ -22,6 +24,8 @@ func addToken(cur []Token, val string) []Token {
 		return append(cur, Keyword(val))
 	case "(", ")", "{", "}", `"`, `,`, ":", ".":
 		return append(cur, Char(val))
+	case "//", "/*", "*/":
+		return append(cur, CommentDelimiter(val))
 	case "+", "-", "*", "/", "%",
 		"<=", "<", "==", ">", ">=", "=", "!=",
 		"|",
@@ -43,18 +47,26 @@ func Tokenize(r io.RuneScanner) ([]Token, error) {
 	var tokens []Token
 	var currentContext context = DefaultContext
 	for c, _, err := r.ReadRune(); err == nil; c, _, err = r.ReadRune() {
-		if unicode.IsSpace(c) && currentContext != StringContext {
-			if currentContext == WhiteSpaceContext {
-				// We're in a whitespace context, so just keep
-				// adding to the token
+		// First handle whitespace
+		if unicode.IsSpace(c) {
+			switch currentContext {
+			case LineCommentContext:
+				if c == '\n' {
+					tokens = append(tokens, LineComment(currentToken))
+					currentContext = DefaultContext
+					currentToken = ""
+					continue
+				}
+				fallthrough
+			case WhiteSpaceContext, StringContext, BlockCommentContext:
 				currentToken += string(c)
-			} else {
+			default:
 				if currentToken != "" {
 					tokens = addToken(tokens, currentToken)
 				}
 				currentToken = string(c)
+				currentContext = WhiteSpaceContext
 			}
-			currentContext = WhiteSpaceContext
 			continue
 		}
 
@@ -80,13 +92,25 @@ func Tokenize(r io.RuneScanner) ([]Token, error) {
 						panic(err)
 					}
 				}
-				if Operator(currentToken + string(c) + string(peekedToken)).IsValid() {
+				if Operator(currentToken+string(c)+string(peekedToken)).IsValid() ||
+					CommentDelimiter(currentToken+string(c)+string(peekedToken)).IsValid() {
 					currentToken += string(c)
 					continue
 				} else if Operator(currentToken + string(c)).IsValid() {
 					tokens = addToken(tokens, currentToken+string(c))
 					currentToken = ""
 					currentContext = DefaultContext
+					continue
+				} else if cd := CommentDelimiter(currentToken + string(c)); cd.IsValid() {
+					tokens = addToken(tokens, currentToken+string(c))
+					currentToken = ""
+					if cd == "//" {
+						currentContext = LineCommentContext
+					} else if cd == "/*" {
+						currentContext = BlockCommentContext
+					} else {
+						panic("Unhandled comment delimiter type")
+					}
 					continue
 				}
 				if currentToken != "" {
@@ -118,6 +142,20 @@ func Tokenize(r io.RuneScanner) ([]Token, error) {
 					currentContext = DefaultContext
 					continue
 				}
+			}
+		case BlockCommentContext:
+			peekedToken, _, err := r.ReadRune()
+			if err != nil {
+				panic(err)
+			}
+			if c == '*' && peekedToken == '/' {
+				tokens = append(tokens, BlockComment(currentToken), CommentDelimiter("*/"))
+				currentContext = DefaultContext
+				currentToken = ""
+				continue
+			}
+			if err := r.UnreadRune(); err != nil {
+				panic(err)
 			}
 		}
 		currentToken += string(c)

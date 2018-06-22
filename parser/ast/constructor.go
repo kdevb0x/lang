@@ -56,13 +56,13 @@ func ParseFromReader(r io.Reader) ([]Node, TypeInformation, Callables, error) {
 	return Construct(tokens)
 }
 
-func stripWhitespace(tokens []token.Token) []token.Token {
+func stripWhitespaceAndComments(tokens []token.Token) []token.Token {
 	// Remove all whitespace tokens to simplify the parsing. We don't care
 	// about it anymore now that we've finished splitting into tokens.
 	t2 := make([]token.Token, 0, len(tokens))
 	for i := 0; i < len(tokens); i++ {
 		switch t := tokens[i].(type) {
-		case token.Whitespace:
+		case token.Whitespace, token.CommentDelimiter, token.LineComment, token.BlockComment:
 			continue
 		default:
 			t2 = append(t2, t)
@@ -92,7 +92,7 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, Callables, error)
 
 	c := NewContext()
 
-	tokens = stripWhitespace(tokens)
+	tokens = stripWhitespaceAndComments(tokens)
 	if debug {
 		for i := 0; i < len(tokens); i++ {
 			fmt.Fprintf(os.Stderr, "%d: '%v'\n", i, tokens[i].String())
