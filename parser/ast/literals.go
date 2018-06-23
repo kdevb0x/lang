@@ -57,7 +57,7 @@ func (c *Context) IsCompatibleType(typ Type, v Value) error {
 		return nil
 	case UserType:
 		if IsLiteral(v) {
-			return c.IsCompatibleType(t.Type, v)
+			return c.IsCompatibleType(t.Typ, v)
 		}
 		if v.Type().TypeName() != typ.TypeName() {
 			return fmt.Errorf("%v is not compatible with %v", v, typ.TypeName())

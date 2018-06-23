@@ -46,3 +46,9 @@ func main () () {
 	}
 }
 `
+
+const UserSumTypeDefn = `
+// Tests a user defined type which is a sum type containing a user defined enum
+enum Keyword = While | Mutable
+type Token = Keyword | string
+`

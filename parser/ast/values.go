@@ -488,7 +488,7 @@ func consumeInfix(start int, tokens []token.Token, c *Context, left Value) (int,
 			}
 			return 0, nil, fmt.Errorf("Tuple does not have component named %v", elem)
 		case UserType:
-			switch tty := ty.Type.(type) {
+			switch tty := ty.Typ.(type) {
 			case TupleType:
 				vr, ok := left.(VarWithType)
 				if !ok {

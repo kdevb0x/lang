@@ -423,7 +423,7 @@ func compare(v1, v2 Node) bool {
 			if v1a.Name != v2a.Name {
 				return false
 			}
-			return compare(v1a.Type, v2a.Type)
+			return compare(v1a.Typ, v2a.Typ)
 		}
 		return false
 	}
@@ -5327,6 +5327,48 @@ func TestUserProductTypeValue(t *testing.T) {
 	for i, v := range expected {
 		if !compare(ast[i], v) {
 			t.Errorf("Node %d: got %v want %v", i, ast[i], v)
+		}
+	}
+}
+
+func TestUserSumTypeDefn(t *testing.T) {
+	tokens, err := token.Tokenize(strings.NewReader(sampleprograms.UserSumTypeDefn))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, _, _, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Node{
+		EnumTypeDefn{
+			"Keyword",
+			[]EnumOption{
+				EnumOption{"While", nil, TypeLiteral("Keyword")},
+				EnumOption{"Mutable", nil, TypeLiteral("Keyword")},
+			},
+			nil,
+		},
+		TypeDefn{
+			Name: "Token",
+			ConcreteType: SumType{
+				EnumTypeDefn{
+					"Keyword",
+					[]EnumOption{
+						EnumOption{"While", nil, TypeLiteral("Keyword")},
+						EnumOption{"Mutable", nil, TypeLiteral("Keyword")},
+					},
+					nil,
+				},
+				TypeLiteral("string"),
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("Node %d: got %v want %v (%v, %v)", i, ast[i], v, reflect.TypeOf(ast[i]), reflect.TypeOf(v))
 		}
 	}
 }

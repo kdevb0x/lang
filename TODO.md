@@ -13,7 +13,6 @@ Priorities (in order):
 - need to determine what effect parameters that are mutated should declare
 	- ReferenceParameter test
 - VM should use PrintByteSlice and PrintString from stdlib, not hack.
-- User types in sum types blow up
 - Types need refactoring into another package and enum types need a real type class.
 
 # New features TODOs

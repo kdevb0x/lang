@@ -424,12 +424,12 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 				// be used as a key for c.values
 				s.Var.Typ = ast.TypeLiteral(t.TypeName())
 			case ast.UserType:
-				switch t.Type.(type) {
+				switch t.Typ.(type) {
 				case ast.TupleType:
 					// We can't fallthrough a type switch, so if it's
 					// a user tuple type change it to the underlying tuple
 					// type and go back to the start
-					s.Var.Typ = t.Type
+					s.Var.Typ = t.Typ
 					goto hack
 				}
 			case ast.TupleType:

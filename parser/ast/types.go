@@ -141,6 +141,10 @@ func (t TypeDefn) TypeDefn() TypeDef {
 	return t
 }
 
+func (t TypeDefn) String() string {
+	return fmt.Sprintf("TypeDefn{Name: %v Type: %v Parameters: %v}", t.Name, t.ConcreteType, t.Parameters)
+}
+
 func (t TypeDefn) PrettyPrint(lvl int) string {
 	panic("Not implemented")
 }
@@ -168,10 +172,12 @@ func (t EnumTypeDefn) Type() Type {
 	return t
 }
 
-func (t EnumTypeDefn) Info() TypeInfo {
-	panic("Unhandled info")
-	// FIXME: This is not accurate
-	return TypeInfo{8, false}
+func (e EnumTypeDefn) Info() TypeInfo {
+	t := TypeInfo{8, false}
+	for _, c := range e.Parameters {
+		t.Size += c.Info().Size
+	}
+	return t
 }
 
 func (t EnumTypeDefn) TypeName() string {
@@ -603,14 +609,34 @@ func (tv TupleValue) Value() interface{} {
 }
 
 type UserType struct {
-	Type
+	Typ  Type
 	Name string
 }
 
 func (ut UserType) String() string {
-	return fmt.Sprintf("UserType{Name: %v, Type: %v}", ut.Name, ut.Type)
+	return fmt.Sprintf("UserType{Name: %v, Type: %v}", ut.Name, ut.Typ)
 }
 
 func (ut UserType) TypeName() string {
 	return ut.Name
+}
+
+func (ut UserType) Type() Type {
+	return ut
+}
+
+func (ut UserType) Node() Node {
+	return ut
+}
+
+func (ut UserType) Components() []Type {
+	return ut.Typ.Components()
+}
+
+func (ut UserType) Info() TypeInfo {
+	return ut.Typ.Info()
+}
+
+func (ut UserType) PrettyPrint(lvl int) string {
+	return nTabs(lvl) + ut.Name
 }
