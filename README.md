@@ -102,6 +102,6 @@ before getting all invalid programs to be rejected.)
 - [ ] Improve assertion support
 	- [x] make assert work with compiled code, not just interpreted
 	- [ ] include line number/location in assert error message
-	- [ ] include way to disable assertions for release builds
+	- [ ] include way to change behaviour of assertions at build time (ignore/warn/die)
 - [ ] Refactor the bootstrap compiler to be good code? (Or just live with it until 0.3.0?)
 - [ ] Type-based function overloading 
