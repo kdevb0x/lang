@@ -32,6 +32,38 @@ func RunProgram(name, p string) error {
 	return err
 }
 
+func compileAndTest(t *testing.T, name, p string, stdout, stderr string) error {
+	dir, err := ioutil.TempDir("", "langtest"+name)
+	if err != nil {
+		return err
+	}
+	if !debug {
+		defer os.RemoveAll(dir)
+	}
+	exe, err := BuildProgram(dir, strings.NewReader(p))
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command(dir + "/" + exe)
+	cstdout := &strings.Builder{}
+	cstderr := &strings.Builder{}
+	cmd.Stdout = cstdout
+	cmd.Stderr = cstderr
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmd.Wait(); err != nil {
+		t.Fatal(err)
+	}
+	if stdout != cstdout.String() {
+		t.Errorf("Unexpected standard out for %v: want %v got %v", name, stdout, cstdout.String())
+	}
+	if stderr != cstderr.String() {
+		t.Errorf("Unexpected standard err for %v: want %v got %v", name, stderr, cstderr.String())
+	}
+	return err
+}
+
 func TestCompileHelloWorld(t *testing.T) {
 	if debug {
 		t.Fatal("Can not run helloworld test in debug mode.")
@@ -1016,6 +1048,35 @@ func ExampleEmptyReturn() {
 		fmt.Println(err.Error())
 	}
 	// Output:
+}
+
+func TestAssertions(t *testing.T) {
+	tests := []struct {
+		Name           string
+		Program        string
+		Stdout, Stderr string
+	}{
+		{
+			"AssertionFail", sampleprograms.AssertionFail, "", "assertion false failed",
+		},
+		{
+			"AssertionFailWithMessage", sampleprograms.AssertionFailWithMessage, "", "assertion false failed: This always fails",
+		},
+		{
+			"AssertionPass", sampleprograms.AssertionPass, "", "",
+		},
+		{
+			"AssertionPassWithMessage", sampleprograms.AssertionPassWithMessage, "", "",
+		},
+		{
+			"AssertionFailWithVariable", sampleprograms.AssertionFailWithVariable, "", "assertion x > 3 failed",
+		},
+	}
+
+	for _, test := range tests {
+		compileAndTest(t, test.Name, test.Program, test.Stdout, test.Stderr)
+	}
+
 }
 
 func ExampleSumTypeFuncCall() {

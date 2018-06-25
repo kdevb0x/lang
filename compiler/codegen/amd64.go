@@ -181,8 +181,9 @@ func (a amd64Registers) getPhysicalRegisterInternal(r mlir.Register) (PhysicalRe
 	case a.r15 == r:
 		return "R15", nil
 	}
-	return "", fmt.Errorf("Register not mapped")
+	return "", fmt.Errorf("Register not mapped (%v)", r)
 }
+
 func (a *amd64Registers) clearRegisterMapping() {
 	a.ax = nil
 	a.bx = nil

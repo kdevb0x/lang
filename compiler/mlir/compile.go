@@ -294,6 +294,41 @@ func (ctx *Context) convertOp(op hlir.Opcode, conditionLabel Label, jt jumpType)
 		default:
 			panic("Equals used outside of a comparison context")
 		}
+	case hlir.ASSERT:
+		var ops []Opcode
+		assertend := Label(fmt.Sprintf("assert%ddone", branchNum))
+		branchNum++
+
+		if len(o.Predicate.Body) == 0 {
+			// Condition was of the form "if x" for a boolean variable x, so it's
+			// implicitly checking whether it's equal to true
+			ops = append(ops, ctx.convertOp(hlir.EQ{Left: o.Predicate.Register, Right: hlir.IntLiteral(0)}, assertend, jumpFailure)...)
+		} else {
+			for _, op := range o.Predicate.Body {
+				ops = append(ops, ctx.convertOp(op, assertend, jumpSuccess)...)
+			}
+		}
+
+		msg := fmt.Sprintf("assertion %v failed", o.Node.PrettyPrint(0))
+		if o.Message != "" {
+			msg += ": " + string(o.Message)
+		}
+
+		ops = append(ops, CALL{
+			FName: "Write",
+			Args: []Register{
+				IntLiteral(2), // stderr
+				IntLiteral(len(msg)),
+				StringLiteral(msg),
+			},
+		},
+		)
+		ops = append(ops, assertend)
+
+		if ctx.curFunc.LargestFuncCall < 32 {
+			ctx.curFunc.LargestFuncCall = 32
+		}
+		return ops
 	default:
 		// Uncomment this after the tests all pass.
 		panic(fmt.Sprintf("Unhandled op type %v", reflect.TypeOf(op)))

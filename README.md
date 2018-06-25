@@ -100,7 +100,7 @@ before getting all invalid programs to be rejected.)
 - [ ] "l test -compile" (run tests by compiling a binary, not running in a VM)
 - [ ] "l test -static" (static analysis tests)
 - [ ] Improve assertion support
-	- [ ] make assert work with compiled code, not just interpreted
+	- [x] make assert work with compiled code, not just interpreted
 	- [ ] include line number/location in assert error message
 	- [ ] include way to disable assertions for release builds
 - [ ] Refactor the bootstrap compiler to be good code? (Or just live with it until 0.3.0?)
