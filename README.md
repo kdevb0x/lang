@@ -42,3 +42,66 @@ Ideally, your bug report should be small/short enough that it can
 be included as a regression in the `parser/sampleprograms` directory.
 (For now, the priority is to get all valid programs to compile
 before getting all invalid programs to be rejected.)
+
+## Roadmap
+
+### Pre 0.1.0 (Status: "Sort of works, nothing significant has been written")
+
+- [ ] Write all non-syscall standard library functions in native code, not assembly
+	- [x] PrintString
+	- [x] PrintByteSlice
+	- [ ] PrintInt
+- [ ] Write (native) autoformatter
+	- [ ] new parse tree (before ast) package (keeps comments, whitespace)
+
+### Pre 0.2.0 (Status: "Sort of works, but writing a few packages might have shaken out the bugs")
+
+- [ ] Port test sub-command to native code
+	- [ ] ast package
+	- [ ] hlir
+	- [ ] hlir/vm
+
+### Pre 0.3.0 (Status: "Probably mostly works")
+
+- [ ] Port compiler (while still invoking go for linking)
+	- [ ] mlir package
+	- [ ] codegen package
+
+### Pre 0.4.0 (Status: bootstrapped!)
+
+- [ ] Fully bootstrapped
+	- [ ] Native code generation (don't depend on Go assembler/linker, output binary directly)
+	- [ ] other?
+
+### Pre 0.5.0 (may be split up) (Status: Useable?)
+
+- [ ] Optimizations 
+	- [ ] Arithmetric simplification for constants
+	- [ ] Comparison simplification for constants
+	- [ ] Constant propagation
+	- [ ] Eliminate unused instructions
+		- [ ] Unused Dst for MOV
+		- [ ] Unused Dst for ADD, SUB, DIV, MUL, and MOD
+		- [ ] Unused Dst for EQ, NEQ, GEQ, GT, LT, LTE
+	- [ ] Eliminate unused blocks
+		- [ ] if false { ..1 } else { ..2} => ..2	 
+		- [ ] if true  { ..1 } else { ..2} => ..1
+		- [ ] while false { ..1 } => eliminate
+	- [ ] Compile time evaluation of pure functions with constant arguments
+	- [ ] Inlining
+		- [ ] Small functions
+		- [ ] Pure functions with at least 1 constant argument
+
+### Unscheduled/When needed
+
+- [ ] import packages
+- [ ] heap variables
+- [ ] interfaces/polymorphism
+- [ ] "l test -compile" (run tests by compiling a binary, not running in a VM)
+- [ ] "l test -static" (static analysis tests)
+- [ ] Improve assertion support
+	- [ ] make assert work with compiled code, not just interpreted
+	- [ ] include line number/location in assert error message
+	- [ ] include way to disable assertions for release builds
+- [ ] Refactor the bootstrap compiler to be good code? (Or just live with it until 0.3.0?)
+- [ ] Type-based function overloading 

@@ -3,9 +3,10 @@ about something.)
 
 Priorities (in order):
 0. Bugs (any that are found preventing the below)
-2. Heap allocation (required for both PrintInt and token package)
-3. Enforce effects
-4. Import (required for ast package)
+	- slice in token test not working (because enum?)
+1. Enforce effects
+2. Heap allocation
+3. Import (required for ast package)
 
 # Bugfix TODOs
 - can not return []byte -- claims "invalid argument"
