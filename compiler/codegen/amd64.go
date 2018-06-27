@@ -511,41 +511,8 @@ func (a *Amd64) ConvertInstruction(i int, ops []mlir.Opcode) string {
 				}
 
 				_, isFuncArg := val.Base.(mlir.FuncArg)
-				switch off := val.Offset.(type) {
-				case mlir.IntLiteral:
-					baseAddr, err := a.tempPhysicalRegister(false)
-					if err != nil {
-						panic(err)
-					}
-					// Move the base address to a register. If the variable came from a function
-					// argument, it's already a pointer, otherwise we need to convert it to the
-					// address of the first element so that offsets access the right memory location.
-					if isFuncArg {
-						v += fmt.Sprintf("\tMOVQ %v, %v\n\t", src, baseAddr)
-					} else {
-						v += fmt.Sprintf("\tMOVQ $%v, %v\n\t", src, baseAddr)
-					}
-					// Offset
-					fakescale := false
-					if val.Scale == 16 {
-						// Scale == 16 means that it's a string, and we need to move
-						// 2 words (length and pointer), not 1.
-						val.Scale = 8
-						fakescale = true
-						off *= 2
-					}
-					v += fmt.Sprintf("\tMOVQ %d(%v), %v\n\t", uint(off)*val.Scale, baseAddr, physArg)
-					if fakescale {
-						v += fmt.Sprintf("MOV%v %v, %v\n\t", suffix, physArg, fa)
-						v += fmt.Sprintf("\tMOVQ %d(%v), %v\n\t", uint(off+1)*val.Scale, baseAddr, physArg)
-						if o.TailCall {
-							panic("Unhandled tail call")
-						} else {
-							dst := mlir.FuncCallArg{i*2 + 1, ast.TypeInfo{8, arg.Signed()}}
-							fa = a.ToPhysical(dst, true)
-						}
-					}
-				case mlir.LocalValue, mlir.FuncArg, mlir.TempValue:
+				switch val.Offset.(type) {
+				case mlir.IntLiteral, mlir.LocalValue, mlir.FuncArg, mlir.TempValue:
 					// Get the offset from memory into a register
 					offr, err := a.getPhysicalRegister(val.Offset)
 					if err != nil {
