@@ -16,10 +16,14 @@ type RegisterInfo struct {
 	// Only valid for slices
 	SliceSize uint
 	Creator   ast.VarWithType
+	//Creator ast.Value
+
+	Type ast.Type
 }
 
 type variableLayout struct {
 	values       map[ast.VarWithType]Register
+	sliceBase    map[ast.VarWithType]Register
 	tempVars     int
 	tempRegs     uint
 	typeinfo     ast.TypeInformation
@@ -87,6 +91,7 @@ func (c *variableLayout) NextLocalRegister(varname ast.VarWithType) Register {
 		varname,
 		0,
 		ast.VarWithType{},
+		varname.Typ,
 	}
 	return lv
 }
@@ -109,6 +114,7 @@ func (c *variableLayout) FuncParamRegister(varname ast.VarWithType, i int) Regis
 		varname,
 		0,
 		ast.VarWithType{},
+		varname.Typ,
 	}
 	return c.values[varname]
 }

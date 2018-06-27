@@ -18,6 +18,7 @@ func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callabl
 	callNum = 0
 	context := &variableLayout{
 		make(map[ast.VarWithType]Register),
+		make(map[ast.VarWithType]Register),
 		0,
 		0,
 		typeInfo,
@@ -48,6 +49,7 @@ func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callabl
 					arg,
 					0,
 					arg,
+					ast.TypeLiteral("uint64"),
 				}
 				nargs++
 				context.registerInfo[FuncArg{uint(nargs), arg.Reference}] = RegisterInfo{
@@ -56,6 +58,7 @@ func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callabl
 					arg,
 					0,
 					arg,
+					arg.Typ,
 				}
 				nargs++
 			case ast.SumType:
@@ -70,6 +73,7 @@ func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callabl
 						arg,
 						0,
 						arg,
+						arg.Typ,
 					}
 					nargs++
 				}
@@ -84,6 +88,7 @@ func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callabl
 						arg,
 						0,
 						arg,
+						ast.TypeLiteral("uint64"),
 					}
 					nargs++
 					context.registerInfo[FuncArg{uint(nargs), arg.Reference}] = RegisterInfo{
@@ -92,20 +97,38 @@ func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callabl
 						arg,
 						0,
 						arg,
+						arg.Type(),
 					}
 					nargs++
 				} else {
-					context.FuncParamRegister(arg, nargs)
-					words := strings.Fields(string(arg.Type().TypeName()))
-					for _, typePiece := range words {
-						context.registerInfo[FuncArg{uint(nargs), arg.Reference}] = RegisterInfo{
-							"",
-							context.GetTypeInfo(typePiece),
-							arg,
-							0,
-							arg,
-						}
+					switch arg.Type().(type) {
+					case ast.ArrayType:
+						// We pass arrays as if they were slices in function
+						// calls to avoid the overhead of copying, so add one
+						// param for the size even if we don't use it.
+						context.FuncParamRegister(ast.VarWithType{
+							Name: arg.Name + ".size",
+							Typ:  ast.TypeLiteral("uint64"),
+						}, nargs)
 						nargs++
+
+						// Add the base pointer
+						context.FuncParamRegister(arg, nargs)
+						nargs++
+					default:
+						context.FuncParamRegister(arg, nargs)
+						words := strings.Fields(string(arg.Type().TypeName()))
+						for _, typePiece := range words {
+							context.registerInfo[FuncArg{uint(nargs), arg.Reference}] = RegisterInfo{
+								"",
+								context.GetTypeInfo(typePiece),
+								arg,
+								0,
+								arg,
+								nil, // FIXME: This should be the type
+							}
+							nargs++
+						}
 					}
 				}
 			}
@@ -122,7 +145,7 @@ func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callabl
 						context.retsumtypes = make(map[int]ast.Type)
 					}
 					context.retsumtypes[i] = rv.Typ
-					context.registerInfo[FuncRetVal(rn)] = RegisterInfo{"", ti, rv, 0, rv}
+					context.registerInfo[FuncRetVal(rn)] = RegisterInfo{"", ti, rv, 0, rv, c}
 					rn++
 				}
 			default:
@@ -130,7 +153,7 @@ func Generate(node ast.Node, typeInfo ast.TypeInformation, callables ast.Callabl
 				for _, typePiece := range words {
 					ti := context.GetTypeInfo(typePiece)
 					context.rettypes = append(context.rettypes, ti)
-					context.registerInfo[FuncRetVal(rn)] = RegisterInfo{"", ti, rv, 0, rv}
+					context.registerInfo[FuncRetVal(rn)] = RegisterInfo{"", ti, rv, 0, rv, nil} // FIXME: Last arg should be type
 					rn++
 				}
 			}
@@ -224,11 +247,21 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]Opcode
 					case LocalValue:
 						argRegs = append(argRegs, lvl)
 						lvl++
+						//argRegs = append(argRegs, SliceBasePointer{lvl})
 						argRegs = append(argRegs, lvl)
+
+						context.registerInfo[lvl] = RegisterInfo{
+							"",
+							ast.TypeInfo{8, false},
+							ast.VarWithType{},
+							0,
+							ast.VarWithType{},
+							nil,
+						}
 					case FuncArg:
 						argRegs = append(argRegs, lvl)
 						lvl.Id++
-						argRegs = append(argRegs, lvl)
+						argRegs = append(argRegs, SliceBasePointer{lvl})
 					default:
 						panic("Unhandled register type for string")
 					}
@@ -290,11 +323,15 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]Opcode
 						})
 					}
 					argRegs = append(argRegs, l)
-					p := Pointer{val1}
-					argRegs = append(argRegs, p)
-					info := context.registerInfo[p]
-					info.Creator = a
-					context.registerInfo[p] = info
+					if base, ok := context.sliceBase[a]; ok {
+						argRegs = append(argRegs, SliceBasePointer{base})
+					} else {
+						p := Pointer{val1}
+						argRegs = append(argRegs, p)
+						info := context.registerInfo[p]
+						info.Creator = a
+						context.registerInfo[p] = info
+					}
 				case FuncArg:
 					argRegs = append(argRegs, FuncArg{
 						Id:        l.Id,
@@ -303,6 +340,20 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]Opcode
 					argRegs = append(argRegs, FuncArg{
 						Id: l.Id + 1,
 					})
+				default:
+					panic(fmt.Sprintf("This should not happen: %v", reflect.TypeOf(lv)))
+				}
+			case ast.ArrayType:
+				// arrays get passed around as if they were slices, but it's easier to
+				// figure out the parameters since we always know the size and the
+				// context stores the base pointer directly.
+				argRegs = append(argRegs, IntLiteral(st.Size))
+				lv := context.Get(a)
+				switch l := lv.(type) {
+				case SliceBasePointer, FuncArg:
+					argRegs = append(argRegs, l)
+				case LocalValue:
+					argRegs = append(argRegs, SliceBasePointer{lv})
 				default:
 					panic(fmt.Sprintf("This should not happen: %v", reflect.TypeOf(lv)))
 				}
@@ -330,7 +381,6 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]Opcode
 				} else {
 					argRegs = append(argRegs, lv)
 				}
-
 			}
 		case ast.FuncCall:
 			// a function call as a parameter to a function call in
@@ -354,6 +404,14 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]Opcode
 			}
 			ops = append(ops, arg...)
 			argRegs = append(argRegs, r[0])
+		case ast.Slice:
+			base, r, err := evaluateValue(a.Base, context)
+			if err != nil {
+				return nil, err
+			}
+			ops = append(ops, base...)
+			argRegs = append(argRegs, IntLiteral(a.Size), SliceBasePointer{r[0]})
+			//argRegs = append(argRegs, r[0])
 		default:
 			panic(fmt.Sprintf("Unhandled argument type in FuncCall %v", reflect.TypeOf(a)))
 		}
@@ -366,7 +424,7 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]Opcode
 			comp := t.Components()
 			for _, v := range comp {
 				reg := LastFuncCallRetVal{callNum, uint(rv)}
-				context.registerInfo[reg] = RegisterInfo{"", v.Info(), ret, 0, ret}
+				context.registerInfo[reg] = RegisterInfo{"", v.Info(), ret, 0, ret, v}
 				rv++
 			}
 		default:
@@ -374,7 +432,7 @@ func callFunc(fc ast.FuncCall, context *variableLayout, tailcall bool) ([]Opcode
 			for _, word := range words {
 				ti := context.GetTypeInfo(word)
 				v := LastFuncCallRetVal{callNum, uint(rv)}
-				context.registerInfo[v] = RegisterInfo{"", ti, ret, 0, ret}
+				context.registerInfo[v] = RegisterInfo{"", ti, ret, 0, ret, nil} // FIXME: Last should be type
 			}
 			rv++
 		}
@@ -494,6 +552,23 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 					info := context.registerInfo[reg]
 					info.SliceSize = uint(len(s.Val.(ast.ArrayLiteral)))
 					context.registerInfo[reg] = info
+				case ast.Slice:
+					// If we're actively taking a slice, it's similar to assigning
+					// to an array literal.
+					reg := context.NextLocalRegister(s.Var)
+					ops = append(ops, MOV{
+						Src: IntLiteral(vr.Size),
+						Dst: reg,
+					})
+					info := context.registerInfo[reg]
+					info.SliceSize = uint(vr.Size)
+					info.Creator = s.Var //vr.Base
+					bops, brvs, err := evaluateValue(vr.Base, context)
+					if err != nil {
+						return nil, err
+					}
+					ops = append(ops, bops...)
+					context.sliceBase[s.Var] = brvs[0]
 				default:
 					panic(fmt.Sprintf("Unhandled register type in slice assignment: %v", reflect.TypeOf(vr)))
 				}
@@ -563,19 +638,52 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 				}
 			}
 		case ast.MutStmt:
+
 			// If it's a slice, start by putting the size before calling evaluateValue.
 			// evaluateValue only deals with the literal and doesn't know if it's in a slice
 			// or array context.
 			if _, ok := s.Var.Typ.(ast.SliceType); ok {
-				reg := context.NextLocalRegister(s.Var)
-				ops = append(ops, MOV{
-					// FIXME: This shouldn't assume it's a literal.
-					Src: IntLiteral(len(s.InitialValue.(ast.ArrayLiteral))),
-					Dst: reg,
-				})
-				info := context.registerInfo[reg]
-				info.SliceSize = uint(len(s.InitialValue.(ast.ArrayLiteral)))
-				context.registerInfo[reg] = info
+				switch vr := s.InitialValue.(type) {
+				case ast.VarWithType:
+					// A let statement being assigned to a variable doesn't need any IR, it just
+					// needs to make sure that the reference points to the right place.
+					// The verification that nothing gets modified happens at the AST level.
+					// FIXME: This should make a copy if the reference to the variable.
+					nvr := context.Get(vr)
+					context.SetLocalRegister(s.Var, nvr)
+					continue
+				case ast.Cast:
+					reg := context.NextLocalRegister(s.Var)
+					context.SetLocalRegister(s.Var, reg)
+				case ast.ArrayLiteral:
+					reg := context.NextLocalRegister(s.Var)
+					ops = append(ops, MOV{
+						Src: IntLiteral(len(vr)),
+						Dst: reg,
+					})
+					info := context.registerInfo[reg]
+					info.SliceSize = uint(len(s.InitialValue.(ast.ArrayLiteral)))
+					context.registerInfo[reg] = info
+				case ast.Slice:
+					// If we're actively taking a slice, it's similar to assigning
+					// to an array literal.
+					reg := context.NextLocalRegister(s.Var)
+					ops = append(ops, MOV{
+						Src: IntLiteral(vr.Size),
+						Dst: reg,
+					})
+					info := context.registerInfo[reg]
+					info.SliceSize = uint(vr.Size)
+					info.Creator = s.Var //vr.Base
+					bops, brvs, err := evaluateValue(vr.Base, context)
+					if err != nil {
+						return nil, err
+					}
+					ops = append(ops, bops...)
+					context.sliceBase[s.Var] = brvs[0]
+				default:
+					panic(fmt.Sprintf("Unhandled register type in slice assignment: %v", reflect.TypeOf(vr)))
+				}
 			}
 			body, rvs, err := evaluateValue(s.InitialValue, context)
 			if err != nil {
@@ -1331,7 +1439,7 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, []Register
 				comp := t.Components()
 				for _, s := range comp {
 					reg := LastFuncCallRetVal{callNum - 1, uint(i)}
-					context.registerInfo[reg] = RegisterInfo{"", s.Info(), v, 0, v}
+					context.registerInfo[reg] = RegisterInfo{"", s.Info(), v, 0, v, s}
 					regs = append(regs, reg)
 					i++
 				}
@@ -1340,7 +1448,7 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, []Register
 				for _, word := range words {
 					ti := context.GetTypeInfo(word)
 					reg := LastFuncCallRetVal{callNum - 1, uint(i)}
-					context.registerInfo[reg] = RegisterInfo{"", ti, v, 0, v}
+					context.registerInfo[reg] = RegisterInfo{"", ti, v, 0, v, nil} // FIXME: Should be type
 					regs = append(regs, reg)
 					i++
 				}
@@ -1421,6 +1529,10 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, []Register
 			rv = append(rv, subr...)
 		}
 		return ops, rv, nil
+	case ast.Slice:
+		// FIXME: Is this the right thing to do here?
+		subops, subr, err := evaluateValue(s.Base, context)
+		return subops, []Register{Pointer{subr[0]}}, err
 	default:
 		panic(fmt.Errorf("Unhandled value type: %v", reflect.TypeOf(s)))
 	}

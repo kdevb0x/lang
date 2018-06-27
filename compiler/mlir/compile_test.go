@@ -423,7 +423,7 @@ func TestIRGenSumToTen(t *testing.T) {
 	}
 	expected := []Opcode{
 		MOV{
-			Src: FuncArg{0, ast.TypeInfo{8, true}, false},
+			Src: FuncArg{0, ast.TypeInfo{8, true}, false, nil},
 			Dst: LocalValue{0, ast.TypeInfo{8, true}},
 		},
 		MOV{
@@ -521,7 +521,7 @@ func TestIRGenSumToTenRecursive(t *testing.T) {
 			FName: "partial_sum",
 			Args: []Register{
 				IntLiteral(0),
-				FuncArg{0, ast.TypeInfo{8, true}, false},
+				FuncArg{0, ast.TypeInfo{8, true}, false, nil},
 			},
 			TailCall: true,
 		},
@@ -548,12 +548,12 @@ func TestIRGenSumToTenRecursive(t *testing.T) {
 		JNE{
 			ConditionalJump{
 				Label: "if0else",
-				Src:   FuncArg{1, ast.TypeInfo{8, true}, false},
+				Src:   FuncArg{1, ast.TypeInfo{8, true}, false, nil},
 				Dst:   IntLiteral(0),
 			},
 		},
 		MOV{
-			Src: FuncArg{0, ast.TypeInfo{8, true}, false},
+			Src: FuncArg{0, ast.TypeInfo{8, true}, false, nil},
 			Dst: FuncRetVal{0, ast.TypeInfo{8, true}},
 		},
 		RET{},
@@ -561,15 +561,15 @@ func TestIRGenSumToTenRecursive(t *testing.T) {
 		Label("if0else"),
 		Label("if0elsedone"),
 		MOV{
-			Src: FuncArg{0, ast.TypeInfo{8, true}, false},
+			Src: FuncArg{0, ast.TypeInfo{8, true}, false, nil},
 			Dst: TempValue(1),
 		},
 		ADD{
-			Src: FuncArg{1, ast.TypeInfo{8, true}, false},
+			Src: FuncArg{1, ast.TypeInfo{8, true}, false, nil},
 			Dst: TempValue(1),
 		},
 		MOV{
-			Src: FuncArg{1, ast.TypeInfo{8, true}, false},
+			Src: FuncArg{1, ast.TypeInfo{8, true}, false, nil},
 			Dst: TempValue(2),
 		},
 		SUB{
@@ -1177,11 +1177,11 @@ func TestIRGenFibonacci(t *testing.T) {
 	}
 	expected := []Opcode{
 		MOV{
-			Src: FuncArg{0, ast.TypeInfo{8, false}, false},
+			Src: FuncArg{0, ast.TypeInfo{8, false}, false, nil},
 			Dst: TempValue(0),
 		},
 		ADD{
-			Src: FuncArg{1, ast.TypeInfo{8, false}, false},
+			Src: FuncArg{1, ast.TypeInfo{8, false}, false, nil},
 			Dst: TempValue(0),
 		},
 		MOV{
@@ -1190,7 +1190,7 @@ func TestIRGenFibonacci(t *testing.T) {
 		},
 		JL{ConditionalJump{Label: "if0else", Src: LocalValue{0, ast.TypeInfo{8, false}}, Dst: IntLiteral(200)}},
 		MOV{
-			Src: FuncArg{1, ast.TypeInfo{8, false}, false},
+			Src: FuncArg{1, ast.TypeInfo{8, false}, false, nil},
 			Dst: FuncRetVal{0, ast.TypeInfo{8, false}},
 		},
 		RET{},
@@ -1213,7 +1213,7 @@ func TestIRGenFibonacci(t *testing.T) {
 		CALL{
 			FName: "fib_rec",
 			Args: []Register{
-				FuncArg{1, ast.TypeInfo{8, false}, false},
+				FuncArg{1, ast.TypeInfo{8, false}, false, nil},
 				LocalValue{0, ast.TypeInfo{8, false}},
 			},
 			TailCall: true,
@@ -1338,7 +1338,7 @@ func TestIRGenericEnumType(t *testing.T) {
 	expected := []Opcode{
 		JLE{ConditionalJump{
 			Label: "if0else",
-			Src:   FuncArg{0, ast.TypeInfo{8, true}, false},
+			Src:   FuncArg{0, ast.TypeInfo{8, true}, false, nil},
 			Dst:   IntLiteral(3),
 		},
 		},
@@ -1495,20 +1495,20 @@ func TestIRMatchParam(t *testing.T) {
 	expected := []Opcode{
 		JE{ConditionalJump{
 			Label: "match0v0",
-			Src:   FuncArg{0, ast.TypeInfo{8, false}, false},
+			Src:   FuncArg{0, ast.TypeInfo{8, false}, false, nil},
 			Dst:   IntLiteral(1),
 		},
 		},
 		JE{ConditionalJump{
 			Label: "match0v1",
-			Src:   FuncArg{0, ast.TypeInfo{8, false}, false},
+			Src:   FuncArg{0, ast.TypeInfo{8, false}, false, nil},
 			Dst:   IntLiteral(0),
 		},
 		},
 		JMP{"match0done"},
 		Label("match0v0"),
 		MOV{
-			Src: FuncArg{1, ast.TypeInfo{8, true}, false},
+			Src: FuncArg{1, ast.TypeInfo{8, true}, false, nil},
 			Dst: FuncRetVal{0, ast.TypeInfo{8, true}},
 		},
 		RET{},
@@ -1577,20 +1577,20 @@ func TestIRMatchParam2(t *testing.T) {
 		},
 		JE{ConditionalJump{
 			Label: "match0v0",
-			Src:   FuncArg{0, ast.TypeInfo{8, false}, false},
+			Src:   FuncArg{0, ast.TypeInfo{8, false}, false, nil},
 			Dst:   IntLiteral(1),
 		},
 		},
 		JE{ConditionalJump{
 			Label: "match0v1",
-			Src:   FuncArg{0, ast.TypeInfo{8, false}, false},
+			Src:   FuncArg{0, ast.TypeInfo{8, false}, false, nil},
 			Dst:   IntLiteral(0),
 		},
 		},
 		JMP{"match0done"},
 		Label("match0v0"),
 		MOV{
-			Src: FuncArg{1, ast.TypeInfo{8, true}, false},
+			Src: FuncArg{1, ast.TypeInfo{8, true}, false, nil},
 			Dst: FuncRetVal{0, ast.TypeInfo{8, true}},
 		},
 		RET{},
@@ -1660,7 +1660,7 @@ func TestIRSimpleAlgorithm(t *testing.T) {
 			Dst: LocalValue{1, ast.TypeInfo{8, true}},
 		},
 		MUL{
-			Left:  FuncArg{0, ast.TypeInfo{8, true}, false},
+			Left:  FuncArg{0, ast.TypeInfo{8, true}, false, nil},
 			Right: IntLiteral(2),
 			Dst:   TempValue(0),
 		},
@@ -1868,14 +1868,14 @@ func TestIRReferenceVariable(t *testing.T) {
 	expected := []Opcode{
 		MOV{
 			Src: IntLiteral(4),
-			Dst: FuncArg{0, ast.TypeInfo{8, true}, true},
+			Dst: FuncArg{0, ast.TypeInfo{8, true}, true, nil},
 		},
 		MOV{
-			Src: FuncArg{0, ast.TypeInfo{8, true}, true},
+			Src: FuncArg{0, ast.TypeInfo{8, true}, true, nil},
 			Dst: TempValue(0),
 		},
 		ADD{
-			Src: FuncArg{1, ast.TypeInfo{8, true}, false},
+			Src: FuncArg{1, ast.TypeInfo{8, true}, false, nil},
 			Dst: TempValue(0),
 		},
 		MOV{
@@ -2157,8 +2157,8 @@ func TestIRSliceParam(t *testing.T) {
 		CALL{
 			FName: "PrintByteSlice",
 			Args: []Register{
-				FuncArg{0, ast.TypeInfo{8, false}, false},
-				FuncArg{1, ast.TypeInfo{8, false}, false},
+				FuncArg{0, ast.TypeInfo{8, false}, false, ast.TypeLiteral("uint64")},
+				FuncArg{1, ast.TypeInfo{8, false}, false, ast.SliceType{ast.TypeLiteral("byte")}},
 			},
 		},
 	}
@@ -2378,8 +2378,8 @@ func TestIREcho(t *testing.T) {
 		CALL{
 			FName: "len",
 			Args: []Register{
-				FuncArg{0, ast.TypeInfo{8, false}, false},
-				FuncArg{1, ast.TypeInfo{8, false}, false},
+				FuncArg{0, ast.TypeInfo{8, false}, false, ast.TypeLiteral("uint64")},
+				FuncArg{1, ast.TypeInfo{8, false}, false, ast.SliceType{ast.TypeLiteral("string")}},
 			},
 		},
 		MOV{
@@ -2396,7 +2396,7 @@ func TestIREcho(t *testing.T) {
 				Offset{
 					Offset: LocalValue{0, ast.TypeInfo{8, true}},
 					Scale:  16,
-					Base:   FuncArg{1, ast.TypeInfo{8, false}, false},
+					Base:   FuncArg{1, ast.TypeInfo{8, false}, false, ast.SliceType{ast.TypeLiteral("string")}},
 				},
 			},
 		},
@@ -2856,8 +2856,8 @@ func TestPreEcho2(t *testing.T) {
 		CALL{
 			FName: "len",
 			Args: []Register{
-				FuncArg{0, ast.TypeInfo{8, false}, false},
-				FuncArg{1, ast.TypeInfo{8, false}, false},
+				FuncArg{0, ast.TypeInfo{8, false}, false, ast.TypeLiteral("uint64")},
+				FuncArg{1, ast.TypeInfo{8, false}, false, ast.SliceType{ast.TypeLiteral("string")}},
 			},
 		},
 		MOV{
@@ -2872,7 +2872,7 @@ func TestPreEcho2(t *testing.T) {
 			FName: "PrintString",
 			Args: []Register{
 				Offset{
-					Base:   FuncArg{1, ast.TypeInfo{8, false}, false},
+					Base:   FuncArg{1, ast.TypeInfo{8, false}, false, ast.SliceType{ast.TypeLiteral("string")}},
 					Scale:  16,
 					Offset: LocalValue{0, ast.TypeInfo{8, true}},
 				},
@@ -2978,8 +2978,8 @@ func TestUnbufferedCat(t *testing.T) {
 		CALL{
 			FName: "len",
 			Args: []Register{
-				FuncArg{0, ast.TypeInfo{8, false}, false},
-				FuncArg{1, ast.TypeInfo{8, false}, false},
+				FuncArg{0, ast.TypeInfo{8, false}, false, ast.TypeLiteral("uint64")},
+				FuncArg{1, ast.TypeInfo{8, false}, false, ast.SliceType{ast.TypeLiteral("string")}},
 			},
 		},
 		MOV{
@@ -2994,7 +2994,7 @@ func TestUnbufferedCat(t *testing.T) {
 			FName: "Open",
 			Args: []Register{
 				Offset{
-					Base:   FuncArg{1, ast.TypeInfo{8, false}, false},
+					Base:   FuncArg{1, ast.TypeInfo{8, false}, false, ast.SliceType{ast.TypeLiteral("string")}},
 					Scale:  16,
 					Offset: LocalValue{2, ast.TypeInfo{8, true}},
 				},
@@ -3132,8 +3132,8 @@ func TestUnbufferedCat2(t *testing.T) {
 		CALL{
 			FName: "len",
 			Args: []Register{
-				FuncArg{0, ast.TypeInfo{8, false}, false},
-				FuncArg{1, ast.TypeInfo{8, false}, false},
+				FuncArg{0, ast.TypeInfo{8, false}, false, ast.TypeLiteral("uint64")},
+				FuncArg{1, ast.TypeInfo{8, false}, false, ast.SliceType{ast.TypeLiteral("string")}},
 			},
 		},
 		JGE{
@@ -3143,7 +3143,7 @@ func TestUnbufferedCat2(t *testing.T) {
 			FName: "Open",
 			Args: []Register{
 				Offset{
-					Base:   FuncArg{1, ast.TypeInfo{8, false}, false},
+					Base:   FuncArg{1, ast.TypeInfo{8, false}, false, ast.SliceType{ast.TypeLiteral("string")}},
 					Scale:  16,
 					Offset: LocalValue{3, ast.TypeInfo{8, true}},
 				},
@@ -3398,8 +3398,8 @@ func TestStringArg(t *testing.T) {
 		CALL{
 			FName: "PrintString",
 			Args: []Register{
-				FuncArg{0, ast.TypeInfo{8, false}, false},
-				FuncArg{1, ast.TypeInfo{8, false}, false},
+				FuncArg{0, ast.TypeInfo{8, false}, false, ast.TypeLiteral("uint64")},
+				FuncArg{1, ast.TypeInfo{8, false}, false, ast.TypeLiteral("string")},
 			},
 		},
 	}
@@ -3501,7 +3501,7 @@ func TestSumtypeFuncReturn(t *testing.T) {
 		JE{
 			ConditionalJump{
 				Label: "if0else",
-				Src:   FuncArg{0, ast.TypeInfo{1, false}, false},
+				Src:   FuncArg{0, ast.TypeInfo{1, false}, false, nil},
 				Dst:   IntLiteral(0),
 			},
 		},
@@ -3562,7 +3562,7 @@ func TestIfBool(t *testing.T) {
 		JE{
 			ConditionalJump{
 				Label: "if0else",
-				Src:   FuncArg{0, ast.TypeInfo{1, false}, false},
+				Src:   FuncArg{0, ast.TypeInfo{1, false}, false, nil},
 				Dst:   IntLiteral(0),
 			},
 		},

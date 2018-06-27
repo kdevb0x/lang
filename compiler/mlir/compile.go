@@ -350,7 +350,7 @@ func (ctx Context) convertRegister(reg hlir.Register) Register {
 	case hlir.TempValue:
 		return TempValue(r)
 	case hlir.FuncArg:
-		return FuncArg{uint(r.Id), ctx.GetTypeInfo(reg), r.Reference}
+		return FuncArg{uint(r.Id), ctx.GetTypeInfo(reg), r.Reference, ctx.RegisterData[r].Type}
 	case hlir.Offset:
 		scale := uint(r.Scale)
 		if scale == 0 {
@@ -367,6 +367,8 @@ func (ctx Context) convertRegister(reg hlir.Register) Register {
 		}
 	case hlir.LastFuncCallRetVal:
 		return FuncRetVal{r.RetNum, ctx.GetTypeInfo(reg)}
+	case hlir.SliceBasePointer:
+		return SliceBasePointer{ctx.convertRegister(r.Register)}
 	default:
 		panic(fmt.Sprintf("Unhandled register type %v", reflect.TypeOf(r)))
 	}

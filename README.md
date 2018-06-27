@@ -50,9 +50,10 @@ before getting all invalid programs to be rejected.)
 - [ ] Write all non-syscall standard library functions in native code, not assembly
 	- [x] PrintString
 	- [x] PrintByteSlice
-	- [ ] PrintInt
+	- [ ] PrintInt (almost done, needs variable slice indexing)
 - [ ] Write (native) autoformatter
 	- [ ] new parse tree (before ast) package (keeps comments, whitespace)
+		- [ ] packages/imports
 
 ### Pre 0.2.0 (Status: "Sort of works, but writing a few packages might have shaken out the bugs")
 
@@ -94,14 +95,14 @@ before getting all invalid programs to be rejected.)
 
 ### Unscheduled/When needed
 
-- [ ] import packages
 - [ ] heap variables
 - [ ] interfaces/polymorphism
 - [ ] "l test -compile" (run tests by compiling a binary, not running in a VM)
 - [ ] "l test -static" (static analysis tests)
+- [ ] "l test -fuzz [-compile] [funcname]" (run tests with random arguments that meet preconditions and ensure no assertion failures)
 - [ ] Improve assertion support
 	- [x] make assert work with compiled code, not just interpreted
-	- [ ] include line number/location in assert error message
-	- [ ] include way to change behaviour of assertions at build time (ignore/warn/die)
+	- [ ] include line number/location in assert error message (post 0.3.0)
+	- [ ] include way to change behaviour of assertions at build time (ignore/warn/die) (post 0.3.0)
 - [ ] Refactor the bootstrap compiler to be good code? (Or just live with it until 0.3.0?)
 - [ ] Type-based function overloading 

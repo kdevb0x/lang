@@ -22,7 +22,7 @@ Priorities (in order):
 - Implement "import" / package namespaces
 	- refactor builtins into separate standard library package
 - Compile time evaluation of pure functions with constant arguments
-- Add product type / tuple support
+- Multiple return
 - Add interfaces/polymorphism
 
 # HLIR Optimization TODOs
@@ -69,4 +69,4 @@ Priorities (in order):
 - Need better tests for sum types that aren't passed as functions (ie mutable x string | int, then assign to both string and int )
 - Better tests for incompatible tuple values (wrong types, wrong size, access member that doesn't exist, assign to element in mutable tuple, etc.)
 - Need tests for tuples in mutable variables and not just let, also as function call parameters
-
+- Add test to make sure let variables don't get passed to mutable parameters (esp. for arrays)

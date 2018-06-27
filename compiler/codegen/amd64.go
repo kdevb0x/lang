@@ -34,6 +34,18 @@ type Amd64 struct {
 
 	// A mapping of mlir.LocalValue IDs to the offset relative to FP in a function
 	lvOffsets map[uint]uint
+
+	// A hack to determine if a local register is a slice base or not, which is necessary
+	// to know if it needs to be de-referenced or not at various places
+	sliceBase map[mlir.Register]bool
+}
+
+func (a *Amd64) isSliceBase(r mlir.Register) bool {
+	if _, ok := r.(mlir.SliceBasePointer); ok {
+		return true
+	}
+	_, ok := a.sliceBase[r]
+	return ok
 }
 
 func (a *amd64Registers) nextPhysicalRegister(r mlir.Register, skipDX bool) (PhysicalRegister, error) {
@@ -135,6 +147,89 @@ func (a *amd64Registers) tempPhysicalRegister(skipDX bool) (PhysicalRegister, er
 	}
 	if a.r15 == nil {
 		return "R15", nil
+	}
+	return "", fmt.Errorf("No physical registers available")
+}
+
+// Gets a second physical register to use in resolving the same op.
+func (a *amd64Registers) tempPhysicalRegister2(skipDX bool) (PhysicalRegister, error) {
+	found := false
+	// Avoids AX and BP, since AX is the return register and BP is the first
+	// argument to a function call.
+	if a.bx == nil {
+		found = true
+	}
+	if a.cx == nil {
+		if found {
+			return "CX", nil
+		}
+		found = true
+	}
+	if a.dx == nil && !skipDX {
+		if found {
+			return "DX", nil
+		}
+		found = true
+	}
+	if a.si == nil {
+		if found {
+			return "SI", nil
+		}
+		found = true
+	}
+	if a.di == nil {
+		if found {
+			return "DI", nil
+		}
+		found = true
+	}
+	if a.r8 == nil {
+		if found {
+			return "R8", nil
+		}
+		found = true
+	}
+	if a.r9 == nil {
+		if found {
+			return "R9", nil
+		}
+		found = true
+	}
+	if a.r10 == nil {
+		if found {
+			return "R10", nil
+		}
+		found = true
+	}
+	if a.r11 == nil {
+		if found {
+			return "R11", nil
+		}
+		found = true
+	}
+	if a.r12 == nil {
+		if found {
+			return "R12", nil
+		}
+		found = true
+	}
+	if a.r13 == nil {
+		if found {
+			return "R13", nil
+		}
+		found = true
+	}
+	if a.r14 == nil {
+		if found {
+			return "R14", nil
+		}
+		found = true
+	}
+	if a.r15 == nil {
+		if found {
+			return "R15", nil
+		}
+		found = true
 	}
 	return "", fmt.Errorf("No physical registers available")
 }
@@ -242,11 +337,13 @@ func (a *Amd64) ToPhysical(r mlir.Register, altform bool) PhysicalRegister {
 		// not the IR register name..
 		return PhysicalRegister(fmt.Sprintf("%v+%d(FP)", v.String(), int(v.Id)*8))
 	case mlir.Pointer:
-		switch v.Register.(type) {
+		switch r := v.Register.(type) {
 		case mlir.LocalValue:
-			return PhysicalRegister(fmt.Sprintf("$%v", a.ToPhysical(v.Register, false)))
+			return PhysicalRegister(fmt.Sprintf("$%v", a.ToPhysical(r, false)))
+		case mlir.Offset:
+			return PhysicalRegister(fmt.Sprintf("%v", a.ToPhysical(r.Base, false)))
 		default:
-			panic("Not implemented")
+			panic(fmt.Sprintf("Not implemented: %v", reflect.TypeOf(v.Register)))
 		}
 	case mlir.TempValue:
 		r, err := a.getPhysicalRegister(v)
@@ -311,6 +408,7 @@ func (a *Amd64) ConvertInstruction(i int, ops []mlir.Opcode) string {
 		returning := false
 		v := ""
 		var src, dst PhysicalRegister
+		suffix := a.opSuffix(o.Src, o.Dst)
 		switch o.Dst.(type) {
 		case mlir.FuncRetVal:
 			returning = true
@@ -324,14 +422,55 @@ func (a *Amd64) ConvertInstruction(i int, ops []mlir.Opcode) string {
 				}
 			}
 			dst = d
+		case mlir.Offset:
+			//suffix = "Q"
+			dst = a.ToPhysical(o.Dst, true)
 		default:
 			dst = a.ToPhysical(o.Dst, true)
 		}
 
-		suffix := a.opSuffix(o.Src, o.Dst)
-
 		switch val := o.Src.(type) {
-		case mlir.LocalValue, mlir.FuncRetVal, mlir.FuncArg, mlir.StringLiteral, mlir.Pointer:
+		case mlir.Pointer:
+			switch off := val.Register.(type) {
+			case mlir.Offset:
+				// Moving an offset pointer into a local value means we're dealing with
+				// finding the basis pointer for a slice creation, and this needs special
+				// care for now.
+				// First check if the arg is already in a register.
+				r, err := a.getPhysicalRegister(val)
+				if err == nil {
+					src = r
+					break
+				}
+				idx, err := a.tempPhysicalRegister(false)
+				if err != nil {
+					panic(err)
+				}
+				src, err = a.tempPhysicalRegister(false)
+				if err != nil {
+					panic(err)
+				}
+				//Note: val.Offset should be a literal.
+				v += fmt.Sprintf("\tMOVQ %v, %v\n\t", a.ToPhysical(off.Offset, returning), idx)
+
+				v += fmt.Sprintf("\tMOVQ $%v(%v*%v), %v\n\t", a.ToPhysical(off.Base, returning), idx, off.Scale, src)
+				v += fmt.Sprintf("MOVQ %v, %v", src, dst)
+				a.sliceBase[o.Dst] = true
+				return v
+			default:
+				// First check if the arg is already in a register.
+				r, err := a.getPhysicalRegister(val)
+				if err == nil {
+					src = r
+					break
+				}
+				src, err = a.tempPhysicalRegister(false)
+				if err != nil {
+					panic(err)
+				}
+				v += fmt.Sprintf("\tMOV%v %v, %v\n\t", suffix, a.ToPhysical(val, returning), src)
+			}
+		case mlir.LocalValue, mlir.FuncRetVal, mlir.FuncArg, mlir.StringLiteral:
 			// First check if the arg is already in a register.
 			r, err := a.getPhysicalRegister(val)
 			if err == nil {
@@ -397,17 +536,41 @@ func (a *Amd64) ConvertInstruction(i int, ops []mlir.Opcode) string {
 			}
 		case mlir.Offset:
 			offset, err := a.getPhysicalRegister(d.Offset)
-			suffix := a.singleRegSuffix(int(d.Scale))
 			if err != nil {
 				offset, err = a.nextPhysicalRegister(d.Offset, false)
 				if err != nil {
 					panic(err)
 				}
+				var suffix string
+				switch d.Offset.(type) {
+				case mlir.IntLiteral:
+					suffix = "Q"
+				default:
+					suffix = a.opSuffix(d.Base, fakeRegister{8, o.Dst.Signed()})
+				}
 				v += fmt.Sprintf("\tMOV%v %v, %v\n\t", suffix, a.ToPhysical(d.Offset, false), offset)
 			}
-			v += fmt.Sprintf("\tMOV%v %v, %v(%v*%d)\n\t", suffix, src, dst, offset, d.Scale)
+			suffix := a.singleRegSuffix(int(d.Scale))
+			switch d.Base.(type) {
+			case mlir.LocalValue:
+				tmp, err := a.tempPhysicalRegister(false)
+				if err != nil {
+					panic(err)
+				}
+				v += fmt.Sprintf("\tMOVQ $%v, %v\n\t", dst, tmp)
+				v += fmt.Sprintf("\tMOV%v %v, (%v)(%v*%d)\n\t", suffix, src, tmp, offset, d.Scale)
+			case mlir.FuncArg:
+				tmp, err := a.tempPhysicalRegister(false)
+				if err != nil {
+					panic(err)
+				}
+				v += fmt.Sprintf("\tMOVQ %v, %v\n\t", dst, tmp)
+				v += fmt.Sprintf("\tMOV%v %v, (%v)(%v*%d)\n\t", suffix, src, tmp, offset, d.Scale)
+			default:
+				v += fmt.Sprintf("\tMOV%v %v, %v(%v*%d)\n\t", suffix, src, dst, offset, d.Scale)
+			}
 		default:
-			v += fmt.Sprintf("MOV%v %v, %v", a.opSuffix(o.Src, o.Dst), src, dst)
+			v += fmt.Sprintf("MOV%v %v, %v", suffix, src, dst)
 		}
 		return v
 	case mlir.CALL:
@@ -435,7 +598,7 @@ func (a *Amd64) ConvertInstruction(i int, ops []mlir.Opcode) string {
 			if o.TailCall {
 				// If it's a tail call, the dst should get optimized
 				// to the same location as this call's.
-				dst = mlir.FuncArg{uint(i), ast.TypeInfo{arg.Size(), arg.Signed()}, false}
+				dst = mlir.FuncArg{uint(i), ast.TypeInfo{arg.Size(), arg.Signed()}, false, nil}
 				fa = a.ToPhysical(dst, true)
 			} else {
 				dst = mlir.FuncCallArg{i, ast.TypeInfo{8, arg.Signed()}}
@@ -471,6 +634,38 @@ func (a *Amd64) ConvertInstruction(i int, ops []mlir.Opcode) string {
 					panic("Unknown type of call destination register")
 				}
 				v += fmt.Sprintf("MOVQ %v, %v\n\t", src, physArg)
+			case mlir.SliceBasePointer:
+				// First check if the arg is already in a register.
+				src = a.ToPhysical(val.Register, false)
+				r, err := a.getPhysicalRegister(arg)
+				if err == nil {
+					physArg = r
+					break
+				}
+				physArg, err = a.tempPhysicalRegister(false)
+				if err != nil {
+					panic(err)
+				}
+				switch r := val.Register.(type) {
+				case mlir.Offset:
+					offr, err := a.tempPhysicalRegister2(false)
+					if err != nil {
+						panic(err)
+					}
+
+					v += fmt.Sprintf("\tMOVQ %v, %v\n\t", a.ToPhysical(r.Offset, false), offr)
+					v += fmt.Sprintf("\tLEAQ %v(%v*%d), %v\n\t", src, offr, r.Scale, physArg)
+				case mlir.LocalValue:
+					// Pass the address of the base, not the value
+					v += fmt.Sprintf("\tMOVQ $%v, %v\n\t", src, physArg)
+				case mlir.FuncArg:
+					// The base was already converted to address when passed as
+					// an argument the first time, so pass the value.
+					v += fmt.Sprintf("\tMOVQ %v, %v\n\t", src, physArg)
+				default:
+					panic(fmt.Sprintf("Unhandled slicebasepointer type %v", reflect.TypeOf(r)))
+				}
+				suffix = "Q"
 			case mlir.LocalValue, mlir.FuncArg, mlir.Pointer:
 				suffix = a.opSuffix(val, dst)
 				// First check if the arg is already in a register.
@@ -527,7 +722,7 @@ func (a *Amd64) ConvertInstruction(i int, ops []mlir.Opcode) string {
 					if err != nil {
 						panic(err)
 					}
-					if isFuncArg {
+					if isFuncArg || a.isSliceBase(val.Base) {
 						v += fmt.Sprintf("\tMOVQ %v, %v\n\t", src, baseAddr)
 					} else {
 						v += fmt.Sprintf("\tMOVQ $%v, %v\n\t", src, baseAddr)
@@ -542,6 +737,16 @@ func (a *Amd64) ConvertInstruction(i int, ops []mlir.Opcode) string {
 						v += fmt.Sprintf("\tSAL%v $1, %v\n\t", suffix, offr)
 						val.Scale = 8
 						fakescale = true
+					}
+					if fa, ok := val.Base.(mlir.FuncArg); ok {
+						// FIXME: This is a hack. It isn't very robust.
+						switch t := fa.Type.(type) {
+						case ast.ArrayType:
+							if t.Base.TypeName() == "byte" {
+								suff = "BQZX"
+							}
+						}
+
 					}
 					v += fmt.Sprintf("\tMOV%v (%v)(%v*%d), %v\n\t", suff, baseAddr, offr, val.Scale, physArg)
 					if fakescale {
@@ -719,18 +924,51 @@ func (a *Amd64) ConvertInstruction(i int, ops []mlir.Opcode) string {
 			v += "PUSHQ DX\n\t"
 			popdx = true
 		}
+		if off, isoffset := o.Left.(mlir.Offset); isoffset {
+			r, err := a.tempPhysicalRegister(false)
+			if err != nil {
+				panic(err)
+			}
+			r2, err := a.tempPhysicalRegister2(false)
+			if err != nil {
+				panic(err)
+			}
+			// Offsets need to be resolved before being moved into AX
+			//Note: val.Offset should be a literal.
+			v += fmt.Sprintf("\tMOVQ %v, %v\n\t", a.ToPhysical(off.Offset, false), r)
+			v += fmt.Sprintf("\tMOVQ %v, %v\n\t", a.ToPhysical(off.Base, false), r2)
+			switch off.Scale {
+			case 1:
+				v += fmt.Sprintf("\tMOVBQZX (%v)(%v*%v), %v\n\t", r2, r, off.Scale, r)
+			case 2:
+				v += fmt.Sprintf("\tMOWLQZX (%v)(%v*%v), %v\n\t", r2, r, off.Scale, r)
+			case 4:
+				v += fmt.Sprintf("\tMOVLQZXQ (%v)(%v*%v), %v\n\t", r2, r, off.Scale, r)
+			case 8:
+				v += fmt.Sprintf("\tMOVQ (%v)(%v*%v), %v\n\t", r2, r, off.Scale, r)
+			default:
+			}
+
+			v += fmt.Sprintf("MOVQ %v, AX\n\t", r)
+		} else {
+			v += fmt.Sprintf("MOVQ %v, AX // %v\n\t", a.ToPhysical(o.Left, false), o.Left)
+		}
 		v += "MOVQ $0, DX\n\t"
-		v += fmt.Sprintf("MOVQ %v, AX // %v\n\t", a.ToPhysical(o.Left, false), o.Left)
 
 		// FIXME: This is only required if o.Right isn't really a register,
 		// but a fake register like "$15".
-		r, err := a.tempPhysicalRegister(true)
+		r, err := a.tempPhysicalRegister2(true)
 		if err != nil {
 			panic(err)
 		}
 
 		v += fmt.Sprintf("MOVQ %v, %v\n\t", a.ToPhysical(o.Right, false), r)
-		v += fmt.Sprintf("IDIVQ %v\n\t", r)
+
+		if o.Left.Signed() {
+			v += fmt.Sprintf("IDIVQ %v\n\t", r)
+		} else {
+			v += fmt.Sprintf("DIVQ %v\n\t", r)
+		}
 		switch o.Dst.(type) {
 		case mlir.TempValue:
 			r, err = a.nextPhysicalRegister(o.Dst, false)
@@ -864,15 +1102,56 @@ func (a *Amd64) ConvertInstruction(i int, ops []mlir.Opcode) string {
 }
 
 func (a Amd64) cJmpIR(op string, o mlir.ConditionalJump) string {
-	switch o.Src.(type) {
+	switch src := o.Src.(type) {
 	case mlir.TempValue:
-		src, err := a.getPhysicalRegister(o.Src)
+		srcr, err := a.getPhysicalRegister(src)
 		if err != nil {
 			panic(err)
 		}
-		return fmt.Sprintf("\n\tCMPQ %v, %v\n\t%v %v", src, a.ToPhysical(o.Dst, false), op, o.Label.Inline())
+		return fmt.Sprintf("\n\tCMPQ %v, %v\n\t%v %v", srcr, a.ToPhysical(o.Dst, false), op, o.Label.Inline())
+	case mlir.Offset:
+		var v string
+		dst, err := a.getPhysicalRegister(o.Dst)
+		if err != nil {
+			dst, err = a.nextPhysicalRegister(o.Dst, false)
+			if err != nil {
+				panic(err)
+			}
+			v += fmt.Sprintf("MOV%v %v, %v\n\t", a.singleRegSuffix(o.Dst.Size()), a.ToPhysical(o.Dst, false), dst)
+		}
+
+		idx, err := a.tempPhysicalRegister(false)
+		if err != nil {
+			panic(err)
+		}
+		srcr, err := a.tempPhysicalRegister2(false)
+		if err != nil {
+			panic(err)
+		}
+
+		v += fmt.Sprintf("\tMOVQ %v, %v\n\t", a.ToPhysical(src.Offset, false), idx)
+
+		switch src.Base.(type) {
+		case mlir.FuncArg:
+			v += fmt.Sprintf("\tMOVQ %v, %v\n\t", a.ToPhysical(src.Base, false), srcr)
+		case mlir.LocalValue:
+			if a.isSliceBase(src.Base) {
+				v += fmt.Sprintf("\tMOVQ %v, %v\n\t", a.ToPhysical(src.Base, false), srcr)
+			} else {
+				v += fmt.Sprintf("\tMOVQ $%v, %v\n\t", a.ToPhysical(src.Base, false), srcr)
+			}
+		default:
+			panic("Unhandled type for offset")
+			//v += fmt.Sprintf("\tMOVQ %v, %v\n\t", a.ToPhysical(src.Base, false), srcr)
+		}
+		suffix := a.opSuffix(src.Base, fakeRegister{8, src.Base.Signed()})
+		v += fmt.Sprintf("MOV%v (%v)(%v*%v), %v\n\t", suffix, srcr, idx, src.Scale, srcr)
+
+		v += fmt.Sprintf("CMPQ %v, %v\n\t", srcr, dst)
+		v += fmt.Sprintf("%v %v", op, o.Label.Inline())
+		return v
 	default:
-		src, err := a.tempPhysicalRegister(false)
+		srcr, err := a.tempPhysicalRegister(false)
 		if err != nil {
 			panic(err)
 		}
@@ -887,13 +1166,28 @@ func (a Amd64) cJmpIR(op string, o mlir.ConditionalJump) string {
 			}
 			// FIXME: Only required if both src and dst are not really registers.
 			suffix := a.opSuffix(o.Src, o.Dst)
-			v := fmt.Sprintf("MOV%v %v, %v", suffix, a.ToPhysical(o.Src, false), src)
+			v := fmt.Sprintf("MOV%v %v, %v", suffix, a.ToPhysical(o.Src, false), srcr)
 			return v + fmt.Sprintf("\n\tCMP%v %v, %v\n\t%v %v", a.singleRegSuffix(o.Dst.Size()), src, dst, op, o.Label.Inline())
 		default:
 			// FIXME: Only required if both src and dst are not really registers
 			suffix := a.opSuffix(o.Src, o.Dst)
-			v := fmt.Sprintf("MOV%v %v, %v", suffix, a.ToPhysical(o.Src, false), src)
-			return v + fmt.Sprintf("\n\tCMP%v %v, %v\n\t%v %v", a.singleRegSuffix(o.Dst.Size()), src, a.ToPhysical(o.Dst, false), op, o.Label.Inline())
+			v := fmt.Sprintf("MOV%v %v, %v", suffix, a.ToPhysical(o.Src, false), srcr)
+			return v + fmt.Sprintf("\n\tCMP%v %v, %v\n\t%v %v", a.singleRegSuffix(o.Dst.Size()), srcr, a.ToPhysical(o.Dst, false), op, o.Label.Inline())
 		}
 	}
+}
+
+// Fake a type of register. Usually used to force something to be
+// sign extended with opSuffix.
+type fakeRegister struct {
+	size   int
+	signed bool
+}
+
+func (f fakeRegister) Signed() bool {
+	return f.signed
+}
+
+func (f fakeRegister) Size() int {
+	return f.size
 }

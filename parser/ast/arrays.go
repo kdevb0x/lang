@@ -143,3 +143,51 @@ func (a SliceType) Components() []Type {
 	// One int64 for the size, one int for the pointer
 	return []Type{TypeLiteral("uint64"), TypeLiteral("int")}
 }
+
+type Slice struct {
+	Base Value
+	Size IntLiteral
+}
+
+func (a Slice) Type() Type {
+	return SliceType{
+		Base: a.Base.Type(),
+	}
+}
+
+/*
+func (a Slice) TypeName() string {
+	return fmt.Sprintf("[]%v", a.Start.Typ.TypeName())
+}
+*/
+func (a Slice) PrettyPrint(lvl int) string {
+	// FIXME: This is wrong.
+	return fmt.Sprintf("%v[%v:%v]", nTabs(lvl), a.Base, a.Size)
+}
+
+func (a Slice) Node() Node {
+	return a
+}
+func (a Slice) String() string {
+	return fmt.Sprintf("Slice{Start: %v, Size: %v}", a.Base, a.Size)
+}
+
+func (a Slice) Value() interface{} {
+	// FIXME: this is just a stub.
+	return 0
+}
+
+/*
+func (a Slice) Info() TypeInfo {
+	baseinfo := a.Start.Typ.Info()
+	return TypeInfo{
+		16, // 8 for size, 8 for base pointer
+		baseinfo.Signed,
+	}
+}
+
+func (a Slice) Components() []Type {
+	// One int64 for the size, one int for the pointer
+	return []Type{TypeLiteral("uint64"), TypeLiteral("int")}
+}
+*/

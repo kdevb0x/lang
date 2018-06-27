@@ -14,6 +14,10 @@ type Pointer struct {
 	ctx *Context
 }
 
+func (p Pointer) String() string {
+	return fmt.Sprintf("%v", p.r)
+}
+
 type Context struct {
 	Funcs        map[string]hlir.Func
 	Callables    ast.Callables
@@ -78,8 +82,8 @@ func (c *Context) SetRegister(r hlir.Register, val interface{}) error {
 	case hlir.FuncArg:
 		c.funcArg[reg] = val
 	case hlir.Offset:
-		off, _ := resolveOffset(reg, c)
-		c.SetRegister(off, val)
+		off, nctx := resolveOffset(reg, c)
+		nctx.SetRegister(off, val)
 	default:
 		panic(fmt.Sprintf("Unhandled register type: %v", reflect.TypeOf(r).Name()))
 	}

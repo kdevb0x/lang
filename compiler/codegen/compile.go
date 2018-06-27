@@ -15,7 +15,7 @@ var debug bool = false
 func Compile(w io.Writer, f mlir.Func) error {
 	fmt.Fprintf(w, "TEXT %v(SB), 4+16, $%v\n", f.Name, reserveStackSize(f))
 	data := dataLiterals(w, f)
-	cpu := Amd64{stringLiterals: data, numArgs: f.NumArgs, lvOffsets: make(map[uint]uint)}
+	cpu := Amd64{stringLiterals: data, numArgs: f.NumArgs, lvOffsets: make(map[uint]uint), sliceBase: make(map[mlir.Register]bool)}
 	cpu.clearRegisterMapping()
 	// calculate the offsets of every local value
 	offset := uint(f.NumArgs * 8)

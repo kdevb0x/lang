@@ -2,12 +2,25 @@ package hlir
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/driusan/lang/parser/ast"
 	"github.com/driusan/lang/parser/sampleprograms"
 )
 
+func parseFile(t *testing.T, testcase string) ([]ast.Node, ast.TypeInformation, ast.Callables) {
+	f, err := os.Open("../../testsuite/" + testcase + ".l")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	at, ti, callables, err := ast.ParseFromReader(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return at, ti, callables
+}
 func compareOp(a, b Opcode) bool {
 	switch a1 := a.(type) {
 	case CALL:
@@ -4682,6 +4695,844 @@ func TestUserProductTypeValue(t *testing.T) {
 		},
 	}
 
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Errorf("%v", err)
+	}
+}
+
+func TestSliceFromArray(t *testing.T) {
+	as, ti, c := parseFile(t, "slicefromarray")
+
+	i, _, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		MOV{
+			Src: IntLiteral(1),
+			Dst: LocalValue(0),
+		},
+		MOV{
+			Src: IntLiteral(2),
+			Dst: LocalValue(1),
+		},
+		MOV{
+			Src: IntLiteral(3),
+			Dst: LocalValue(2),
+		},
+		MOV{
+			Src: IntLiteral(4),
+			Dst: LocalValue(3),
+		},
+		MOV{
+			Src: IntLiteral(5),
+			Dst: LocalValue(4),
+		},
+		MOV{
+			Src: IntLiteral(2),
+			Dst: LocalValue(5),
+		},
+		MOV{
+			Src: Pointer{
+				Offset{
+					Base:   LocalValue(0),
+					Offset: IntLiteral(2),
+					Scale:  IntLiteral(1),
+					Container: ast.VarWithType{
+						"x", ast.ArrayType{
+							ast.TypeLiteral("byte"),
+							5,
+						},
+						false,
+					},
+				},
+			},
+			Dst: LocalValue(6),
+		},
+		CALL{FName: "PrintInt", Args: []Register{
+			Offset{
+				Base:   LocalValue(6),
+				Offset: IntLiteral(0),
+				Scale:  IntLiteral(1),
+				Container: ast.VarWithType{
+					"y", ast.SliceType{
+						ast.TypeLiteral("byte"),
+					},
+					false,
+				},
+			},
+		},
+		},
+		CALL{FName: "PrintInt", Args: []Register{
+			Offset{
+				Base:   LocalValue(6),
+				Offset: IntLiteral(1),
+				Scale:  IntLiteral(1),
+				Container: ast.VarWithType{
+					"y", ast.SliceType{
+						ast.TypeLiteral("byte"),
+					},
+					false,
+				},
+			},
+		},
+		},
+		ASSERT{
+			Predicate: Condition{
+				[]Opcode{
+
+					CALL{
+						FName: "len",
+						Args: []Register{
+							LocalValue(5),
+							SliceBasePointer{
+								Offset{
+									Offset: IntLiteral(2),
+									Scale:  IntLiteral(1),
+									Base:   LocalValue(0),
+									Container: ast.VarWithType{
+										"x", ast.ArrayType{
+											ast.TypeLiteral("byte"),
+											5,
+										},
+										false,
+									},
+								},
+							},
+						},
+					},
+					EQ{
+						Left:  LastFuncCallRetVal{2, 0},
+						Right: IntLiteral(2),
+						Dst:   TempValue(0),
+					},
+				},
+				TempValue(0),
+			},
+			Message: "",
+		},
+		ASSERT{
+			Predicate: Condition{
+				[]Opcode{
+					EQ{
+						Left: Offset{
+							Base:   LocalValue(6),
+							Offset: IntLiteral(0),
+							Scale:  IntLiteral(1),
+							Container: ast.VarWithType{
+								"y", ast.SliceType{
+									ast.TypeLiteral("byte"),
+								},
+								false,
+							},
+						},
+						Right: IntLiteral(3),
+						Dst:   TempValue(1),
+					},
+				},
+				TempValue(1),
+			},
+			Message: "",
+		},
+		ASSERT{
+			Predicate: Condition{
+				[]Opcode{
+					EQ{
+						Left: Offset{
+							Base:   LocalValue(6),
+							Offset: IntLiteral(1),
+							Scale:  IntLiteral(1),
+							Container: ast.VarWithType{
+								"y", ast.SliceType{
+									ast.TypeLiteral("byte"),
+								},
+								false,
+							},
+						},
+						Right: IntLiteral(4),
+						Dst:   TempValue(2),
+					},
+				},
+				TempValue(2),
+			},
+			Message: "",
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Errorf("%v", err)
+	}
+}
+
+func TestMutSliceFromArray(t *testing.T) {
+	as, ti, c := parseFile(t, "mutslicefromarray")
+
+	i, _, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		MOV{
+			Src: IntLiteral(1),
+			Dst: LocalValue(0),
+		},
+		MOV{
+			Src: IntLiteral(2),
+			Dst: LocalValue(1),
+		},
+		MOV{
+			Src: IntLiteral(3),
+			Dst: LocalValue(2),
+		},
+		MOV{
+			Src: IntLiteral(4),
+			Dst: LocalValue(3),
+		},
+		MOV{
+			Src: IntLiteral(5),
+			Dst: LocalValue(4),
+		},
+		MOV{
+			Src: IntLiteral(2),
+			Dst: LocalValue(5),
+		},
+		MOV{
+			Src: Pointer{
+				Offset{
+					Base:   LocalValue(0),
+					Offset: IntLiteral(2),
+					Scale:  IntLiteral(1),
+					Container: ast.VarWithType{
+						"x", ast.ArrayType{
+							ast.TypeLiteral("byte"),
+							5,
+						},
+						false,
+					},
+				},
+			},
+			Dst: LocalValue(6),
+		},
+		CALL{FName: "PrintInt", Args: []Register{
+			Offset{
+				Base:   LocalValue(6),
+				Offset: IntLiteral(0),
+				Scale:  IntLiteral(1),
+				Container: ast.VarWithType{
+					"y", ast.SliceType{
+						ast.TypeLiteral("byte"),
+					},
+					false,
+				},
+			},
+		},
+		},
+		CALL{FName: "PrintInt", Args: []Register{
+			Offset{
+				Base:   LocalValue(6),
+				Offset: IntLiteral(1),
+				Scale:  IntLiteral(1),
+				Container: ast.VarWithType{
+					"y", ast.SliceType{
+						ast.TypeLiteral("byte"),
+					},
+					false,
+				},
+			},
+		},
+		},
+		ASSERT{
+			Predicate: Condition{
+				[]Opcode{
+
+					CALL{
+						FName: "len",
+						Args: []Register{
+							LocalValue(5),
+							SliceBasePointer{
+								Offset{
+									Offset: IntLiteral(2),
+									Scale:  IntLiteral(1),
+									Base:   LocalValue(0),
+									Container: ast.VarWithType{
+										"x", ast.ArrayType{
+											ast.TypeLiteral("byte"),
+											5,
+										},
+										false,
+									},
+								},
+							},
+						},
+					},
+					EQ{
+						Left:  LastFuncCallRetVal{2, 0},
+						Right: IntLiteral(2),
+						Dst:   TempValue(0),
+					},
+				},
+				TempValue(0),
+			},
+			Message: "",
+		},
+		ASSERT{
+			Predicate: Condition{
+				[]Opcode{
+					EQ{
+						Left: Offset{
+							Base:   LocalValue(6),
+							Offset: IntLiteral(0),
+							Scale:  IntLiteral(1),
+							Container: ast.VarWithType{
+								"y", ast.SliceType{
+									ast.TypeLiteral("byte"),
+								},
+								false,
+							},
+						},
+						Right: IntLiteral(3),
+						Dst:   TempValue(1),
+					},
+				},
+				TempValue(1),
+			},
+			Message: "",
+		},
+		ASSERT{
+			Predicate: Condition{
+				[]Opcode{
+					EQ{
+						Left: Offset{
+							Base:   LocalValue(6),
+							Offset: IntLiteral(1),
+							Scale:  IntLiteral(1),
+							Container: ast.VarWithType{
+								"y", ast.SliceType{
+									ast.TypeLiteral("byte"),
+								},
+								false,
+							},
+						},
+						Right: IntLiteral(4),
+						Dst:   TempValue(2),
+					},
+				},
+				TempValue(2),
+			},
+			Message: "",
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Errorf("%v", err)
+	}
+}
+func TestMutSliceFromSlice(t *testing.T) {
+	as, ti, c := parseFile(t, "mutslicefromslice")
+
+	i, _, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		MOV{
+			Src: IntLiteral(5),
+			Dst: LocalValue(0),
+		},
+		MOV{
+			Src: IntLiteral(1),
+			Dst: LocalValue(1),
+		},
+		MOV{
+			Src: IntLiteral(2),
+			Dst: LocalValue(2),
+		},
+		MOV{
+			Src: IntLiteral(3),
+			Dst: LocalValue(3),
+		},
+		MOV{
+			Src: IntLiteral(4),
+			Dst: LocalValue(4),
+		},
+		MOV{
+			Src: IntLiteral(5),
+			Dst: LocalValue(5),
+		},
+		MOV{
+			Src: IntLiteral(2),
+			Dst: LocalValue(6),
+		},
+		MOV{
+			Src: Pointer{
+				Offset{
+					Base:   LocalValue(1),
+					Offset: IntLiteral(3),
+					Scale:  IntLiteral(1),
+					Container: ast.VarWithType{
+						"x", ast.SliceType{
+							ast.TypeLiteral("byte"),
+						},
+						false,
+					},
+				},
+			},
+			Dst: LocalValue(7),
+		},
+		CALL{FName: "PrintInt", Args: []Register{
+			Offset{
+				Base:   LocalValue(7),
+				Offset: IntLiteral(0),
+				Scale:  IntLiteral(1),
+				Container: ast.VarWithType{
+					"y", ast.SliceType{
+						ast.TypeLiteral("byte"),
+					},
+					false,
+				},
+			},
+		},
+		},
+		CALL{FName: "PrintInt", Args: []Register{
+			Offset{
+				Base:   LocalValue(7),
+				Offset: IntLiteral(1),
+				Scale:  IntLiteral(1),
+				Container: ast.VarWithType{
+					"y", ast.SliceType{
+						ast.TypeLiteral("byte"),
+					},
+					false,
+				},
+			},
+		},
+		},
+		ASSERT{
+			Predicate: Condition{
+				[]Opcode{
+
+					CALL{
+						FName: "len",
+						Args: []Register{
+							LocalValue(6),
+							SliceBasePointer{
+								Offset{
+									Offset: IntLiteral(3),
+									Scale:  IntLiteral(1),
+									Base:   LocalValue(1),
+									Container: ast.VarWithType{
+										"x", ast.SliceType{
+											ast.TypeLiteral("byte"),
+										},
+										false,
+									},
+								},
+							},
+						},
+					},
+					EQ{
+						Left:  LastFuncCallRetVal{2, 0},
+						Right: IntLiteral(2),
+						Dst:   TempValue(0),
+					},
+				},
+				TempValue(0),
+			},
+			Message: "",
+		},
+		ASSERT{
+			Predicate: Condition{
+				[]Opcode{
+					EQ{
+						Left: Offset{
+							Base:   LocalValue(7),
+							Offset: IntLiteral(0),
+							Scale:  IntLiteral(1),
+							Container: ast.VarWithType{
+								"y", ast.SliceType{
+									ast.TypeLiteral("byte"),
+								},
+								false,
+							},
+						},
+						Right: IntLiteral(4),
+						Dst:   TempValue(1),
+					},
+				},
+				TempValue(1),
+			},
+			Message: "",
+		},
+		ASSERT{
+			Predicate: Condition{
+				[]Opcode{
+					EQ{
+						Left: Offset{
+							Base:   LocalValue(7),
+							Offset: IntLiteral(1),
+							Scale:  IntLiteral(1),
+							Container: ast.VarWithType{
+								"y", ast.SliceType{
+									ast.TypeLiteral("byte"),
+								},
+								false,
+							},
+						},
+						Right: IntLiteral(5),
+						Dst:   TempValue(2),
+					},
+				},
+				TempValue(2),
+			},
+			Message: "",
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Errorf("%v", err)
+	}
+}
+
+func TestSlicePrint(t *testing.T) {
+	as, ti, c := parseFile(t, "sliceprint")
+
+	i, _, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		MOV{
+			Src: IntLiteral(70),
+			Dst: LocalValue(0),
+		},
+		MOV{
+			Src: IntLiteral(111),
+			Dst: LocalValue(1),
+		},
+		MOV{
+			Src: IntLiteral(111),
+			Dst: LocalValue(2),
+		},
+		MOV{
+			Src: IntLiteral(66),
+			Dst: LocalValue(3),
+		},
+		MOV{
+			Src: IntLiteral(97),
+			Dst: LocalValue(4),
+		},
+		MOV{
+			Src: IntLiteral(114),
+			Dst: LocalValue(5),
+		},
+		MOV{
+			Src: IntLiteral(3),
+			Dst: LocalValue(6),
+		},
+		MOV{
+			Src: Pointer{
+				Offset{
+					Base:   LocalValue(0),
+					Offset: IntLiteral(3),
+					Scale:  IntLiteral(1),
+					Container: ast.VarWithType{
+						"x", ast.ArrayType{
+							ast.TypeLiteral("byte"),
+							6,
+						},
+						false,
+					},
+				},
+			},
+			Dst: LocalValue(7),
+		},
+		CALL{
+			FName: "Write",
+			Args: []Register{
+				IntLiteral(1),
+				IntLiteral(3),
+				SliceBasePointer{
+					Offset{
+						Base:   LocalValue(0),
+						Offset: IntLiteral(0),
+						Scale:  IntLiteral(1),
+						Container: ast.VarWithType{
+							"x", ast.ArrayType{
+								ast.TypeLiteral("byte"),
+								6,
+							},
+							false,
+						},
+					},
+				},
+			},
+		},
+		CALL{
+			FName: "Write",
+			Args: []Register{
+				IntLiteral(2),
+				LocalValue(6),
+				SliceBasePointer{
+					Offset{
+						Base:   LocalValue(0),
+						Offset: IntLiteral(3),
+						Scale:  IntLiteral(1),
+						Container: ast.VarWithType{
+							"x", ast.ArrayType{
+								ast.TypeLiteral("byte"),
+								6,
+							},
+							false,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Errorf("%v", err)
+	}
+}
+
+func TestArrayParam(t *testing.T) {
+	as, ti, c := parseFile(t, "arrayparam")
+
+	i, _, _, err := Generate(as[0], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []Opcode{
+		CALL{
+			FName: "PrintInt",
+			Args: []Register{
+				Offset{
+					Offset: IntLiteral(0),
+					Scale:  IntLiteral(1),
+					Base:   FuncArg{1, false},
+					Container: ast.VarWithType{
+						"x", ast.ArrayType{
+							ast.TypeLiteral("byte"),
+							5,
+						},
+						false,
+					},
+				},
+			},
+		},
+		ASSERT{
+			Predicate: Condition{
+				Body: []Opcode{
+					MOD{
+						Left: Offset{
+							Offset: IntLiteral(0),
+							Scale:  IntLiteral(1),
+							Base:   FuncArg{1, false},
+							Container: ast.VarWithType{
+								"x", ast.ArrayType{
+									ast.TypeLiteral("byte"),
+									5,
+								},
+								false,
+							},
+						},
+						Right: IntLiteral(5),
+						Dst:   TempValue(0),
+					},
+					EQ{
+						Left:  TempValue(0),
+						Right: IntLiteral(1),
+						Dst:   TempValue(1),
+					},
+				},
+				Register: TempValue(1),
+			},
+			Message: "",
+		},
+		ASSERT{
+			Predicate: Condition{
+				Body: []Opcode{
+					MOD{
+						Left: Offset{
+							Offset: IntLiteral(1),
+							Scale:  IntLiteral(1),
+							Base:   FuncArg{1, false},
+							Container: ast.VarWithType{
+								"x", ast.ArrayType{
+									ast.TypeLiteral("byte"),
+									5,
+								},
+								false,
+							},
+						},
+						Right: IntLiteral(5),
+						Dst:   TempValue(2),
+					},
+					EQ{
+						Left:  TempValue(2),
+						Right: IntLiteral(2),
+						Dst:   TempValue(3),
+					},
+				},
+				Register: TempValue(3),
+			},
+			Message: "",
+		},
+		ASSERT{
+			Predicate: Condition{
+				Body: []Opcode{
+					MOD{
+						Left: Offset{
+							Offset: IntLiteral(2),
+							Scale:  IntLiteral(1),
+							Base:   FuncArg{1, false},
+							Container: ast.VarWithType{
+								"x", ast.ArrayType{
+									ast.TypeLiteral("byte"),
+									5,
+								},
+								false,
+							},
+						},
+						Right: IntLiteral(5),
+						Dst:   TempValue(4),
+					},
+					EQ{
+						Left:  TempValue(4),
+						Right: IntLiteral(3),
+						Dst:   TempValue(5),
+					},
+				},
+				Register: TempValue(5),
+			},
+			Message: "",
+		},
+		ASSERT{
+			Predicate: Condition{
+				Body: []Opcode{
+					MOD{
+						Left: Offset{
+							Offset: IntLiteral(3),
+							Scale:  IntLiteral(1),
+							Base:   FuncArg{1, false},
+							Container: ast.VarWithType{
+								"x", ast.ArrayType{
+									ast.TypeLiteral("byte"),
+									5,
+								},
+								false,
+							},
+						},
+						Right: IntLiteral(5),
+						Dst:   TempValue(6),
+					},
+					EQ{
+						Left:  TempValue(6),
+						Right: IntLiteral(4),
+						Dst:   TempValue(7),
+					},
+				},
+				Register: TempValue(7),
+			},
+			Message: "",
+		},
+		ASSERT{
+			Predicate: Condition{
+				Body: []Opcode{
+					MOD{
+						Left: Offset{
+							Offset: IntLiteral(4),
+							Scale:  IntLiteral(1),
+							Base:   FuncArg{1, false},
+							Container: ast.VarWithType{
+								"x", ast.ArrayType{
+									ast.TypeLiteral("byte"),
+									5,
+								},
+								false,
+							},
+						},
+						Right: IntLiteral(5),
+						Dst:   TempValue(8),
+					},
+					EQ{
+						Left:  TempValue(8),
+						Right: IntLiteral(0),
+						Dst:   TempValue(9),
+					},
+				},
+				Register: TempValue(9),
+			},
+			Message: "",
+		},
+	}
+	if err := compareIR(i.Body, expected); err != nil {
+		t.Errorf("%v", err)
+	}
+
+	expected = []Opcode{
+		MOV{
+			Src: IntLiteral(1),
+			Dst: LocalValue(0),
+		},
+		MOV{
+			Src: IntLiteral(2),
+			Dst: LocalValue(1),
+		},
+		MOV{
+			Src: IntLiteral(3),
+			Dst: LocalValue(2),
+		},
+		MOV{
+			Src: IntLiteral(4),
+			Dst: LocalValue(3),
+		},
+		MOV{
+			Src: IntLiteral(5),
+			Dst: LocalValue(4),
+		},
+		MOV{
+			Src: IntLiteral(6),
+			Dst: LocalValue(5),
+		},
+		MOV{
+			Src: IntLiteral(7),
+			Dst: LocalValue(6),
+		},
+		MOV{
+			Src: IntLiteral(8),
+			Dst: LocalValue(7),
+		},
+		MOV{
+			Src: IntLiteral(9),
+			Dst: LocalValue(8),
+		},
+		MOV{
+			Src: IntLiteral(10),
+			Dst: LocalValue(9),
+		},
+		CALL{FName: "foo",
+			Args: []Register{
+				IntLiteral(5),
+				SliceBasePointer{LocalValue(0)},
+			},
+		},
+		CALL{FName: "foo",
+			Args: []Register{
+				IntLiteral(5),
+				SliceBasePointer{LocalValue(5)},
+			},
+		},
+	}
+	i, _, _, err = Generate(as[1], ti, c, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := compareIR(i.Body, expected); err != nil {
 		t.Errorf("%v", err)
 	}

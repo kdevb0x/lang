@@ -452,16 +452,43 @@ func consumeInfix(start int, tokens []token.Token, c *Context, left Value) (int,
 
 		return n, createOperatorNode(tokens[start], left, right), nil
 	case token.Char("["):
+		base, ok := left.(VarWithType)
+		if !ok {
+			return 0, nil, fmt.Errorf("Can only index on variables")
+		}
+
 		n, index, err := consumeValue(start+1, tokens, c, true)
 		if err != nil {
 			return 0, nil, err
 		}
-		if tokens[start+1+n] != token.Char("]") {
+		if tokens[start+1+n] == token.Char(":") {
+			switch base.Typ.(type) {
+			case ArrayType, SliceType:
+				// Nothing, we're good.
+			default:
+				return 0, nil, fmt.Errorf("Can only slice array or slice variables")
+			}
+			n2, index2, err := consumeValue(start+1+n+1, tokens, c, true)
+			if err != nil {
+				return 0, nil, err
+			}
+			start, ok := index.(IntLiteral)
+			if !ok {
+				return 0, nil, fmt.Errorf("Can currently only use integer literals for slicing indexes. Sorry :(")
+			}
+			end, ok := index2.(IntLiteral)
+			if !ok {
+				return 0, nil, fmt.Errorf("Can currently only use integer literals for slicing indexes. Sorry :(")
+			}
+			return n + n2 + 2, Slice{
+				Base: ArrayValue{
+					Base:  base,
+					Index: start,
+				},
+				Size: end - start,
+			}, nil
+		} else if tokens[start+1+n] != token.Char("]") {
 			return 0, nil, fmt.Errorf("Invalid index")
-		}
-		base, ok := left.(VarWithType)
-		if !ok {
-			return 0, nil, fmt.Errorf("Can only index on variables")
 		}
 		return n + 1, ArrayValue{base, index}, nil
 	case token.Operator("="):

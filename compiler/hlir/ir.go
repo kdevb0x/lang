@@ -112,3 +112,11 @@ func (o Offset) String() string {
 	}
 	return fmt.Sprintf("&(%v+%v*%v)", o.Base, o.Offset, o.Scale)
 }
+
+type SliceBasePointer struct {
+	Register
+}
+
+func (o SliceBasePointer) String() string {
+	return fmt.Sprintf("*(%v)", o.Register)
+}

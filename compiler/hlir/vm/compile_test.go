@@ -1,21 +1,24 @@
 package vm
 
 import (
+	"io"
 	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/driusan/lang/compiler/hlir"
 	"github.com/driusan/lang/parser/sampleprograms"
 )
 
-func compileAndTestWithArgs(t *testing.T, prog string, args []string, estdout, estderr string) {
-	ctx, err := Parse(prog)
+func compileAndTestWithArgs(t *testing.T, name string, prog io.Reader, args []string, estdout, estderr string) {
+	t.Helper()
+	ctx, err := ParseFromReader(prog)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	args = append([]string{prog}, args...)
+	args = append([]string{name}, args...)
 
 	// Create a new environment to put the StringLiterals in, so that they can be
 	// treated the same as any other call in how they're passed
@@ -56,7 +59,17 @@ func compileAndTestWithArgs(t *testing.T, prog string, args []string, estdout, e
 }
 
 func compileAndTest(t *testing.T, prog, estdout, estderr string) {
-	compileAndTestWithArgs(t, prog, nil, estdout, estderr)
+	t.Helper()
+	compileAndTestWithArgs(t, prog, strings.NewReader(prog), nil, estdout, estderr)
+}
+func compileAndTestFromFile(t *testing.T, prog, estdout, estderr string) {
+	t.Helper()
+	f, err := os.Open("../../../testsuite/" + prog + ".l")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	compileAndTestWithArgs(t, prog, f, nil, estdout, estderr)
 }
 
 func TestCreateSyscall(t *testing.T) {
@@ -143,8 +156,8 @@ func TestEchoProgram(t *testing.T) {
 		os.Chdir(pwd)
 	}(pwd)
 
-	compileAndTestWithArgs(t, sampleprograms.Echo, []string{"foo", "bar"}, "foo bar\n", "")
-	compileAndTestWithArgs(t, sampleprograms.Echo, []string{"other", "params"}, "other params\n", "")
+	compileAndTestWithArgs(t, "echo", strings.NewReader(sampleprograms.Echo), []string{"foo", "bar"}, "foo bar\n", "")
+	compileAndTestWithArgs(t, "echo", strings.NewReader(sampleprograms.Echo), []string{"other", "params"}, "other params\n", "")
 }
 
 func TestCatProgram(t *testing.T) {
@@ -176,8 +189,8 @@ func TestCatProgram(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	compileAndTestWithArgs(t, sampleprograms.UnbufferedCat, []string{"foo.tmp", "bar.tmp"}, "FooBar", "")
-	compileAndTestWithArgs(t, sampleprograms.UnbufferedCat, []string{"bar.tmp", "foo.tmp"}, "BarFoo", "")
+	compileAndTestWithArgs(t, "cat", strings.NewReader(sampleprograms.UnbufferedCat), []string{"foo.tmp", "bar.tmp"}, "FooBar", "")
+	compileAndTestWithArgs(t, "cat", strings.NewReader(sampleprograms.UnbufferedCat), []string{"bar.tmp", "foo.tmp"}, "BarFoo", "")
 
 }
 
@@ -210,8 +223,8 @@ func TestUnbufferedCat2(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	compileAndTestWithArgs(t, sampleprograms.UnbufferedCat2, []string{"foo.tmp", "bar.tmp"}, "FooBar", "")
-	compileAndTestWithArgs(t, sampleprograms.UnbufferedCat2, []string{"bar.tmp", "foo.tmp"}, "BarFoo", "")
+	compileAndTestWithArgs(t, "cat", strings.NewReader(sampleprograms.UnbufferedCat2), []string{"foo.tmp", "bar.tmp"}, "FooBar", "")
+	compileAndTestWithArgs(t, "cat", strings.NewReader(sampleprograms.UnbufferedCat2), []string{"bar.tmp", "foo.tmp"}, "BarFoo", "")
 
 }
 
@@ -244,8 +257,8 @@ func TestUnbufferedCat3(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	compileAndTestWithArgs(t, sampleprograms.UnbufferedCat3, []string{"foo.tmp", "bar.tmp"}, "FooBar", "")
-	compileAndTestWithArgs(t, sampleprograms.UnbufferedCat3, []string{"bar.tmp", "foo.tmp"}, "BarFoo", "")
+	compileAndTestWithArgs(t, "cat", strings.NewReader(sampleprograms.UnbufferedCat3), []string{"foo.tmp", "bar.tmp"}, "FooBar", "")
+	compileAndTestWithArgs(t, "cat", strings.NewReader(sampleprograms.UnbufferedCat3), []string{"bar.tmp", "foo.tmp"}, "BarFoo", "")
 
 }
 
@@ -612,7 +625,7 @@ func TestAssignmentToSliceVariableIndex(t *testing.T) {
 }
 
 func TestWriteStringByte(t *testing.T) {
-	compileAndTest(t, sampleprograms.WriteStringByte, "hellohello", "")
+	compileAndTestFromFile(t, "writestringbyte", "hellohello", "")
 }
 
 func TestStringArg(t *testing.T) {
@@ -677,4 +690,23 @@ func TestProductTypeValue(t *testing.T) {
 
 func TestUserProductTypeValue(t *testing.T) {
 	compileAndTest(t, sampleprograms.UserProductTypeValue, "hello\n3", "")
+}
+
+func TestTestSuite(t *testing.T) {
+	tests := []struct {
+		Name           string
+		Stdout, Stderr string
+	}{
+		{"slicefromarray", "34", ""},
+		{"slicefromslice", "45", ""},
+		{"mutslicefromarray", "34", ""},
+		{"mutslicefromslice", "45", ""},
+		{"sliceprint", "Foo", "Bar"},
+		{"arrayparam", "16", ""},
+		{"mutarrayparam", "", ""},
+	}
+
+	for _, tc := range tests {
+		compileAndTestFromFile(t, tc.Name, tc.Stdout, tc.Stderr)
+	}
 }

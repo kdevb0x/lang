@@ -71,11 +71,13 @@ type FuncArg struct {
 	Id        uint
 	Info      ast.TypeInfo
 	Reference bool
+
+	ast.Type
 }
 
 func (fa FuncArg) String() string {
 	if Debug {
-		return fmt.Sprintf("P%d (%v)", fa.Id, fa.Info)
+		return fmt.Sprintf("P%d (%v %v)", fa.Id, fa.Info, fa.Type)
 	}
 	return fmt.Sprintf("P%d", fa.Id)
 
@@ -198,4 +200,8 @@ func (o Offset) Size() int {
 
 func (o Offset) String() string {
 	return fmt.Sprintf("&(%v+%v*%v)", o.Base, o.Offset, o.Scale)
+}
+
+type SliceBasePointer struct {
+	Register
 }

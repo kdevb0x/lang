@@ -1,7 +1,7 @@
 // Tests that a slice can be taken from an array
 func main () () {
-	let x [5]byte = { 1, 2, 3, 4, 5 }
-	let y = x[2:4]
+	mutable x [5]byte = { 1, 2, 3, 4, 5 }
+	mutable y = x[2:4]
 
 	PrintInt(y[0])
 	PrintInt(y[1])

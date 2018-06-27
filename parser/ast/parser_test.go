@@ -1,7 +1,9 @@
 package ast
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -11,9 +13,6 @@ import (
 )
 
 func compare(v1, v2 Node) bool {
-	if v1 == nil && v2 == nil {
-		return true
-	}
 	// Easy types that don't have anything preventing them from being compared
 	// with ==
 	switch v1.(type) {
@@ -21,12 +20,18 @@ func compare(v1, v2 Node) bool {
 		Variable,
 		AdditionOperator, SubtractionOperator, AssignmentOperator,
 		MulOperator, DivOperator,
-		EqualityComparison, NotEqualsComparison,
+		NotEqualsComparison,
 		GreaterOrEqualComparison, LessThanOrEqualComparison,
-		TypeLiteral, nil:
+		TypeLiteral:
 		return v1 == v2
 	}
 
+	if v1a, ok := v1.(EqualityComparison); ok {
+		if v2a, ok := v2.(EqualityComparison); ok {
+			return compare(v1a.Left, v2a.Left) && compare(v2a.Right, v2a.Right)
+		}
+		return false
+	}
 	if v1a, ok := v1.(VarWithType); ok {
 		if v2a, ok := v2.(VarWithType); ok {
 			return v1a.Name == v2a.Name && v1a.Reference == v2a.Reference && compare(v1a.Typ, v2a.Typ)
@@ -427,7 +432,35 @@ func compare(v1, v2 Node) bool {
 		}
 		return false
 	}
+	if v1a, ok := v1.(Slice); ok {
+		if v2a, ok := v2.(Slice); ok {
+			if v1a.Size != v2a.Size {
+				return false
+			}
+			return compare(v1a.Base, v2a.Base)
+		}
+		return false
+	}
 	panic(fmt.Sprintf("Unimplemented type for compare %v vs %v", reflect.TypeOf(v1), reflect.TypeOf(v2)))
+}
+
+func buildAst(t *testing.T, filename string) ([]Node, TypeInformation, Callables) {
+	t.Helper()
+	f, err := os.Open("../../testsuite/" + filename + ".l")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+
+	tokens, err := token.Tokenize(bufio.NewReader(f))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, ti, c, err := Construct(tokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return ast, ti, c
 }
 
 func TestParseFizzBuzz(t *testing.T) {
@@ -5362,6 +5395,339 @@ func TestUserSumTypeDefn(t *testing.T) {
 					nil,
 				},
 				TypeLiteral("string"),
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("Node %d: got %v want %v (%v, %v)", i, ast[i], v, reflect.TypeOf(ast[i]), reflect.TypeOf(v))
+		}
+	}
+}
+
+func TestSliceFromArray(t *testing.T) {
+	ast, _, _ := buildAst(t, "slicefromarray")
+
+	expected := []Node{
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					LetStmt{
+						Var: VarWithType{"x",
+							ArrayType{
+								Base: TypeLiteral("byte"),
+								Size: IntLiteral(5),
+							},
+							false,
+						},
+						Val: ArrayLiteral{
+							IntLiteral(1),
+							IntLiteral(2),
+							IntLiteral(3),
+							IntLiteral(4),
+							IntLiteral(5),
+						},
+					},
+					LetStmt{
+						Var: VarWithType{"y",
+							SliceType{
+								Base: TypeLiteral("byte"),
+							},
+							false,
+						},
+						Val: Slice{
+							Base: ArrayValue{
+								Base: VarWithType{"x",
+									ArrayType{
+										Base: TypeLiteral("byte"),
+										Size: IntLiteral(5),
+									},
+									false,
+								},
+								Index: IntLiteral(2),
+							},
+							Size: IntLiteral(2),
+						},
+					},
+					FuncCall{
+						Name: "PrintInt",
+						UserArgs: []Value{
+							ArrayValue{
+								Base: VarWithType{"y",
+									SliceType{
+										Base: TypeLiteral("byte"),
+									},
+									false,
+								},
+								Index: IntLiteral(0),
+							},
+						},
+					},
+					FuncCall{
+						Name: "PrintInt",
+						UserArgs: []Value{
+							ArrayValue{
+								Base: VarWithType{"y",
+									SliceType{
+										Base: TypeLiteral("byte"),
+									},
+									false,
+								},
+								Index: IntLiteral(1),
+							},
+						},
+					},
+
+					Assertion{
+						Predicate: EqualityComparison{
+							Left: FuncCall{
+								Name: "len",
+
+								UserArgs: []Value{
+									VarWithType{"y",
+										SliceType{
+											Base: TypeLiteral("byte"),
+										},
+										false,
+									},
+								},
+							},
+							Right: IntLiteral(2),
+						},
+					},
+					Assertion{
+						Predicate: EqualityComparison{
+							Left: ArrayValue{
+								Base: VarWithType{"y",
+									SliceType{
+										Base: TypeLiteral("byte"),
+									},
+									false,
+								},
+								Index: IntLiteral(0),
+							},
+							Right: IntLiteral(3),
+						},
+					},
+					Assertion{
+						Predicate: EqualityComparison{
+							Left: ArrayValue{
+								Base: VarWithType{"y",
+									SliceType{
+										Base: TypeLiteral("byte"),
+									},
+									false,
+								},
+								Index: IntLiteral(1),
+							},
+							Right: IntLiteral(4),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("Node %d: got %v want %v (%v, %v)", i, ast[i], v, reflect.TypeOf(ast[i]), reflect.TypeOf(v))
+		}
+	}
+}
+
+func TestArrayArg(t *testing.T) {
+	ast, _, _ := buildAst(t, "arrayparam")
+
+	expected := []Node{
+		FuncDecl{
+			Name: "foo",
+			Args: []VarWithType{
+				VarWithType{"x", ArrayType{Base: TypeLiteral("byte"), Size: 5}, false},
+			},
+
+			Return:  nil,
+			Effects: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					FuncCall{
+						Name: "PrintInt",
+						UserArgs: []Value{
+							ArrayValue{
+								Base: VarWithType{"x",
+									ArrayType{
+										Base: TypeLiteral("byte"),
+										Size: 5,
+									},
+									false,
+								},
+								Index: IntLiteral(0),
+							},
+						},
+					},
+					Assertion{
+						Predicate: EqualityComparison{
+							Left: ModOperator{
+								Left: ArrayValue{
+									Base: VarWithType{"x",
+										ArrayType{
+											Base: TypeLiteral("byte"),
+											Size: 5,
+										},
+										false,
+									},
+									Index: IntLiteral(0),
+								},
+								Right: IntLiteral(5),
+							},
+							Right: IntLiteral(1),
+						},
+					},
+					Assertion{
+						Predicate: EqualityComparison{
+							Left: ModOperator{
+								Left: ArrayValue{
+									Base: VarWithType{"x",
+										ArrayType{
+											Base: TypeLiteral("byte"),
+											Size: 5,
+										},
+										false,
+									},
+									Index: IntLiteral(1),
+								},
+								Right: IntLiteral(5),
+							},
+							Right: IntLiteral(2),
+						},
+					},
+					Assertion{
+						Predicate: EqualityComparison{
+							Left: ModOperator{
+								Left: ArrayValue{
+									Base: VarWithType{"x",
+										ArrayType{
+											Base: TypeLiteral("byte"),
+											Size: 5,
+										},
+										false,
+									},
+									Index: IntLiteral(2),
+								},
+								Right: IntLiteral(5),
+							},
+							Right: IntLiteral(3),
+						},
+					},
+					Assertion{
+						Predicate: EqualityComparison{
+							Left: ModOperator{
+								Left: ArrayValue{
+									Base: VarWithType{"x",
+										ArrayType{
+											Base: TypeLiteral("byte"),
+											Size: 5,
+										},
+										false,
+									},
+									Index: IntLiteral(3),
+								},
+								Right: IntLiteral(5),
+							},
+							Right: IntLiteral(4),
+						},
+					},
+					Assertion{
+						Predicate: EqualityComparison{
+							Left: ModOperator{
+								Left: ArrayValue{
+									Base: VarWithType{"x",
+										ArrayType{
+											Base: TypeLiteral("byte"),
+											Size: 5,
+										},
+										false,
+									},
+									Index: IntLiteral(4),
+								},
+								Right: IntLiteral(5),
+							},
+							Right: IntLiteral(5),
+						},
+					},
+				},
+			},
+		},
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: nil,
+			Body: BlockStmt{
+				[]Node{
+					LetStmt{
+						Var: VarWithType{"n",
+							ArrayType{
+								Base: TypeLiteral("byte"),
+								Size: IntLiteral(5),
+							},
+							false,
+						},
+						Val: ArrayLiteral{
+							IntLiteral(1),
+							IntLiteral(2),
+							IntLiteral(3),
+							IntLiteral(4),
+							IntLiteral(5),
+						},
+					},
+					MutStmt{
+						Var: VarWithType{"n2",
+							ArrayType{
+								Base: TypeLiteral("byte"),
+								Size: IntLiteral(5),
+							},
+							false,
+						},
+						InitialValue: ArrayLiteral{
+							IntLiteral(6),
+							IntLiteral(7),
+							IntLiteral(8),
+							IntLiteral(9),
+							IntLiteral(10),
+						},
+					},
+					FuncCall{
+						Name: "foo",
+						UserArgs: []Value{
+							VarWithType{"n",
+								ArrayType{
+									Base: TypeLiteral("byte"),
+									Size: IntLiteral(5),
+								},
+								false,
+							},
+						},
+					},
+					FuncCall{
+						Name: "foo",
+						UserArgs: []Value{
+							VarWithType{"n2",
+								ArrayType{
+									Base: TypeLiteral("byte"),
+									Size: IntLiteral(5),
+								},
+								false,
+							},
+						},
+					},
+				},
 			},
 		},
 	}

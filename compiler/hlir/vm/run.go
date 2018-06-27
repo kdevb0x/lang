@@ -64,6 +64,31 @@ func runOp(op hlir.Opcode, ctx *Context, allowed []ast.Effect) (stop bool, err e
 					fmt.Fprintf(ctx.stdout, "%s", s2)
 				} else {
 					base, nctx := dereferencePointer(o.Args[2], ctx)
+				outer:
+					for {
+						switch o := base.(type) {
+						case hlir.LocalValue:
+							break outer
+						case hlir.Offset:
+							base, nctx = resolveOffset(o, nctx)
+							break outer
+						case hlir.SliceBasePointer:
+							break outer
+						default:
+							base, nctx = dereferencePointer(base, nctx)
+						}
+
+					}
+					ptr, ok := base.(hlir.SliceBasePointer)
+					if ok {
+						// It might not be a SliceBasePointer if it's
+						// a string
+						if o, ok := ptr.Register.(hlir.Offset); ok {
+							base, nctx = resolveOffset(o, nctx)
+						} else {
+							base = ptr.Register
+						}
+					}
 					for i := 0; i < l.(int); i++ {
 						ch := evalRegister(base, nctx)
 						if s, ok := ch.(string); ok {
@@ -77,12 +102,58 @@ func runOp(op hlir.Opcode, ctx *Context, allowed []ast.Effect) (stop bool, err e
 						case hlir.LocalValue:
 							base = b + 1
 						default:
-							panic("Unhandled register type in Write of byte slice")
+							panic(fmt.Sprintf("Unhandled register type in Write of byte slice %v", reflect.TypeOf(b)))
 						}
 					}
 				}
 			case 2:
-				ctx.writeStderr(s.(string))
+				if s2, ok := s.(string); ok {
+					ctx.writeStderr(s2)
+				} else {
+					base, nctx := dereferencePointer(o.Args[2], ctx)
+
+				outererr:
+					for {
+						switch o := base.(type) {
+						case hlir.LocalValue:
+							break outererr
+						case hlir.Offset:
+							base, nctx = resolveOffset(o, nctx)
+							break outererr
+						case hlir.SliceBasePointer:
+							break outererr
+						default:
+							base, nctx = dereferencePointer(base, nctx)
+						}
+
+					}
+					ptr, ok := base.(hlir.SliceBasePointer)
+					if ok {
+						// It might not be a SliceBasePointer if it's
+						// a string
+						if o, ok := ptr.Register.(hlir.Offset); ok {
+							base, nctx = resolveOffset(o, nctx)
+						} else {
+							base = ptr.Register
+						}
+					}
+					for i := 0; i < l.(int); i++ {
+						ch := evalRegister(base, nctx)
+						if s, ok := ch.(string); ok {
+							// Hack because Strings and Byte slices aren't represented
+							// the same way in the VM, even though they should be
+							ctx.writeStderr(fmt.Sprintf("%s", s))
+							break
+						}
+						ctx.writeStderr(fmt.Sprintf("%c", evalRegister(base, nctx)))
+						switch b := base.(type) {
+						case hlir.LocalValue:
+							base = b + 1
+						default:
+							panic(fmt.Sprintf("Unhandled register type in Write of byte slice %v", reflect.TypeOf(b)))
+						}
+					}
+				}
 			default:
 				if s2, ok := s.(string); ok {
 					Write(fd.(int), l.(int), &([]byte(s2)[0]))
@@ -232,9 +303,14 @@ func runOp(op hlir.Opcode, ctx *Context, allowed []ast.Effect) (stop bool, err e
 					}
 				}
 				if !farg.Reference {
-					switch r.(type) {
+					switch r := r.(type) {
 					case hlir.Pointer:
 						pointer := Pointer{r, ctx}
+						newctx.pointers[hlir.Pointer{farg}] = pointer
+					case hlir.SliceBasePointer:
+						// Convert it to a normal pointer when passing
+						// as an argument so that it dereferences properly.
+						pointer := Pointer{hlir.Pointer{r.Register}, ctx}
 						newctx.pointers[hlir.Pointer{farg}] = pointer
 					default:
 						newctx.funcArg[farg] = evalRegister(r, ctx)
@@ -270,6 +346,18 @@ func runOp(op hlir.Opcode, ctx *Context, allowed []ast.Effect) (stop bool, err e
 			ctxptr := ctx.pointers[hlir.Pointer{fa}]
 			ptr := ctxptr.r.(hlir.Pointer)
 			ctxptr.ctx.SetRegister(ptr.Register, evalRegister(o.Src, ctx))
+		} else if ptr, ok := o.Src.(hlir.Pointer); ok {
+			// If moving a pointer into a variable, make that variable a
+			// pointer so that it can be used as a slice referece
+			dptr := hlir.Pointer{o.Dst}
+
+			switch ptr.Register.(type) {
+			case hlir.Offset:
+				deref, derefctx := resolveOffset(ptr.Register.(hlir.Offset), ctx)
+				ctx.pointers[dptr] = Pointer{deref, derefctx}
+			default:
+				panic("Unhandled case for pointer MOV")
+			}
 		} else {
 			ctx.SetRegister(o.Dst, evalRegister(o.Src, ctx))
 		}
@@ -420,7 +508,11 @@ func evalRegister(r hlir.Register, ctx *Context) interface{} {
 	case hlir.IntLiteral:
 		return int(reg)
 	case hlir.LocalValue:
-		return ctx.localValues[reg]
+		v, ok := ctx.localValues[reg]
+		if !ok {
+			panic(fmt.Sprintf("No variable named %v", reg))
+		}
+		return v
 	case hlir.LastFuncCallRetVal:
 		// hlir numbers the calls so that it can attach different type
 		// information to it. The VM doesn't care, it just wants the last
@@ -459,6 +551,8 @@ func evalRegister(r hlir.Register, ctx *Context) interface{} {
 			return evalRegister(reg.Register, ctx)
 		}
 		return evalRegister(p.r, p.ctx)
+	case hlir.SliceBasePointer:
+		return evalRegister(reg.Register, ctx)
 	default:
 		panic(fmt.Sprintf("Unhandled type: %v", reflect.TypeOf(r).Name()))
 	}
@@ -480,16 +574,34 @@ func evalCondition(cond hlir.Condition, ctx *Context, allowed []ast.Effect) bool
 func resolveOffset(o hlir.Offset, ctx *Context) (hlir.Register, *Context) {
 	switch b := o.Base.(type) {
 	case hlir.LocalValue:
+		bd := b
+		if p, ok := ctx.pointers[hlir.Pointer{b}]; ok {
+			bd = p.r.(hlir.LocalValue)
+		}
 		offset := evalRegister(o.Offset, ctx)
 		if o.Scale == 16 {
-			b += hlir.LocalValue((offset.(int) * 2) + 1)
+			bd += hlir.LocalValue((offset.(int) * 2) + 1)
 		} else {
-			b += hlir.LocalValue(offset.(int))
+			bd += hlir.LocalValue(offset.(int))
 		}
-		return b, ctx
+		return bd, ctx
 	case hlir.FuncArg:
-		v, nctx := dereferencePointer(b, ctx)
-		bd := v.(hlir.LocalValue)
+		base, nctx := dereferencePointer(b, ctx)
+	resolveouter:
+		for {
+			switch o := base.(type) {
+			case hlir.LocalValue:
+				break resolveouter
+			case hlir.FuncArg:
+				base, nctx = dereferencePointer(base, nctx)
+			case hlir.SliceBasePointer:
+				base = o.Register
+			default:
+				base, nctx = dereferencePointer(base, nctx)
+			}
+
+		}
+		bd := base.(hlir.LocalValue)
 		offset := evalRegister(o.Offset, ctx)
 		if o.Scale == 16 {
 			bd += hlir.LocalValue((offset.(int) * 2) + 1)
@@ -515,8 +627,10 @@ func dereferencePointer(r hlir.Register, ctx *Context) (hlir.Register, *Context)
 			if r, ok := v.r.(hlir.Pointer); ok {
 				return dereferencePointer(r, v.ctx)
 			}
-			return r, v.ctx
+			return v.r, v.ctx
 		}
+		panic("Could not dereference FuncArg")
+	case hlir.SliceBasePointer:
 		return r, ctx
 	default:
 		if v, ok := ctx.pointers[hlir.Pointer{reg}]; ok {

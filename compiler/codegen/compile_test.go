@@ -589,6 +589,13 @@ func TestTestSuite(t *testing.T) {
 		{"blockcomment", "3", ""},
 		{"producttypevalue", "3\n0", ""},
 		{"userproducttypevalue", "hello\n3", ""},
+		{"slicefromarray", "34", ""},
+		{"slicefromslice", "45", ""},
+		{"mutslicefromarray", "34", ""},
+		{"mutslicefromslice", "45", ""},
+		{"sliceprint", "Foo", "Bar"},
+		{"arrayparam", "16", ""},
+		{"mutarrayparam", "", ""},
 	}
 
 	for _, tst := range tests {
