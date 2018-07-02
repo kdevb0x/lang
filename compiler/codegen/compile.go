@@ -92,7 +92,7 @@ func printDataLiteral(w io.Writer, str string) PhysicalRegister {
 	}
 
 	for i := 0; i < len(str); i += 8 {
-		if i+8 > len(str) {
+		if i+8 >= len(str) {
 			padding := i + 8 - len(str)
 			toPrint := strings.Replace(str[i:], "\n", `\n`, -1)
 			toPrint = strings.Replace(toPrint, "\000", `\000`, -1)
