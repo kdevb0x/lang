@@ -39,12 +39,12 @@ func BuildProgram(d string, src io.Reader) (string, error) {
 	mlir.Debug = false
 	// FIXME: This should be a library, not hardcoded string consts.
 	// FIXME: Make other architecture entrypoints..
-	stdf, err := os.Create(d + "/_main.s")
+	stdf, err := os.Create(d + "/main.s")
 	if err != nil {
 		return "", err
 	}
 	defer stdf.Close()
-	fmt.Fprintf(stdf, entrypoint+"\n")
+	//fmt.Fprintf(stdf, entrypoint+"\n")
 	fmt.Fprintf(stdf, exits+"\n")
 	fmt.Fprintf(stdf, write+"\n")
 	fmt.Fprintf(stdf, read+"\n")
@@ -61,11 +61,55 @@ func BuildProgram(d string, src io.Reader) (string, error) {
 		return "", err
 	}
 
-	f, err := os.Create(d + "/main.s")
+	/*f, err := os.Create(d + "/main.s")
 	if err != nil {
 		return "", err
 	}
 	defer f.Close()
+	*/
+	f := stdf
+	maingo, err := os.Create(d + "/main.go")
+	if err != nil {
+		return "", err
+	}
+	fmt.Fprintf(maingo, `package main
+import (
+	"os"
+	"unsafe"
+)
+
+type lSlice struct{
+	size uint64
+	base uintptr
+}
+
+type lString struct{
+	size uint64
+	base *byte
+}
+
+func lmain(args lSlice)
+
+func main() {
+	largs := make([]lString, len(os.Args))
+	for i := range os.Args {
+		largs[i] = lString{
+			uint64(len([]byte(os.Args[i]))),
+			&([]byte(os.Args[i])[0]),
+		}
+	}
+	if len(largs) > 0 {
+		lmain(lSlice{
+			uint64(len(largs)),
+			uintptr(unsafe.Pointer(&largs[0])),
+		})
+	} else {
+		lmain(lSlice{0, 0})
+	}
+	os.Exit(0)
+}
+`)
+	maingo.Close()
 
 	// Tokenize needs a Runereader, so wrap the reader around a bufio
 	tokens, err := token.Tokenize(bufio.NewReader(src))
@@ -114,44 +158,19 @@ func BuildProgram(d string, src io.Reader) (string, error) {
 		}
 	}
 
+	defer func(d string, err error) {
+		if err := os.Chdir(d); err != nil {
+			panic(err)
+		}
+	}(os.Getwd())
+	if err := os.Chdir(d); err != nil {
+		panic(err)
+	}
 	// FIXME: Make this more robust and/or not depend on the Go toolchain.
-	cmd := exec.Command("go", "tool", "asm", "-o", d+"/main.o", d+"/main.s")
+	cmd := exec.Command("go", "build", "-o", d+"/main")
 	_, err = cmd.Output()
 	if err != nil {
 		return "", err
-	}
-	cmd = exec.Command("go", "tool", "asm", "-o", d+"/_main.o", d+"/_main.s")
-	_, err = cmd.Output()
-	if err != nil {
-		return "", err
-	}
-
-	cmd = exec.Command("go", "tool", "pack", "c", d+"/main.a", d+"/_main.o", d+"/main.o")
-	_, err = cmd.Output()
-	if err != nil {
-		return "", err
-	}
-
-	if p := os.Getenv("LPATH"); p == "" {
-		// Avoid the Go runtime "main" symbol by building a fake runtime
-		cmd := exec.Command("go", "build", "-o", d+"/runtime.a", "github.com/driusan/noruntime/runtime")
-		_, err = cmd.Output()
-		if err != nil {
-			return "", err
-		}
-
-		cmd = exec.Command("go", "tool", "link", "-E", "_main", "-g", "-L", d, "-w", "-o", d+"/main", d+"/main.a")
-		_, err = cmd.Output()
-		if err != nil {
-			return "", err
-		}
-	} else {
-		// There should already be a fake runtime in LPATH/lib/
-		cmd = exec.Command("go", "tool", "link", "-E", "_main", "-g", "-L", p+"/lib/", "-w", "-o", d+"/main", d+"/main.a")
-		_, err = cmd.Output()
-		if err != nil {
-			return "", err
-		}
 	}
 	return "main", nil
 }

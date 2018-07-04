@@ -13,7 +13,18 @@ var debug bool = false
 // Compile takes an AST and writes the assembly that it compiles to to
 // w.
 func Compile(w io.Writer, f mlir.Func) error {
-	fmt.Fprintf(w, "TEXT %v(SB), 4+16, $%v\n", f.Name, reserveStackSize(f))
+	if f.Name == "main" {
+		fmt.Fprintf(w, "TEXT main\u00b7lmain(SB), 16, $%v\n", reserveStackSize(f))
+	} else {
+		// If it's a function with a tail call to itself, we declare it as nosplit so
+		// that we have a better chance at guessing the function prelude that the Go linker
+		// will add.
+		if hasTailCall(f) {
+			fmt.Fprintf(w, "TEXT %v(SB), 4+16, $%v\n", f.Name, reserveStackSize(f))
+		} else {
+			fmt.Fprintf(w, "TEXT %v(SB), 16, $%v\n", f.Name, reserveStackSize(f))
+		}
+	}
 	data := dataLiterals(w, f)
 	cpu := Amd64{stringLiterals: data, numArgs: f.NumArgs, lvOffsets: make(map[uint]uint), sliceBase: make(map[mlir.Register]bool)}
 	cpu.clearRegisterMapping()
@@ -120,4 +131,15 @@ func reserveStackSize(f mlir.Func) string {
 		return fmt.Sprintf("%d", (f.NumLocals*8)+((f.LargestFuncCall+1)*8))
 	}
 	return fmt.Sprintf("%d-%d", (f.NumLocals*8)+(f.LargestFuncCall*8)+8, f.NumArgs*8)
+}
+
+func hasTailCall(f mlir.Func) bool {
+	for _, op := range f.Body {
+		if c, ok := op.(mlir.CALL); ok {
+			if c.FName == mlir.Fname(f.Name) && c.TailCall {
+				return true
+			}
+		}
+	}
+	return false
 }

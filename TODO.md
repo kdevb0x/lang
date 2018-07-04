@@ -70,3 +70,4 @@ Priorities (in order):
 - Better tests for incompatible tuple values (wrong types, wrong size, access member that doesn't exist, assign to element in mutable tuple, etc.)
 - Need tests for tuples in mutable variables and not just let, also as function call parameters
 - Add test to make sure let variables don't get passed to mutable parameters (esp. for arrays)
+- Add test for subtraction precedence (1-2-3 == -4, not -2)

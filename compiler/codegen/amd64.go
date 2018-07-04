@@ -771,6 +771,7 @@ func (a *Amd64) ConvertInstruction(i int, ops []mlir.Opcode) string {
 			}
 			v += fmt.Sprintf("MOV%v %v, %v\n\t", suffix, physArg, fa)
 		}
+
 		if o.TailCall {
 			// Optimize the call away to a JMP and reuse the stack
 			// frame.
@@ -778,13 +779,6 @@ func (a *Amd64) ConvertInstruction(i int, ops []mlir.Opcode) string {
 			if err != nil {
 				panic(err)
 			}
-			// Jump 1 instruction past the start of this symbol.
-			// The first instruction is SUBQ $k, SP which the linker
-			// inserts. We want to reuse the stack, not push to it.
-			//
-			// FIXME: This needs to manually adjust SP if the stack
-			// space reserved for the new symbol isn't the same as
-			// the current function.
 			v += fmt.Sprintf("MOVQ $%v+14(SB), %v\n\t", o.FName, tmp)
 			return v + fmt.Sprintf("JMP %v", tmp)
 		}
