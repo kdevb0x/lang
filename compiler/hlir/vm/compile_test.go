@@ -704,6 +704,9 @@ func TestTestSuite(t *testing.T) {
 		{"sliceprint", "Foo", "Bar"},
 		{"arrayparam", "16", ""},
 		{"mutarrayparam", "", ""},
+		{"swap", "", ""},
+		{"reverse", "", ""},
+		{"digitsinto", "", ""},
 	}
 
 	for _, tc := range tests {

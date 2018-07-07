@@ -514,6 +514,7 @@ func TestTestSuite(t *testing.T) {
 		Name           string
 		Stdout, Stderr string
 	}{
+		/*
 		{"emptymain", "", ""},
 		{"emptyreturn", "", ""},
 		{"helloworld", "Hello, world!\n", ""},
@@ -596,6 +597,10 @@ func TestTestSuite(t *testing.T) {
 		{"sliceprint", "Foo", "Bar"},
 		{"arrayparam", "16", ""},
 		{"mutarrayparam", "", ""},
+		*/
+		{"swap", "", ""},
+		{"reverse", "", ""},
+		{"digitsinto", "", ""},
 	}
 
 	for _, tst := range tests {

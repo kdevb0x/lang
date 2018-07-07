@@ -489,20 +489,36 @@ func (a *Amd64) ConvertInstruction(i int, ops []mlir.Opcode) string {
 				src = r
 				break
 			}
-			src, err = a.tempPhysicalRegister(false)
-			if err != nil {
-				panic(err)
-			}
-			offset, err := a.getPhysicalRegister(val.Offset)
 			suffix := a.singleRegSuffix(int(val.Scale))
+			offset, err := a.getPhysicalRegister(val.Offset)
+			voff := a.ToPhysical(val.Offset, false)
 			if err != nil {
 				offset, err = a.nextPhysicalRegister(val.Offset, false)
 				if err != nil {
 					panic(err)
 				}
+				v += fmt.Sprintf("\tMOV%v %v, %v // Moving offset into new register\n\t", suffix, voff, offset)
+			} else {
+				v += fmt.Sprintf("\tMOV%v %v, %v // Using old offset for %v\n\t", suffix, a.ToPhysical(val.Offset, returning), offset, val.Offset)
 			}
-			v += fmt.Sprintf("\tMOV%v %v, %v\n\t", suffix, a.ToPhysical(val.Offset, false), offset)
-			v += fmt.Sprintf("\tMOV%v %v(%v*%d), %v\n\t", suffix, a.ToPhysical(val, returning), offset, val.Scale, src)
+			src, err = a.tempPhysicalRegister(false)
+			if err != nil {
+				panic(err)
+			}
+			switch val.Base.(type) {
+			case mlir.FuncArg:
+				base, err := a.tempPhysicalRegister2(false)
+				if err != nil {
+					panic(err)
+				}
+				// Moving into a mutable array arg, so we need to put the address passed into
+				// a register so we can dereference it.
+				v += fmt.Sprintf("\tMOVQ %v, %v\n\t", a.ToPhysical(val.Base, returning), base)
+				v += fmt.Sprintf("\tMOV%v (%v)(%v*%d), %v // %v\n\t", suffix, base, offset, val.Scale, src, src)
+			default:
+				v += fmt.Sprintf("\tMOV%v %v, %v\n\t", suffix, a.ToPhysical(val.Offset, false), offset)
+				v += fmt.Sprintf("\tMOV%v %v(%v*%d), %v\n\t", suffix, a.ToPhysical(val, returning), offset, val.Scale, src)
+			}
 		case mlir.TempValue:
 			var err error
 			src, err = a.getPhysicalRegister(val)
@@ -553,14 +569,14 @@ func (a *Amd64) ConvertInstruction(i int, ops []mlir.Opcode) string {
 			suffix := a.singleRegSuffix(int(d.Scale))
 			switch d.Base.(type) {
 			case mlir.LocalValue:
-				tmp, err := a.tempPhysicalRegister(false)
+				tmp, err := a.tempPhysicalRegister2(false)
 				if err != nil {
 					panic(err)
 				}
 				v += fmt.Sprintf("\tMOVQ $%v, %v\n\t", dst, tmp)
 				v += fmt.Sprintf("\tMOV%v %v, (%v)(%v*%d)\n\t", suffix, src, tmp, offset, d.Scale)
 			case mlir.FuncArg:
-				tmp, err := a.tempPhysicalRegister(false)
+				tmp, err := a.tempPhysicalRegister2(false)
 				if err != nil {
 					panic(err)
 				}

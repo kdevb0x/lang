@@ -50,7 +50,8 @@ before getting all invalid programs to be rejected.)
 - [ ] Write all non-syscall standard library functions in native code, not assembly
 	- [x] PrintString
 	- [x] PrintByteSlice
-	- [ ] PrintInt (almost done, needs variable slice indexing and Go stack splitting)
+	- [ ] PrintInt (almost done, needs variable slice indexing)
+	- [ ] convert from Go strings to real files
 - [ ] Write (native) autoformatter
 	- [ ] port token package
 	- [ ] new parse tree (before ast) package (keeps comments, whitespace)
@@ -68,6 +69,7 @@ before getting all invalid programs to be rejected.)
 - [ ] Port compiler (while still invoking go for linking)
 	- [ ] mlir package
 	- [ ] codegen package
+		- [ ] fork/exec support
 
 ### Pre 0.4.0 (Status: bootstrapped!)
 
