@@ -20,7 +20,7 @@ func (a Assertion) String() string {
 }
 
 func (a Assertion) PrettyPrint(lvl int) string {
-	panic("Not implemented")
+	return a.Predicate.PrettyPrint(lvl)
 }
 
 func consumeAssertStmt(start int, tokens []token.Token, c *Context) (int, Assertion, error) {

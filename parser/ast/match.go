@@ -3,7 +3,6 @@ package ast
 import (
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/driusan/lang/parser/token"
 )
@@ -68,10 +67,9 @@ func consumeMatchStmt(start int, tokens []token.Token, c *Context) (int, MatchSt
 		return 0, MatchStmt{}, fmt.Errorf("Invalid match statement")
 	}
 
-	concreteMap := make(map[string]Type)
 	for i := start + cn + 2; i < len(tokens); {
 		c2 := c.Clone()
-		switch l.Condition.Type().(type) {
+		switch t := l.Condition.Type().(type) {
 		case SumType:
 			n, cs, err := consumeTypeCase(i, tokens, &c2, l.Condition)
 			if err != nil {
@@ -79,22 +77,15 @@ func consumeMatchStmt(start int, tokens []token.Token, c *Context) (int, MatchSt
 			}
 			l.Cases = append(l.Cases, cs)
 			i += n
-		default:
-			if concretes := strings.Fields(string(l.Condition.Type().TypeName())); len(concretes) > 1 {
-				// Convert the generic type's parameters to the concrete typename,
-				// not the generic type, so that the case can look them up properly.
-				// FIXME: There should be a better way than splitting the type name
-				// on whitespace
-				td, ok := c.Types[concretes[0]]
-				if !ok {
-					panic("Expected parameterized enumerated option")
-				}
-				for i, v := range concretes[1:] {
-					concreteMap[td.Parameters[i]] = TypeLiteral(v)
-				}
+		case EnumTypeDefn:
+			n, cs, err := consumeCase(i, tokens, &c2, t.Parameters)
+			if err != nil {
+				return 0, MatchStmt{}, err
 			}
-
-			n, cs, err := consumeCase(i, tokens, &c2, concreteMap)
+			l.Cases = append(l.Cases, cs)
+			i += n
+		default:
+			n, cs, err := consumeCase(i, tokens, &c2, nil)
 			if err != nil {
 				return 0, MatchStmt{}, err
 			}
@@ -114,7 +105,7 @@ func consumeMatchStmt(start int, tokens []token.Token, c *Context) (int, MatchSt
 	return 0, MatchStmt{}, fmt.Errorf("Invalid match statement")
 }
 
-func consumeCase(start int, tokens []token.Token, c *Context, genericMap map[string]Type) (int, MatchCase, error) {
+func consumeCase(start int, tokens []token.Token, c *Context, subtypes []Type) (int, MatchCase, error) {
 	l := MatchCase{}
 	var n int
 	if tokens[start] != token.Keyword("case") {
@@ -122,11 +113,14 @@ func consumeCase(start int, tokens []token.Token, c *Context, genericMap map[str
 	}
 	if eo := c.EnumeratedOption(tokens[start+1].String()); eo != nil {
 		n = 1
-		for _, t := range eo.Parameters {
+		for i, p := range eo.Parameters {
+			if p == "unused" {
+				break
+			}
 			varname := tokens[start+1+n].String()
 			c.Variables[varname] = VarWithType{
 				Name: Variable(varname),
-				Typ:  genericMap[t],
+				Typ:  subtypes[i],
 			}
 			l.LocalVariables = append(l.LocalVariables, c.Variables[varname])
 			n += 1
