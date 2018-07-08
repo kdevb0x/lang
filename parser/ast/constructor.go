@@ -186,15 +186,21 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, Callables, error)
 			cur.Name = typeNames[0].String()
 
 			var pv []string
+			// Assume all the abstract pieces are int64. This is primarily done
+			// so that we can fill in the blank spaces for enum variants that don't
+			// use everything.
 			for _, param := range typeNames[1:] {
 				pv = append(pv, param.String())
 			}
-			n, options, err := consumeEnumTypeList(i+1, tokens, &c)
+			cur.ExpectedParams = len(pv)
+
+			n, options, err := consumeEnumTypeList(i+1, tokens, &c, pv)
 			if err != nil {
 				return nil, nil, nil, err
 			}
 			for _, constructor := range options {
-				constructor.ParentType = TypeLiteral(cur.Name)
+				constructor.ParentType = UserType{TypeLiteral("int64"), cur.Name}
+				constructor.Parameters = pv
 				cur.Options = append(cur.Options, constructor)
 			}
 
@@ -292,13 +298,17 @@ func extractPrototypes(tokens []token.Token, c *Context) error {
 			for _, param := range typeNames[1:] {
 				pv = append(pv, param.String())
 			}
-			n, options, err := consumeEnumTypeList(i+1, tokens, c)
+			cur.ExpectedParams = len(pv)
+
+			n, options, err := consumeEnumTypeList(i+1, tokens, c, pv)
 			if err != nil {
 				return err
 			}
 
 			for _, constructor := range options {
-				constructor.ParentType = TypeLiteral(cur.Name)
+				constructor.ParentType = UserType{TypeLiteral("int64"), cur.Name}
+				constructor.Parameters = pv
+
 				cur.Options = append(cur.Options, constructor)
 			}
 
@@ -373,12 +383,13 @@ func extractPrototypes(tokens []token.Token, c *Context) error {
 			for _, param := range typeNames[1:] {
 				pv = append(pv, param.String())
 			}
-			n, options, err := consumeEnumTypeList(i+1, tokens, c)
+			n, options, err := consumeEnumTypeList(i+1, tokens, c, pv)
 			if err != nil {
 				return err
 			}
 			for _, o := range options {
-				o.ParentType = TypeLiteral(cur.Name)
+				//o.ParentType = TypeLiteral(cur.Name)
+				o.ParentType = UserType{TypeLiteral("int64"), cur.Name}
 				c.EnumOptions[o.Constructor] = o
 			}
 			c.Types[cur.Name] = TypeDefn{
@@ -584,13 +595,18 @@ argLoop:
 	// slices, and there's not yet any casting
 	if name != "PrintInt" && name != "len" {
 		for i, arg := range args {
-			if IsLiteral(f.UserArgs[i]) {
-				if err := c.IsCompatibleType(arg.Type(), f.UserArgs[i]); err != nil {
-					return 0, FuncCall{}, fmt.Errorf("Incompatible call to %v: argument %v must be of type %v (got %v)", name, arg.Name, arg.Type().PrettyPrint(0), f.UserArgs[i].Type())
-				}
-			} else {
-				if arg.Type().TypeName() != f.UserArgs[i].Type().TypeName() {
-					return 0, FuncCall{}, fmt.Errorf("Incompatible call to %v: argument %v must be of type %v (got %v)", name, arg.Name, arg.Type().PrettyPrint(0), f.UserArgs[i].Type())
+			switch arg.Type().(type) {
+			case EnumTypeDefn:
+				// FIXME: Validate enum compatibility
+			default:
+				if IsLiteral(f.UserArgs[i]) {
+					if err := c.IsCompatibleType(arg.Type(), f.UserArgs[i]); err != nil {
+						return 0, FuncCall{}, fmt.Errorf("Incompatible call to %v: argument %v must be of type %v (got %v)", name, arg.Name, arg.Type().PrettyPrint(0), f.UserArgs[i].Type().PrettyPrint(0))
+					}
+				} else {
+					if arg.Type().TypeName() != f.UserArgs[i].Type().TypeName() {
+						return 0, FuncCall{}, fmt.Errorf("Incompatible call to %v: argument %v must be of type %v (got %v)", name, arg.Name, arg.Type().PrettyPrint(0), f.UserArgs[i].Type().PrettyPrint(0))
+					}
 				}
 			}
 		}
@@ -990,15 +1006,22 @@ func consumeType(start int, tokens []token.Token, c *Context) (int, Type, error)
 	case 0:
 		rv = typedef.ConcreteType
 	default:
-		rvl := TypeLiteral(nm)
-		for range typedef.Parameters {
-			n, t, err := consumeType(start+consumed, tokens, c)
-			if err != nil {
-				return 0, nil, err
+		rv = typedef.ConcreteType
+		switch v := rv.(type) {
+		case EnumTypeDefn:
+			for range typedef.Parameters {
+				n, t, err := consumeType(start+consumed, tokens, c)
+				if err != nil {
+					return 0, nil, err
+				}
+				v.Parameters = append(v.Parameters, t)
+
+				consumed += n
+
 			}
-			consumed += n
-			rvl += TypeLiteral(" ") + TypeLiteral(t.TypeName())
-			rv = rvl
+			rv = v
+		default:
+			panic(fmt.Sprintf("Unhandled generic type %v", reflect.TypeOf(rv)))
 		}
 	}
 	if len(tokens) > start+consumed && tokens[start+consumed] == token.Operator("|") {
@@ -1036,7 +1059,7 @@ func consumeIdentifiersUntilEquals(start int, tokens []token.Token, c *Context) 
 	return 0, nil, fmt.Errorf("Could not parse identifiers")
 }
 
-func consumeEnumTypeList(start int, tokens []token.Token, c *Context) (int, []EnumOption, error) {
+func consumeEnumTypeList(start int, tokens []token.Token, c *Context, expectedParams []string) (int, []EnumOption, error) {
 	var vals []EnumOption
 	var val EnumOption
 	for i := start; i < len(tokens); i++ {
@@ -1049,11 +1072,21 @@ func consumeEnumTypeList(start int, tokens []token.Token, c *Context) (int, []En
 			}
 
 			if i+1 < len(tokens) && tokens[i+1] == token.Operator("|") {
+				if len(val.Parameters) != len(expectedParams) {
+					for range expectedParams[len(val.Parameters)+1:] {
+						val.Parameters = append(val.Parameters, "unused")
+					}
+				}
 				vals = append(vals, val)
 				val = EnumOption{}
 				i += 1
 			}
 		case token.Keyword:
+			if len(val.Parameters) != len(expectedParams) {
+				for range expectedParams[len(val.Parameters)+1:] {
+					val.Parameters = append(val.Parameters, "unused")
+				}
+			}
 			vals = append(vals, val)
 			return i - start, vals, nil
 		default:

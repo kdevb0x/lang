@@ -22,7 +22,7 @@ func compare(v1, v2 Node) bool {
 		MulOperator, DivOperator,
 		NotEqualsComparison,
 		GreaterOrEqualComparison, LessThanOrEqualComparison,
-		TypeLiteral:
+		TypeLiteral, nil:
 		return v1 == v2
 	}
 
@@ -2058,10 +2058,11 @@ func TestEnumType(t *testing.T) {
 		EnumTypeDefn{
 			"Foo",
 			[]EnumOption{
-				EnumOption{"A", nil, TypeLiteral("Foo")},
-				EnumOption{"B", nil, TypeLiteral("Foo")},
+				EnumOption{"A", nil, UserType{TypeLiteral("int64"), "Foo"}},
+				EnumOption{"B", nil, UserType{TypeLiteral("int64"), "Foo"}},
 			},
 			nil,
+			0,
 		},
 		FuncDecl{
 			Name:    "main",
@@ -2078,14 +2079,20 @@ func TestEnumType(t *testing.T) {
 							EnumTypeDefn{
 								"Foo",
 								[]EnumOption{
-									EnumOption{"A", nil, TypeLiteral("Foo")},
-									EnumOption{"B", nil, TypeLiteral("Foo")},
+									EnumOption{"A", nil, UserType{TypeLiteral("int64"), "Foo"}},
+									EnumOption{"B", nil, UserType{TypeLiteral("int64"), "Foo"}},
 								},
 								nil,
+								0,
 							},
 							false,
 						},
-						Val: EnumValue{Constructor: EnumOption{"A", nil, TypeLiteral("Foo")}},
+						Val: EnumValue{Constructor: EnumOption{
+							"A",
+							nil,
+							UserType{TypeLiteral("int64"), "Foo"},
+						},
+						},
 					},
 					MatchStmt{
 						Condition: VarWithType{
@@ -2093,15 +2100,20 @@ func TestEnumType(t *testing.T) {
 							EnumTypeDefn{
 								"Foo",
 								[]EnumOption{
-									EnumOption{"A", nil, TypeLiteral("Foo")},
-									EnumOption{"B", nil, TypeLiteral("Foo")},
+									EnumOption{"A", nil, UserType{TypeLiteral("int64"), "Foo"}},
+									EnumOption{"B", nil, UserType{TypeLiteral("int64"), "Foo"}},
 								},
 								nil,
+								0,
 							},
 							false},
 						Cases: []MatchCase{
 							MatchCase{
-								Variable: EnumOption{"A", nil, TypeLiteral("Foo")},
+								Variable: EnumOption{
+									"A",
+									nil,
+									UserType{TypeLiteral("int64"), "Foo"},
+								},
 								Body: BlockStmt{
 									[]Node{
 										FuncCall{
@@ -2114,7 +2126,11 @@ func TestEnumType(t *testing.T) {
 								},
 							},
 							MatchCase{
-								Variable: EnumOption{"B", nil, TypeLiteral("Foo")},
+								Variable: EnumOption{
+									"B",
+									nil,
+									UserType{TypeLiteral("int64"), "Foo"},
+								},
 								Body: BlockStmt{
 									[]Node{
 										FuncCall{
@@ -2156,10 +2172,11 @@ func TestEnumTypeInferred(t *testing.T) {
 		EnumTypeDefn{
 			"Foo",
 			[]EnumOption{
-				EnumOption{"A", nil, TypeLiteral("Foo")},
-				EnumOption{"B", nil, TypeLiteral("Foo")},
+				EnumOption{"A", nil, UserType{TypeLiteral("int64"), "Foo"}},
+				EnumOption{"B", nil, UserType{TypeLiteral("int64"), "Foo"}},
 			},
 			nil,
+			0,
 		},
 		FuncDecl{
 			Name:    "main",
@@ -2171,14 +2188,14 @@ func TestEnumTypeInferred(t *testing.T) {
 				[]Node{
 
 					LetStmt{
-						Var: VarWithType{"a", TypeLiteral("Foo"), false},
-						Val: EnumValue{Constructor: EnumOption{"B", nil, TypeLiteral("Foo")}},
+						Var: VarWithType{"a", UserType{TypeLiteral("int64"), "Foo"}, false},
+						Val: EnumValue{Constructor: EnumOption{"B", nil, UserType{TypeLiteral("int64"), "Foo"}}},
 					},
 					MatchStmt{
-						Condition: VarWithType{"a", TypeLiteral("Foo"), false},
+						Condition: VarWithType{"a", UserType{TypeLiteral("int64"), "Foo"}, false},
 						Cases: []MatchCase{
 							MatchCase{
-								Variable: EnumOption{"A", nil, TypeLiteral("Foo")},
+								Variable: EnumOption{"A", nil, UserType{TypeLiteral("int64"), "Foo"}},
 								Body: BlockStmt{
 									[]Node{
 										FuncCall{
@@ -2191,7 +2208,7 @@ func TestEnumTypeInferred(t *testing.T) {
 								},
 							},
 							MatchCase{
-								Variable: EnumOption{"B", nil, TypeLiteral("Foo")},
+								Variable: EnumOption{"B", nil, UserType{TypeLiteral("int64"), "Foo"}},
 								Body: BlockStmt{
 									[]Node{
 										FuncCall{
@@ -2331,6 +2348,7 @@ func TestGenericEnumType(t *testing.T) {
 				EnumOption{"Just", []string{"a"}, TypeLiteral("Maybe")},
 			},
 			nil,
+			1,
 		},
 		FuncDecl{
 			Name: "DoSomething",
@@ -2338,7 +2356,17 @@ func TestGenericEnumType(t *testing.T) {
 			Return: []VarWithType{
 				{
 					"",
-					TypeLiteral("Maybe int"),
+					EnumTypeDefn{
+						"Maybe",
+						[]EnumOption{
+							EnumOption{"Nothing", nil, TypeLiteral("Maybe")},
+							EnumOption{"Just", []string{"a"}, TypeLiteral("Maybe")},
+						},
+						[]Type{
+							TypeLiteral("int"),
+						},
+						1,
+					},
 					false,
 				},
 			},
@@ -2371,9 +2399,22 @@ func TestGenericEnumType(t *testing.T) {
 
 			Body: BlockStmt{
 				[]Node{
-
 					LetStmt{
-						Var: VarWithType{"x", TypeLiteral("Maybe int"), false},
+						Var: VarWithType{
+							"x",
+							EnumTypeDefn{
+								"Maybe",
+								[]EnumOption{
+									EnumOption{"Nothing", nil, TypeLiteral("Maybe")},
+									EnumOption{"Just", []string{"a"}, TypeLiteral("Maybe")},
+								},
+								[]Type{
+									TypeLiteral("int"),
+								},
+								1,
+							},
+							false,
+						},
 						Val: FuncCall{
 							Name: "DoSomething",
 							UserArgs: []Value{
@@ -2382,7 +2423,21 @@ func TestGenericEnumType(t *testing.T) {
 						},
 					},
 					MatchStmt{
-						Condition: VarWithType{"x", TypeLiteral("Maybe int"), false},
+						Condition: VarWithType{
+							"x",
+							EnumTypeDefn{
+								"Maybe",
+								[]EnumOption{
+									EnumOption{"Nothing", nil, TypeLiteral("Maybe")},
+									EnumOption{"Just", []string{"a"}, TypeLiteral("Maybe")},
+								},
+								[]Type{
+									TypeLiteral("int"),
+								},
+								1,
+							},
+							false,
+						},
 						Cases: []MatchCase{
 							MatchCase{
 								Variable: EnumOption{"Nothing", nil, TypeLiteral("Maybe")},
@@ -2421,8 +2476,23 @@ func TestGenericEnumType(t *testing.T) {
 							},
 						},
 					},
+
 					LetStmt{
-						Var: VarWithType{"x", TypeLiteral("Maybe int"), false},
+						Var: VarWithType{
+							"x",
+							EnumTypeDefn{
+								"Maybe",
+								[]EnumOption{
+									EnumOption{"Nothing", nil, TypeLiteral("Maybe")},
+									EnumOption{"Just", []string{"a"}, TypeLiteral("Maybe")},
+								},
+								[]Type{
+									TypeLiteral("int"),
+								},
+								1,
+							},
+							false,
+						},
 						Val: FuncCall{
 							Name: "DoSomething",
 							UserArgs: []Value{
@@ -2431,7 +2501,21 @@ func TestGenericEnumType(t *testing.T) {
 						},
 					},
 					MatchStmt{
-						Condition: VarWithType{"x", TypeLiteral("Maybe int"), false},
+						Condition: VarWithType{
+							"x",
+							EnumTypeDefn{
+								"Maybe",
+								[]EnumOption{
+									EnumOption{"Nothing", nil, TypeLiteral("Maybe")},
+									EnumOption{"Just", []string{"a"}, TypeLiteral("Maybe")},
+								},
+								[]Type{
+									TypeLiteral("int"),
+								},
+								1,
+							},
+							false,
+						},
 						Cases: []MatchCase{
 							MatchCase{
 								Variable: EnumOption{"Nothing", nil, TypeLiteral("Maybe")},
@@ -2505,10 +2589,26 @@ func TestMatchParam(t *testing.T) {
 				EnumOption{"Just", []string{"x"}, TypeLiteral("Maybe")},
 			},
 			nil,
+			1,
 		},
 		FuncDecl{
 			Name: "foo",
-			Args: []VarWithType{{"x", TypeLiteral("Maybe int"), false}},
+			Args: []VarWithType{{
+				"x",
+				EnumTypeDefn{
+					"Maybe",
+					[]EnumOption{
+						EnumOption{"Nothing", nil, TypeLiteral("Maybe")},
+						EnumOption{"Just", []string{"x"}, TypeLiteral("Maybe")},
+					},
+					[]Type{
+						TypeLiteral("int"),
+					},
+					1,
+				},
+				false,
+			},
+			},
 			Return: []VarWithType{
 				{
 					"",
@@ -2519,7 +2619,21 @@ func TestMatchParam(t *testing.T) {
 			Body: BlockStmt{
 				[]Node{
 					MatchStmt{
-						Condition: VarWithType{"x", TypeLiteral("Maybe int"), false},
+						Condition: VarWithType{
+							"x",
+							EnumTypeDefn{
+								"Maybe",
+								[]EnumOption{
+									EnumOption{"Nothing", nil, TypeLiteral("Maybe")},
+									EnumOption{"Just", []string{"x"}, TypeLiteral("Maybe")},
+								},
+								[]Type{
+									TypeLiteral("int"),
+								},
+								1,
+							},
+							false,
+						},
 						Cases: []MatchCase{
 							MatchCase{
 								LocalVariables: []VarWithType{
@@ -2559,7 +2673,6 @@ func TestMatchParam(t *testing.T) {
 
 							FuncCall{
 								Name: "foo",
-
 								UserArgs: []Value{
 									EnumValue{
 										Constructor: EnumOption{"Just", []string{"x"}, TypeLiteral("Maybe")},
@@ -2602,10 +2715,25 @@ func TestMatchParam2(t *testing.T) {
 				EnumOption{"Just", []string{"x"}, TypeLiteral("Maybe")},
 			},
 			nil,
+			1,
 		},
 		FuncDecl{
 			Name: "foo",
-			Args: []VarWithType{{"x", TypeLiteral("Maybe int"), false}},
+			Args: []VarWithType{
+				{
+					"x",
+					EnumTypeDefn{
+						"Maybe",
+						[]EnumOption{
+							EnumOption{"Nothing", nil, TypeLiteral("Maybe")},
+							EnumOption{"Just", []string{"x"}, TypeLiteral("Maybe")},
+						},
+						nil,
+						1,
+					},
+					false,
+				},
+			},
 			Return: []VarWithType{
 				{
 					"",
@@ -2623,7 +2751,21 @@ func TestMatchParam2(t *testing.T) {
 						},
 					},
 					MatchStmt{
-						Condition: VarWithType{"x", TypeLiteral("Maybe int"), false},
+						Condition: VarWithType{
+							"x",
+							EnumTypeDefn{
+								"Maybe",
+								[]EnumOption{
+									EnumOption{"Nothing", nil, TypeLiteral("Maybe")},
+									EnumOption{"Just", []string{"x"}, TypeLiteral("Maybe")},
+								},
+								[]Type{
+									TypeLiteral("int"),
+								},
+								1,
+							},
+							false,
+						},
 						Cases: []MatchCase{
 							MatchCase{
 								LocalVariables: []VarWithType{
@@ -2662,7 +2804,6 @@ func TestMatchParam2(t *testing.T) {
 						UserArgs: []Value{
 							FuncCall{
 								Name: "foo",
-
 								UserArgs: []Value{
 									EnumValue{
 										Constructor: EnumOption{"Just", []string{"x"}, TypeLiteral("Maybe")},
@@ -5382,6 +5523,7 @@ func TestUserSumTypeDefn(t *testing.T) {
 				EnumOption{"Mutable", nil, TypeLiteral("Keyword")},
 			},
 			nil,
+			0,
 		},
 		TypeDefn{
 			Name: "Token",
@@ -5393,6 +5535,7 @@ func TestUserSumTypeDefn(t *testing.T) {
 						EnumOption{"Mutable", nil, TypeLiteral("Keyword")},
 					},
 					nil,
+					0,
 				},
 				TypeLiteral("string"),
 			},

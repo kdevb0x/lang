@@ -69,7 +69,7 @@ func (ev EnumValue) TypeName() string {
 }
 
 func (ev EnumValue) Type() Type {
-	return TypeLiteral(ev.TypeName())
+	return ev.Constructor.Type() //UserType{TypeLiteral("int64", ev.TypeName()}
 }
 
 func (ev EnumValue) Info() TypeInfo {
@@ -150,9 +150,10 @@ func (t TypeDefn) PrettyPrint(lvl int) string {
 }
 
 type EnumTypeDefn struct {
-	Name       string
-	Options    []EnumOption
-	Parameters []Type
+	Name           string
+	Options        []EnumOption
+	Parameters     []Type
+	ExpectedParams int
 }
 
 func (t EnumTypeDefn) Node() Node {
@@ -160,7 +161,7 @@ func (t EnumTypeDefn) Node() Node {
 }
 
 func (t EnumTypeDefn) String() string {
-	return fmt.Sprintf("EnumTypeDefn{%v, Options: %v}", t.Name, t.Options)
+	return fmt.Sprintf("EnumTypeDefn{%v, Options: %v Parameters(%d): %v}", t.Name, t.Options, t.ExpectedParams, t.Parameters)
 
 }
 
@@ -189,11 +190,17 @@ func (t EnumTypeDefn) TypeName() string {
 }
 
 func (t EnumTypeDefn) PrettyPrint(lvl int) string {
-	panic("Not implemented")
+	ret := fmt.Sprintf("%v%v", nTabs(lvl), t.Name)
+	for _, p := range t.Parameters {
+		ret += " " + p.TypeName()
+	}
+	return ret
 }
 
 func (t EnumTypeDefn) Components() []Type {
-	panic("Not implemented")
+	// 1 piece for the variant, plus each parameter
+	ti := TypeLiteral("int")
+	return append([]Type{ti}, t.Parameters...)
 }
 
 func (m MutStmt) Type() Type {
