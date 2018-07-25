@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/driusan/lang/compiler/codegen"
+	"github.com/driusan/lang/compiler/llvmir"
 	"github.com/driusan/lang/compiler/hlir/vm"
 )
 
@@ -84,9 +84,6 @@ func main() {
 
 // Builds a program in /tmp and copies the result to the current directory.
 func buildAndCopyProgram(src io.Reader) error {
-	// FIXME: BuildProgram should probably be in some other package,
-	// so that it can be used by both the compiler tests and the
-	// command line client.
 	d, err := ioutil.TempDir("", "langbuild")
 	if err != nil {
 		return err
@@ -97,12 +94,13 @@ func buildAndCopyProgram(src io.Reader) error {
 	if !debug {
 		defer os.RemoveAll(d)
 	}
-	exe, err := codegen.BuildProgram(d, src)
+
+	wdir, err := llvmir.Compile(src)
+	if wdir != "" {
+		defer os.RemoveAll(wdir)
+	}
 	if err != nil {
 		return err
-	}
-	if exe == "" {
-		return fmt.Errorf("No executable built.")
 	}
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -112,7 +110,7 @@ func buildAndCopyProgram(src io.Reader) error {
 	if name == "." || name == "" || name == "/" {
 		log.Fatal("Could not determine appropriate executable name.")
 	}
-	return copyFile(d+"/"+exe, "./"+name)
+	return copyFile(wdir+"/main", "./"+name)
 }
 
 func copyFile(src, dst string) error {

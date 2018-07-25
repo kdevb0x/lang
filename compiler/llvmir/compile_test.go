@@ -11,7 +11,7 @@ import (
 	"github.com/llir/llvm/ir"
 )
 
-func parseFile(t *testing.T, testcase string) *ir.Module {
+func parseTestFile(t *testing.T, testcase string) *ir.Module {
 	t.Helper()
 	f, err := os.Open("../../testsuite/" + testcase + ".l")
 	if err != nil {
@@ -24,81 +24,6 @@ func parseFile(t *testing.T, testcase string) *ir.Module {
 	}
 
 	return m
-}
-
-func startSymbol(m *ir.Module) string {
-	for _, f := range m.Funcs {
-		if f.GetName() == "main" {
-			switch len(f.Params()) {
-			case 0:
-				return `declare void @main()
-
-	define void @_start() {
-		call void @main()
-		call void asm sideeffect "movq $$0, %rdi\0Amovq $$` + SYS_EXIT + `, %rax\0Asyscall\0A", ""()
-
-		unreachable
-	}`
-			case 1:
-				return `declare void @main({ { i8*, i64}*, i64} %args )
-
-	define i64 @cstrlen(i8* %str) {
-		%i = alloca i64
-		store i64 0, i64* %i
-		br label %loop
-		loop:
-		%ival = load i64, i64* %i
-		%1 = getelementptr i8, i8* %str, i64 %ival
-		%chr = load i8, i8* %1
-		%zero = icmp eq i8 0, %chr
-		br i1 %zero, label %ret, label %inc
-		inc:
-		%2 = add i64 1, %ival
-		store i64 %2, i64* %i
-		br label %loop
-		ret:
-
-		ret i64 %ival
-	}
-
-	define void @_start() {
-		%argc = call i64 asm sideeffect "movq 0(%rdi), %rax", "=A"()
-		%argv = call i8** asm sideeffect "movq %rdi, %rax\0Aaddq $$8, %rax", "=A"()
-
-		%i = alloca i64
-		store i64 %argc, i64* %i
-		br label %convarg
-		convarg:
-		%ival = load i64, i64* %i
-		%dec = sub i64 %ival, 1
-		%1 = alloca {i8*, i64}
-		%2 = load {i8*, i64}, {i8*, i64}* %1
-		%3 = getelementptr i8*, i8** %argv, i64 %dec
-		%4 = load i8*, i8** %3
-		%5 = insertvalue {i8*, i64} %2, i8* %4, 0
-		%6 = call i64 @cstrlen(i8* %4)
-		%7 = insertvalue {i8*, i64} %5, i64 %6, 1
-		store { i8*, i64 } %7, {i8*, i64}* %1
-
-		store i64 %dec, i64* %i
-		%zero = icmp eq i64 0, %dec
-		br i1 %zero, label %run, label %convarg
-		run:
-		%withargv =insertvalue { { i8*, i64 }* , i64 } { {i8*, i64}* undef, i64 0}, {i8*, i64}* %1, 0
-		%args = insertvalue { { i8*, i64 }* , i64 } %withargv, i64 %argc, 1
-		call void @main({ { i8*, i64 }* , i64 } %args)
-
-		; inline exit syscall
-		call void asm sideeffect "movq $$0, %rdi\0Amovq $$` + SYS_EXIT + `, %rax\0Asyscall\0A", ""()
-		unreachable
-	}`
-			default:
-				panic("Main must be either empty or a string slice")
-			}
-		}
-	}
-	// No main symbol, must be a library.
-	return ""
 }
 
 func runWithArgs(t *testing.T, name, dir string, args []string, estdout, estderr string) {
@@ -141,7 +66,7 @@ func runWithArgs(t *testing.T, name, dir string, args []string, estdout, estderr
 // Compile a program and return the dir that was used as a temporary dir.
 // It's the caller's responsibility to clean up dir.
 func compile(t *testing.T, name string) string {
-	m := parseFile(t, name)
+	m := parseTestFile(t, name)
 	dir, err := ioutil.TempDir("", "langtest"+name+"_")
 	if err != nil {
 		t.Fatal(err)
