@@ -2,8 +2,8 @@ package llvmir
 
 import (
 	"fmt"
-	"io/ioutil"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -88,7 +88,7 @@ func startSymbol(m *ir.Module) string {
 
 // Compile a program and return the dir that was used as a temporary dir.
 // It's the caller's responsibility to clean up dir.
-func Compile(src io.Reader) (string, error) {
+func Compile(src io.Reader, noopt bool) (string, error) {
 	dir, err := ioutil.TempDir("", "langbuild_")
 	if err != nil {
 		return dir, err
@@ -145,13 +145,17 @@ func Compile(src io.Reader) (string, error) {
 		%1 = call i32 asm sideeffect "`+strings.Replace(`movq %rcx, %rax
 		movq %rsp,%rdi
 		subq %rcx, %rdi
+		subq $$16, %rdi`+ // FIXME: This should be aligned, this is just so that movsb doesn't
+		// overwrite the return address on the stack.
+		`
 		cld
 		rep movsb
 		subq %rax, %rdi
+		movb $$0, (%rdi, %rax)
 movq $$438, %rdx
 movq $$`+CREATE_CONST+`, %rsi
 movq $$`+SYS_OPEN+`, %rax
-syscall`, "\n", `\0A`, -1)+`", "=A,{si},{cx}"(i8* %base, i64 %size) 
+syscall`, "\n", `\0A`, -1)+`", "=A,{si},{cx},~{dirflag},~{fpsr},~{flags}"(i8* %base, i64 %size)
 		%2 = sext i32 %1 to i64
 		ret i64 %2
 	}
@@ -269,33 +273,43 @@ syscall`, "\n", `\0A`, -1)+`", "=A,{si},{cx},~{dirflag},~{fpsr},~{flags}"(i8* %b
 
 	`)
 
-	cmd := exec.Command("llc", "-filetype=obj", dir+"/runtime.ll")
+	cmd := exec.Command("llvm-link", "-o="+dir+"/code.bc", dir+"/runtime.ll", dir+"/usercode.ll")
 	if err := cmd.Start(); err != nil {
 		return dir, err
 	}
 	if err := cmd.Wait(); err != nil {
 		return dir, err
 	}
-	cmd = exec.Command("llc", "-filetype=obj", dir+"/usercode.ll")
+
+	if !noopt {
+		// This is the ideal, but some of the options cause the test
+		// suite to crash, so we need to figure out why before enabling
+		// them.
+		cmd = exec.Command("opt", "-o", dir+"/code.bc", "-internalize", "-internalize-public-api-list=_start", "-inline", "-ipconstprop", "-globaldce", "-constprop", "-sccp", "-dce", "-sroa", "-jump-threading", "-mem2reg", dir+"/code.bc")
+		// This is what is run:
+		// Missing: -inline, -mem2reg
+		cmd = exec.Command("opt", "-o", dir+"/code.bc", "-internalize", "-internalize-public-api-list=_start", "-ipconstprop", "-globaldce", "-constprop", "-sccp", "-dce", "-sroa", "-jump-threading", dir+"/code.bc")
+		if err := cmd.Start(); err != nil {
+			return dir, err
+		}
+		if err := cmd.Wait(); err != nil {
+			return dir, err
+		}
+	}
+
+	cmd = exec.Command("llc", "-filetype=obj", dir+"/code.bc")
 	if err := cmd.Start(); err != nil {
 		return dir, err
 	}
 	if err := cmd.Wait(); err != nil {
 		return dir, err
 	}
-	cmd = exec.Command("llc", "-filetype=obj", dir+"/usercode.ll")
+	cmd = exec.Command("ld", "-o", dir+"/main", dir+"/code.o")
 	if err := cmd.Start(); err != nil {
 		return dir, err
 	}
 	if err := cmd.Wait(); err != nil {
 		return dir, err
 	}
-	cmd = exec.Command("ld", "-o", dir+"/main", dir+"/usercode.o", dir+"/runtime.o")
-	if err := cmd.Start(); err != nil {
-		return dir, err
-	}
-	if err := cmd.Wait(); err != nil {
-		return dir, err
-	}
-	return dir,nil
+	return dir, nil
 }

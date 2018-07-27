@@ -84,23 +84,16 @@ func main() {
 
 // Builds a program in /tmp and copies the result to the current directory.
 func buildAndCopyProgram(src io.Reader) error {
-	d, err := ioutil.TempDir("", "langbuild")
-	if err != nil {
-		return err
-	}
-	if debug {
-		log.Println("Using temporary directory", d, "(WARNING: will not automatically delete in debug mode)")
-	}
-	if !debug {
-		defer os.RemoveAll(d)
-	}
 
 	wdir, err := llvmir.Compile(src)
-	if wdir != "" {
+	if wdir != "" && !debug {
 		defer os.RemoveAll(wdir)
 	}
 	if err != nil {
 		return err
+	}
+	if debug {
+		log.Println("Using temporary directory", wdir, "(WARNING: will not automatically delete in debug mode)")
 	}
 	cwd, err := os.Getwd()
 	if err != nil {
