@@ -50,7 +50,7 @@ before getting all invalid programs to be rejected.)
 - [ ] Write all non-syscall standard library functions in native code, not assembly
 	- [x] PrintString
 	- [x] PrintByteSlice
-	- [ ] PrintInt (almost done, needs variable slice indexing and Go stack splitting)
+	- [ ] PrintInt (almost done, needs variable slice indexing)
 - [ ] Write (native) autoformatter
 	- [ ] port token package
 	- [ ] new parse tree (before ast) package (keeps comments, whitespace)

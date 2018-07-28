@@ -29,17 +29,17 @@ func startSymbol(m *ir.Module) string {
 
 	define i64 @cstrlen(i8* %str) {
 		%i = alloca i64
-		store i64 0, i64* %i
+		store volatile i64 0, i64* %i
 		br label %loop
 		loop:
-		%ival = load i64, i64* %i
+		%ival = load volatile i64, i64* %i
 		%1 = getelementptr i8, i8* %str, i64 %ival
-		%chr = load i8, i8* %1
+		%chr = load volatile i8, i8* %1
 		%zero = icmp eq i8 0, %chr
 		br i1 %zero, label %ret, label %inc
 		inc:
 		%2 = add i64 1, %ival
-		store i64 %2, i64* %i
+		store volatile i64 %2, i64* %i
 		br label %loop
 		ret:
 
@@ -52,24 +52,25 @@ func startSymbol(m *ir.Module) string {
 
 		%i = alloca i64
 		store i64 %argc, i64* %i
+		%x = alloca {i8*, i64}, i64 %argc
 		br label %convarg
 		convarg:
-		%ival = load i64, i64* %i
+		%ival = load volatile i64, i64* %i
 		%dec = sub i64 %ival, 1
-		%1 = alloca {i8*, i64}
-		%2 = load {i8*, i64}, {i8*, i64}* %1
+		%1 = getelementptr {i8*, i64}, {i8*, i64}* %x, i64 %dec
+		%2 = load volatile {i8*, i64}, {i8*, i64}* %1
 		%3 = getelementptr i8*, i8** %argv, i64 %dec
-		%4 = load i8*, i8** %3
+		%4 = load volatile i8*, i8** %3
 		%5 = insertvalue {i8*, i64} %2, i8* %4, 0
 		%6 = call i64 @cstrlen(i8* %4)
 		%7 = insertvalue {i8*, i64} %5, i64 %6, 1
 		store { i8*, i64 } %7, {i8*, i64}* %1
 
-		store i64 %dec, i64* %i
+		store volatile i64 %dec, i64* %i
 		%zero = icmp eq i64 0, %dec
 		br i1 %zero, label %run, label %convarg
 		run:
-		%withargv =insertvalue { { i8*, i64 }* , i64 } { {i8*, i64}* undef, i64 0}, {i8*, i64}* %1, 0
+		%withargv =insertvalue { { i8*, i64 }* , i64 } { {i8*, i64}* undef, i64 0}, {i8*, i64}* %x, 0
 		%args = insertvalue { { i8*, i64 }* , i64 } %withargv, i64 %argc, 1
 		call void @main({ { i8*, i64 }* , i64 } %args)
 

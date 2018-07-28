@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/driusan/lang/compiler/hlir"
-	"github.com/driusan/lang/parser/sampleprograms"
 )
 
 func compileAndTestWithArgs(t *testing.T, name string, prog io.Reader, args []string, estdout, estderr string) {
@@ -58,18 +57,29 @@ func compileAndTestWithArgs(t *testing.T, name string, prog io.Reader, args []st
 	}
 }
 
-func compileAndTest(t *testing.T, prog, estdout, estderr string) {
-	t.Helper()
-	compileAndTestWithArgs(t, prog, strings.NewReader(prog), nil, estdout, estderr)
-}
-func compileAndTestFromFile(t *testing.T, prog, estdout, estderr string) {
+func compileAndTestFromFile(t *testing.T, prog, estdout, estderr string, setup func()) {
 	t.Helper()
 	f, err := os.Open("../../../testsuite/" + prog + ".l")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer f.Close()
+	setup()
+
 	compileAndTestWithArgs(t, prog, f, nil, estdout, estderr)
+}
+
+func compileAndTestFromFileWithArgs(t *testing.T, prog string, args []string, estdout, estderr string, setup func()) {
+	t.Helper()
+	f, err := os.Open("../../../testsuite/" + prog + ".l")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+
+	setup()
+
+	compileAndTestWithArgs(t, prog, f, args, estdout, estderr)
 }
 
 func TestCreateSyscall(t *testing.T) {
@@ -90,13 +100,13 @@ func TestCreateSyscall(t *testing.T) {
 	if !debug {
 		defer os.RemoveAll(dir)
 	}
+	compileAndTestFromFile(t, "createsyscall", "", "", func() {
+		// Make sure foo.txt gets created in dir, so that the defer cleans it up..
+		if err := os.Chdir(dir); err != nil {
+			t.Fatal(err)
+		}
 
-	// Make sure foo.txt gets created in dir, so that the defer cleans it up..
-	if err := os.Chdir(dir); err != nil {
-		t.Fatal(err)
-	}
-
-	compileAndTest(t, sampleprograms.CreateSyscall, "", "")
+	})
 
 	content, err := ioutil.ReadFile("foo.txt")
 	if err != nil {
@@ -128,21 +138,27 @@ func TestReadSyscall(t *testing.T) {
 		defer os.RemoveAll(dir)
 	}
 
-	if err := os.Chdir(dir); err != nil {
-		t.Fatal(err)
-	}
-	if err := ioutil.WriteFile("foo.txt", []byte("Hello, world!"), 0755); err != nil {
-		t.Fatal(err)
-	}
+	compileAndTestFromFile(t, "readsyscall", "Hello,", "", func() {
+		if err := os.Chdir(dir); err != nil {
+			t.Fatal(err)
+		}
+		if err := ioutil.WriteFile("foo.txt", []byte("Hello, world!"), 0755); err != nil {
+			t.Fatal(err)
+		}
 
-	compileAndTest(t, sampleprograms.ReadSyscall, "Hello,", "")
+	})
 
-	// Run it again with different file content.
-	if err := ioutil.WriteFile("foo.txt", []byte("Goodbye"), 0755); err != nil {
-		t.Fatal(err)
-	}
-	compileAndTest(t, sampleprograms.ReadSyscall, "Goodby", "")
+	os.Chdir(pwd)
 
+	compileAndTestFromFile(t, "readsyscall", "Goodby", "", func() {
+		if err := os.Chdir(dir); err != nil {
+			t.Fatal(err)
+		}
+		// Run it again with different file content.
+		if err := ioutil.WriteFile("foo.txt", []byte("Goodbye"), 0755); err != nil {
+			t.Fatal(err)
+		}
+	})
 }
 
 // Echo is the simplest program that takes arguments
@@ -156,11 +172,11 @@ func TestEchoProgram(t *testing.T) {
 		os.Chdir(pwd)
 	}(pwd)
 
-	compileAndTestWithArgs(t, "echo", strings.NewReader(sampleprograms.Echo), []string{"foo", "bar"}, "foo bar\n", "")
-	compileAndTestWithArgs(t, "echo", strings.NewReader(sampleprograms.Echo), []string{"other", "params"}, "other params\n", "")
+	compileAndTestFromFileWithArgs(t, "echo", []string{"foo", "bar"}, "foo bar\n", "", func() {})
+	compileAndTestFromFileWithArgs(t, "echo", []string{"other", "params"}, "other params\n", "", func() {})
 }
 
-func TestCatProgram(t *testing.T) {
+func TestCatPrograms(t *testing.T) {
 	// We chdir below, defer a cleanup that resets it after the test finishes.
 	pwd, err := os.Getwd()
 	if err != nil {
@@ -170,526 +186,70 @@ func TestCatProgram(t *testing.T) {
 		os.Chdir(pwd)
 	}(pwd)
 
-	// Set up a test directory
-	dir, err := ioutil.TempDir("", "langtestCat")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !debug {
-		defer os.RemoveAll(dir)
-	}
-	if err := os.Chdir(dir); err != nil {
-		t.Fatal(err)
-	}
+	cats := []string{"unbufferedcat", "unbufferedcat2", "unbufferedcat3"}
+	for _, c := range cats {
+		// We need to be in the original directory for loading the test to work.
+		if err := os.Chdir(pwd); err != nil {
+			t.Fatal(err)
+		}
+		// Set up a test directory
+		dir, err := ioutil.TempDir("", "langtestCat")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !debug {
+			defer os.RemoveAll(dir)
+		}
 
-	if err := ioutil.WriteFile("foo.tmp", []byte("Foo"), 0666); err != nil {
-		t.Fatal(err)
-	}
-	if err := ioutil.WriteFile("bar.tmp", []byte("Bar"), 0666); err != nil {
-		t.Fatal(err)
-	}
+		setup := func() {
+			if err := os.Chdir(pwd); err != nil {
+				t.Fatal(err)
+			}
+			if err := ioutil.WriteFile("foo.tmp", []byte("Foo"), 0666); err != nil {
+				t.Fatal(err)
+			}
+			if err := ioutil.WriteFile("bar.tmp", []byte("Bar"), 0666); err != nil {
+				t.Fatal(err)
+			}
+		}
 
-	compileAndTestWithArgs(t, "cat", strings.NewReader(sampleprograms.UnbufferedCat), []string{"foo.tmp", "bar.tmp"}, "FooBar", "")
-	compileAndTestWithArgs(t, "cat", strings.NewReader(sampleprograms.UnbufferedCat), []string{"bar.tmp", "foo.tmp"}, "BarFoo", "")
-
+		compileAndTestFromFileWithArgs(t, c, []string{"foo.tmp", "bar.tmp"}, "FooBar", "", setup)
+		compileAndTestFromFileWithArgs(t, c, []string{"bar.tmp", "foo.tmp"}, "BarFoo", "", setup)
+	}
 }
 
-func TestUnbufferedCat2(t *testing.T) {
-	// We chdir below, defer a cleanup that resets it after the test finishes.
-	pwd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func(pwd string) {
-		os.Chdir(pwd)
-	}(pwd)
-
-	// Set up a test directory
-	dir, err := ioutil.TempDir("", "langtestCat")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !debug {
-		defer os.RemoveAll(dir)
-	}
-	if err := os.Chdir(dir); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := ioutil.WriteFile("foo.tmp", []byte("Foo"), 0666); err != nil {
-		t.Fatal(err)
-	}
-	if err := ioutil.WriteFile("bar.tmp", []byte("Bar"), 0666); err != nil {
-		t.Fatal(err)
-	}
-
-	compileAndTestWithArgs(t, "cat", strings.NewReader(sampleprograms.UnbufferedCat2), []string{"foo.tmp", "bar.tmp"}, "FooBar", "")
-	compileAndTestWithArgs(t, "cat", strings.NewReader(sampleprograms.UnbufferedCat2), []string{"bar.tmp", "foo.tmp"}, "BarFoo", "")
-
-}
-
-func TestUnbufferedCat3(t *testing.T) {
-	// We chdir below, defer a cleanup that resets it after the test finishes.
-	pwd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func(pwd string) {
-		os.Chdir(pwd)
-	}(pwd)
-
-	// Set up a test directory
-	dir, err := ioutil.TempDir("", "langtestCat")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !debug {
-		defer os.RemoveAll(dir)
-	}
-	if err := os.Chdir(dir); err != nil {
-		t.Fatal(err)
+func TestAssertions(t *testing.T) {
+	tests := []struct {
+		Name           string
+		Stdout, Stderr string
+	}{
+		{
+			"AssertionFail", "", "assertion false failed",
+		},
+		{
+			"AssertionFailWithMessage", "", "assertion false failed: This always fails",
+		},
+		{
+			"AssertionPass", "", "",
+		},
+		{
+			"AssertionPassWithMessage", "", "",
+		},
+		{
+			"AssertionFailWithVariable", "", "assertion x > 3 failed",
+		},
+		{
+			// The first PrintInt should succeed, the second not.
+			"AssertionFailWithContext", "0", "assertion false failed",
+		},
 	}
 
-	if err := ioutil.WriteFile("foo.tmp", []byte("Foo"), 0666); err != nil {
-		t.Fatal(err)
+	for _, tc := range tests {
+		if testing.Verbose() {
+			println("\tRunning test: ", tc.Name)
+		}
+		compileAndTestFromFile(t, tc.Name, tc.Stdout, tc.Stderr, func() {})
 	}
-	if err := ioutil.WriteFile("bar.tmp", []byte("Bar"), 0666); err != nil {
-		t.Fatal(err)
-	}
-
-	compileAndTestWithArgs(t, "cat", strings.NewReader(sampleprograms.UnbufferedCat3), []string{"foo.tmp", "bar.tmp"}, "FooBar", "")
-	compileAndTestWithArgs(t, "cat", strings.NewReader(sampleprograms.UnbufferedCat3), []string{"bar.tmp", "foo.tmp"}, "BarFoo", "")
-
-}
-
-func TestEmptyMain(t *testing.T) {
-	compileAndTest(t, sampleprograms.EmptyMain, "", "")
-}
-
-func TestHelloWorld(t *testing.T) {
-	compileAndTest(t, sampleprograms.HelloWorld, "Hello, world!\n", "")
-}
-
-func TestGenLetStatement(t *testing.T) {
-	compileAndTest(t, sampleprograms.LetStatement, "5", "")
-}
-
-func TestGenLetStatementShadow(t *testing.T) {
-	compileAndTest(t, sampleprograms.LetStatementShadow, "5\nhello", "")
-}
-
-func TestGenTwoProcs(t *testing.T) {
-	compileAndTest(t, sampleprograms.TwoProcs, "3", "")
-}
-
-func TestOutOfOrder(t *testing.T) {
-	compileAndTest(t, sampleprograms.OutOfOrder, "3", "")
-}
-
-func TestMutAddition(t *testing.T) {
-	compileAndTest(t, sampleprograms.MutAddition, "8", "")
-}
-
-func TestSimpleFunc(t *testing.T) {
-	compileAndTest(t, sampleprograms.SimpleFunc, "3", "")
-}
-
-func TestSumToTen(t *testing.T) {
-	compileAndTest(t, sampleprograms.SumToTen, "55", "")
-}
-
-func TestSumToTenRecursive(t *testing.T) {
-	compileAndTest(t, sampleprograms.SumToTenRecursive, "55", "")
-}
-
-func TestFizzBuzz(t *testing.T) {
-	compileAndTest(t, sampleprograms.Fizzbuzz, `1
-2
-fizz
-4
-buzz
-fizz
-7
-8
-fizz
-buzz
-11
-fizz
-13
-14
-fizzbuzz
-16
-17
-fizz
-19
-buzz
-fizz
-22
-23
-fizz
-buzz
-26
-fizz
-28
-29
-fizzbuzz
-31
-32
-fizz
-34
-buzz
-fizz
-37
-38
-fizz
-buzz
-41
-fizz
-43
-44
-fizzbuzz
-46
-47
-fizz
-49
-buzz
-fizz
-52
-53
-fizz
-buzz
-56
-fizz
-58
-59
-fizzbuzz
-61
-62
-fizz
-64
-buzz
-fizz
-67
-68
-fizz
-buzz
-71
-fizz
-73
-74
-fizzbuzz
-76
-77
-fizz
-79
-buzz
-fizz
-82
-83
-fizz
-buzz
-86
-fizz
-88
-89
-fizzbuzz
-91
-92
-fizz
-94
-buzz
-fizz
-97
-98
-fizz
-`, "")
-}
-
-func TestSomeMath(t *testing.T) {
-	compileAndTest(t, sampleprograms.SomeMath,
-		`Add: 3
-Sub: -1
-Mul: 6
-Div: 3
-Complex: 5
-`, "")
-}
-
-func TestEqualComparison(t *testing.T) {
-	compileAndTest(t, sampleprograms.EqualComparison,
-		`true
-3
-`, "")
-}
-
-func TestNotEqualComparison(t *testing.T) {
-	compileAndTest(t, sampleprograms.NotEqualComparison, "false\n", "")
-}
-
-func TestGreaterComparison(t *testing.T) {
-	compileAndTest(t, sampleprograms.GreaterComparison, "true\n4\n", "")
-}
-
-func TestGreaterOrEqualComparison(t *testing.T) {
-	compileAndTest(t, sampleprograms.GreaterOrEqualComparison, "true\n4\n3\n", "")
-}
-
-func TestLessThanComparison(t *testing.T) {
-	compileAndTest(t, sampleprograms.LessThanComparison, "false\n", "")
-}
-
-func TestLessThanOrEqualComparison(t *testing.T) {
-	compileAndTest(t, sampleprograms.LessThanOrEqualComparison, "true\n1\n2\n3\n", "")
-}
-
-func TestUserDefinedType(t *testing.T) {
-	compileAndTest(t, sampleprograms.UserDefinedType, "4", "")
-}
-
-func TestTypeInference(t *testing.T) {
-	compileAndTest(t, sampleprograms.TypeInference, "0, 4\n", "")
-}
-
-func TestConcreteTypeUint8(t *testing.T) {
-	compileAndTest(t, sampleprograms.ConcreteTypeUint8, "4", "")
-}
-
-func TestConcreteTypeInt8(t *testing.T) {
-	compileAndTest(t, sampleprograms.ConcreteTypeInt8, "-4", "")
-}
-
-func TestConcreteTypeUint16(t *testing.T) {
-	compileAndTest(t, sampleprograms.ConcreteTypeUint16, "4", "")
-}
-
-func TestConcreteTypeInt16(t *testing.T) {
-	compileAndTest(t, sampleprograms.ConcreteTypeInt16, "-4", "")
-}
-
-func TestConcreteTypeUint32(t *testing.T) {
-	compileAndTest(t, sampleprograms.ConcreteTypeUint32, "4", "")
-}
-
-func TestConcreteTypeInt32(t *testing.T) {
-	compileAndTest(t, sampleprograms.ConcreteTypeInt32, "-4", "")
-}
-
-func TestConcreteTypeUint64(t *testing.T) {
-	compileAndTest(t, sampleprograms.ConcreteTypeUint64, "4", "")
-}
-
-func TestConcreteTypeInt64(t *testing.T) {
-	compileAndTest(t, sampleprograms.ConcreteTypeInt64, "-4", "")
-}
-
-func TestFibonacci(t *testing.T) {
-	compileAndTest(t, sampleprograms.Fibonacci, `2
-3
-5
-8
-13
-21
-34
-55
-89
-144
-`, "")
-}
-
-func TestEnumType(t *testing.T) {
-	compileAndTest(t, sampleprograms.EnumType, "I am A!\n", "")
-}
-
-func TestEnumTypeInferred(t *testing.T) {
-	compileAndTest(t, sampleprograms.EnumTypeInferred, "I am B!\n", "")
-}
-
-func TestSimpleMatch(t *testing.T) {
-	compileAndTest(t, sampleprograms.SimpleMatch, "I am 3\n", "")
-}
-
-func TestIfElseMatch(t *testing.T) {
-	compileAndTest(t, sampleprograms.IfElseMatch, "x is less than 4\n", "")
-}
-
-func TestGenericEnumType(t *testing.T) {
-	compileAndTest(t, sampleprograms.GenericEnumType, "5\nI am nothing!\n", "")
-}
-
-func TestMatchParam(t *testing.T) {
-	compileAndTest(t, sampleprograms.MatchParam, "5", "")
-}
-
-func TestMatchParam2(t *testing.T) {
-	compileAndTest(t, sampleprograms.MatchParam2, "x5", "")
-}
-
-func TestSimpleAlgorithm(t *testing.T) {
-	compileAndTest(t, sampleprograms.SimpleAlgorithm, "180", "")
-}
-
-func TestSimpleArray(t *testing.T) {
-	compileAndTest(t, sampleprograms.SimpleArray, "4", "")
-}
-
-func TestArrayMutation(t *testing.T) {
-	compileAndTest(t, sampleprograms.ArrayMutation, "4\n2\n3", "")
-}
-
-func TestReferenceVariable(t *testing.T) {
-	compileAndTest(t, sampleprograms.ReferenceVariable, "3\n4\n7", "")
-}
-
-func TestSimpleSlice(t *testing.T) {
-	compileAndTest(t, sampleprograms.SimpleSlice, "4", "")
-}
-
-func TestSimpleSliceInference(t *testing.T) {
-	compileAndTest(t, sampleprograms.SimpleSliceInference, "4", "")
-}
-
-func TestSliceMutation(t *testing.T) {
-	compileAndTest(t, sampleprograms.SliceMutation, "4\n2\n3", "")
-}
-
-func TestSliceParam(t *testing.T) {
-	compileAndTest(t, sampleprograms.SliceParam, ",7X", "")
-}
-
-func TestSliceStringParam(t *testing.T) {
-	compileAndTest(t, sampleprograms.SliceStringParam, "bar", "")
-}
-
-func TestSliceStringVariableParam(t *testing.T) {
-	compileAndTest(t, sampleprograms.SliceStringVariableParam, "bar", "")
-}
-
-func TestPrintString(t *testing.T) {
-	compileAndTest(t, sampleprograms.PrintString, "Success!", "")
-}
-
-func TestWriteSyscall(t *testing.T) {
-	compileAndTest(t, sampleprograms.WriteSyscall, "Stdout!", "Stderr!")
-}
-
-func TestSliceLength(t *testing.T) {
-	compileAndTest(t, sampleprograms.SliceLength2, "5", "")
-}
-
-func TestArrayIndex(t *testing.T) {
-	compileAndTest(t, sampleprograms.ArrayIndex, "4\n5", "")
-}
-
-func TestIndexAssignment(t *testing.T) {
-	compileAndTest(t, sampleprograms.IndexAssignment, "4\n5", "")
-}
-
-func TestIndexedAddition(t *testing.T) {
-	compileAndTest(t, sampleprograms.IndexedAddition, "9\n8", "")
-}
-
-func TestStringArray(t *testing.T) {
-	compileAndTest(t, sampleprograms.StringArray, "bar\nfoo", "")
-}
-
-func TestPreEcho(t *testing.T) {
-	compileAndTest(t, sampleprograms.PreEcho, "bar baz\n", "")
-}
-
-func TestPreEcho2(t *testing.T) {
-	compileAndTest(t, sampleprograms.PreEcho2, "bar baz\n", "")
-}
-
-func TestPrecedence(t *testing.T) {
-	compileAndTest(t, sampleprograms.Precedence, "-3", "")
-}
-
-func TestLetCondition(t *testing.T) {
-	compileAndTest(t, sampleprograms.LetCondition, "1-112", "")
-}
-
-func TestMethodSyntax(t *testing.T) {
-	compileAndTest(t, sampleprograms.MethodSyntax, "10", "")
-}
-
-func TestAssignmentToConstantIndex(t *testing.T) {
-	compileAndTest(t, sampleprograms.AssignmentToConstantIndex, "365", "")
-}
-
-func TestAssignmentToVariableIndex(t *testing.T) {
-	compileAndTest(t, sampleprograms.AssignmentToVariableIndex, "64", "")
-}
-
-func TestAssignmentToSliceVariableIndex(t *testing.T) {
-	compileAndTest(t, sampleprograms.AssignmentToSliceVariableIndex, "64", "")
-}
-
-func TestWriteStringByte(t *testing.T) {
-	compileAndTestFromFile(t, "writestringbyte", "hellohello", "")
-}
-
-func TestStringArg(t *testing.T) {
-	compileAndTest(t, sampleprograms.StringArg, "foobar", "")
-}
-
-func TestCastBuiltin(t *testing.T) {
-	compileAndTest(t, sampleprograms.CastBuiltin, "Foo", "")
-}
-
-func TestCastBuiltin2(t *testing.T) {
-	compileAndTest(t, sampleprograms.CastBuiltin2, "bar", "")
-}
-
-func TestCastIntVariable(t *testing.T) {
-	compileAndTest(t, sampleprograms.CastIntVariable, "65", "")
-}
-
-func TestEmptyReturn(t *testing.T) {
-	compileAndTest(t, sampleprograms.EmptyReturn, "", "")
-}
-
-func TestAssertionFail(t *testing.T) {
-	compileAndTest(t, sampleprograms.AssertionFail, "", "assert false failed")
-}
-
-func TestAssertionFailWithMessage(t *testing.T) {
-	compileAndTest(t, sampleprograms.AssertionFailWithMessage, "", "assert false failed: This always fails")
-}
-
-func TestAssertionPass(t *testing.T) {
-	compileAndTest(t, sampleprograms.AssertionPass, "", "")
-}
-
-func TestAssertionPassWithMessage(t *testing.T) {
-	compileAndTest(t, sampleprograms.AssertionPassWithMessage, "", "")
-}
-
-func TestAssertionFailWithVariable(t *testing.T) {
-	compileAndTest(t, sampleprograms.AssertionFailWithVariable, "", "assert x > 3 failed")
-}
-
-func TestSumTypeFuncCall(t *testing.T) {
-	compileAndTest(t, sampleprograms.SumTypeFuncCall, "bar3", "")
-}
-
-func TestSumTypeFuncReturn(t *testing.T) {
-	compileAndTest(t, sampleprograms.SumTypeFuncReturn, "not33", "")
-}
-
-func TestIfBool(t *testing.T) {
-	compileAndTest(t, sampleprograms.IfBool, "73", "")
-}
-
-func TestLineComment(t *testing.T) {
-	compileAndTest(t, sampleprograms.LineComment, "3", "")
-}
-
-func TestProductTypeValue(t *testing.T) {
-	compileAndTest(t, sampleprograms.ProductTypeValue, "3\n0", "")
-}
-
-func TestUserProductTypeValue(t *testing.T) {
-	compileAndTest(t, sampleprograms.UserProductTypeValue, "hello\n3", "")
 }
 
 func TestTestSuite(t *testing.T) {
@@ -697,6 +257,81 @@ func TestTestSuite(t *testing.T) {
 		Name           string
 		Stdout, Stderr string
 	}{
+		{"emptymain", "", ""},
+		{"emptyreturn", "", ""},
+		{"helloworld", "Hello, world!\n", ""},
+		{"letstatement", "5", ""},
+		{"letstatementshadow", "5\nhello", ""},
+		{"twoprocs", "3", ""},
+		{"outoforder", "3", ""},
+		{"mutaddition", "8", ""},
+		{"sumtoten", "55", ""},
+		{"sumtotenrecursive", "55", ""},
+		{"fizzbuzz", "1\n2\nfizz\n4\nbuzz\nfizz\n7\n8\nfizz\nbuzz\n11\nfizz\n13\n14\nfizzbuzz\n16\n17\nfizz\n19\nbuzz\nfizz\n22\n23\nfizz\nbuzz\n26\nfizz\n28\n29\nfizzbuzz\n31\n32\nfizz\n34\nbuzz\nfizz\n37\n38\nfizz\nbuzz\n41\nfizz\n43\n44\nfizzbuzz\n46\n47\nfizz\n49\nbuzz\nfizz\n52\n53\nfizz\nbuzz\n56\nfizz\n58\n59\nfizzbuzz\n61\n62\nfizz\n64\nbuzz\nfizz\n67\n68\nfizz\nbuzz\n71\nfizz\n73\n74\nfizzbuzz\n76\n77\nfizz\n79\nbuzz\nfizz\n82\n83\nfizz\nbuzz\n86\nfizz\n88\n89\nfizzbuzz\n91\n92\nfizz\n94\nbuzz\nfizz\n97\n98\nfizz\n", ""},
+		{"somemath", "Add: 3\nSub: -1\nMul: 6\nDiv: 3\nComplex: 5\n", ""},
+		{"equalcomparison", "true\n3\n", ""},
+		{"notequalcomparison", "", ""},
+		{"greatercomparison", "4\n", ""},
+		{"greaterorequalcomparison", "true\n4\n3\n", ""},
+		{"lessthancomparison", "false\n", ""},
+		{"lessthanorequalcomparison", "true\n1\n2\n3\n", ""},
+		{"userdefinedtype", "4", ""},
+		{"typeinference", "0, 4\n", ""},
+		{"concreteuint8", "4", ""},
+		{"concreteint8", "-4", ""},
+		{"concreteuint16", "4", ""},
+		{"concreteint16", "-4", ""},
+		{"concreteuint32", "4", ""},
+		{"concreteint32", "-4", ""},
+		{"concreteuint64", "4", ""},
+		{"concreteint64", "-4", ""},
+		{"fibonacci", "2\n3\n5\n8\n13\n21\n34\n55\n89\n144\n", ""},
+		{"enumtype", "I am A!\n", ""},
+		{"enumtypeinferred", "I am B!\n", ""},
+		{"simplematch", "I am 3\n", ""},
+		{"ifelsematch", "x is less than 4\n", ""},
+		{"genericenumtype", "5\nI am nothing!\n", ""},
+		{"matchparam", "5", ""},
+		{"matchparam2", "x5", ""},
+		{"simplealgorithm", "180", ""},
+		{"simplearray", "4", ""},
+		{"arraymutation", "4\n2\n3", ""},
+		{"referencevariable", "3\n4\n7", ""},
+		{"simpleslice", "4", ""},
+		{"simplesliceinference", "4", ""},
+		{"slicemutation", "4\n2\n3", ""},
+		{"sliceparam", ",7X", ""},
+		{"slicestringparam", "bar", ""},
+		{"slicestringvariableparam", "bar", ""},
+		{"printstring", "Success!", ""},
+		{"write", "Stdout!", "Stderr!"},
+		{"slicelength", "4", ""},
+		{"slicelength2", "5", ""},
+		{"arrayindex", "4\n5", ""},
+		{"indexassignment", "4\n5", ""},
+		{"indexedaddition", "9\n8", ""},
+		{"stringarray", "bar\nfoo", ""},
+		{"preecho", "bar baz\n", ""},
+		{"preecho2", "bar baz\n", ""},
+		{"precedence", "-3", ""},
+		{"letcondition", "1-112", ""},
+		{"methodsyntax", "10", ""},
+		{"assignmenttoconstantindex", "365", ""},
+		{"assignmenttovariableindex", "64", ""},
+		{"assignmenttosliceconstantindex", "365", ""},
+		{"assignmenttoslicevariableindex", "64", ""},
+		{"writestringbyte", "hellohello", ""},
+		{"stringarg", "foobar", ""},
+		{"castbuiltin", "Foo", ""},
+		{"castbuiltin2", "bar", ""},
+		{"castintvariable", "65", ""},
+		{"sumtypefunccall", "bar3", ""},
+		{"sumtypefuncreturn", "not33", ""},
+		{"ifbool", "73", ""},
+		{"linecomment", "3", ""},
+		{"blockcomment", "3", ""},
+		{"producttypevalue", "3\n0", ""},
+		{"userproducttypevalue", "hello\n3", ""},
 		{"slicefromarray", "34", ""},
 		{"slicefromslice", "45", ""},
 		{"mutslicefromarray", "34", ""},
@@ -704,9 +339,12 @@ func TestTestSuite(t *testing.T) {
 		{"sliceprint", "Foo", "Bar"},
 		{"arrayparam", "16", ""},
 		{"mutarrayparam", "", ""},
+		{"swap", "", ""},
+		{"reverse", "", ""},
+		{"digitsinto", "", ""},
 	}
 
 	for _, tc := range tests {
-		compileAndTestFromFile(t, tc.Name, tc.Stdout, tc.Stderr)
+		compileAndTestFromFile(t, tc.Name, tc.Stdout, tc.Stderr, func() {})
 	}
 }

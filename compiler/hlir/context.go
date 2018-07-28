@@ -107,7 +107,7 @@ func (c *variableLayout) FuncParamRegister(varname ast.VarWithType, i int) Regis
 		// be used as a key for c.values
 		varname.Typ = ast.TypeLiteral(t.TypeName())
 	}
-	c.values[varname] = fa
+	c.values[hashableHack(varname)] = fa
 	c.registerInfo[fa] = RegisterInfo{
 		string(varname.Name),
 		c.typeinfo[varname.Type().TypeName()],
@@ -116,13 +116,13 @@ func (c *variableLayout) FuncParamRegister(varname ast.VarWithType, i int) Regis
 		ast.VarWithType{},
 		varname.Typ,
 	}
-	return c.values[varname]
+	return c.values[hashableHack(varname)]
 }
 
 // Sets a variable to refer to an existing register, without generating a new
 // one.
 func (c *variableLayout) SetLocalRegister(varname ast.VarWithType, val Register) {
-	c.values[varname] = val
+	c.values[hashableHack(varname)] = val
 }
 
 // Gets the register for an existing variable. Panics on invalid variables.
@@ -130,13 +130,7 @@ func (c variableLayout) Get(varname ast.VarWithType) Register {
 	if varname.Name == "" {
 		panic("Can not get empty varname")
 	}
-	switch t := varname.Type().(type) {
-	case ast.SumType, ast.EnumTypeDefn, ast.TupleType, ast.UserType:
-		// Hack, since SumType is unhashable and can't
-		// be used as a key for c.values
-		varname.Typ = ast.TypeLiteral(t.TypeName())
-	}
-	val, ok := c.values[varname]
+	val, ok := c.values[hashableHack(varname)]
 	if !ok {
 		fmt.Printf("%v", c.values)
 		panic("Could not get variable named " + varname.Name)
@@ -147,7 +141,7 @@ func (c variableLayout) Get(varname ast.VarWithType) Register {
 // Gets the register for an existing variable, and a bool denoting whether
 // the variable exists or not.
 func (c variableLayout) SafeGet(varname ast.VarWithType) (Register, bool) {
-	v, ok := c.values[varname]
+	v, ok := c.values[hashableHack(varname)]
 	return v, ok
 }
 
@@ -166,4 +160,14 @@ func (c variableLayout) CloneValues() map[ast.VarWithType]Register {
 		v[k] = vl
 	}
 	return v
+}
+
+func hashableHack(varname ast.VarWithType) ast.VarWithType {
+	switch t := varname.Type().(type) {
+	case ast.SumType, ast.EnumTypeDefn, ast.TupleType, ast.UserType:
+		// Hack, since SumType is unhashable and can't
+		// be used as a key for c.values
+		varname.Typ = ast.TypeLiteral(t.TypeName())
+	}
+	return varname
 }

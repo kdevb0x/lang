@@ -70,6 +70,40 @@ func compileAndRun(t *testing.T, name string, estdout, estderr string) {
 	runWithArgs(t, name, dir, nil, estdout, estderr)
 }
 
+// TestAssertions tests that assertions work in various contexts.
+func TestAssertions(t *testing.T) {
+	tests := []struct {
+		Name           string
+		Stdout, Stderr string
+	}{
+		{
+			"AssertionFail", "", "assertion false failed",
+		},
+		{
+			"AssertionFailWithMessage", "", "assertion false failed: This always fails",
+		},
+		{
+			"AssertionPass", "", "",
+		},
+		{
+			"AssertionPassWithMessage", "", "",
+		},
+		{
+			"AssertionFailWithVariable", "", "assertion x > 3 failed",
+		},
+		{
+			// The first PrintInt should succeed, the second not.
+			"AssertionFailWithContext", "0", "assertion false failed",
+		},
+	}
+
+	for _, tst := range tests {
+		if testing.Verbose() {
+			println("\tRunning test: ", tst.Name)
+		}
+		compileAndRun(t, tst.Name, tst.Stdout, tst.Stderr)
+	}
+}
 // TestTestSuite tests everything in the testsuite
 func TestTestSuite(t *testing.T) {
 	tests := []struct {
@@ -363,36 +397,3 @@ func TestCatPrograms(t *testing.T) {
 	}
 }
 
-func TestAssertions(t *testing.T) {
-	tests := []struct {
-		Name           string
-		Stdout, Stderr string
-	}{
-		{
-			"AssertionFail", "", "assertion false failed",
-		},
-		{
-			"AssertionFailWithMessage", "", "assertion false failed: This always fails",
-		},
-		{
-			"AssertionPass", "", "",
-		},
-		{
-			"AssertionPassWithMessage", "", "",
-		},
-		{
-			"AssertionFailWithVariable", "", "assertion x > 3 failed",
-		},
-		{
-			// The first PrintInt should succeed, the second not.
-			"AssertionFailWithContext", "0", "assertion false failed",
-		},
-	}
-
-	for _, tst := range tests {
-		if testing.Verbose() {
-			println("\tRunning test: ", tst.Name)
-		}
-		compileAndRun(t, tst.Name, tst.Stdout, tst.Stderr)
-	}
-}

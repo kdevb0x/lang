@@ -647,7 +647,7 @@ type assertionError struct {
 
 func (a assertionError) Error() string {
 	if a.Message == "" {
-		return fmt.Sprintf("assert %v failed", a.src.PrettyPrint(0))
+		return fmt.Sprintf("assertion %v failed", a.src.PrettyPrint(0))
 	}
-	return fmt.Sprintf("assert %v failed: %s", a.src.PrettyPrint(0), string(a.Message))
+	return fmt.Sprintf("assertion %v failed: %s", a.src.PrettyPrint(0), string(a.Message))
 }

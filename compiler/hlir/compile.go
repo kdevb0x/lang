@@ -520,11 +520,12 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 				continue
 			}
 
-			ov, oldval := context.values[s.Var]
+			ov, oldval := context.SafeGet(s.Var)
 			if oldval {
 				// It's being shadowed, so the variable when evaluating the variable
 				// still refers to the old value in ie "let x = x + 1".
-				context.values[s.Var] = ov
+				context.SetLocalRegister(s.Var, ov)
+				//context.values[s.Var] = ov
 			}
 
 			// If it's a slice, start by putting the size before calling evaluateValue.
