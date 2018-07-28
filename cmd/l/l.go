@@ -85,7 +85,7 @@ func main() {
 // Builds a program in /tmp and copies the result to the current directory.
 func buildAndCopyProgram(src io.Reader) error {
 
-	wdir, err := llvmir.Compile(src)
+	wdir, err := llvmir.Compile(src, false)
 	if wdir != "" && !debug {
 		defer os.RemoveAll(wdir)
 	}

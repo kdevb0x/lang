@@ -54,6 +54,9 @@ func (v ArrayLiteral) Value() interface{} {
 }
 
 func (v ArrayLiteral) String() string {
+	if len(v) == 0 {
+		return fmt.Sprintf("ArrayLiteral{[%v]nil (%v)}", len(v), []Value(v))
+	}
 	return fmt.Sprintf("ArrayLiteral{[%v]%v (%v)}", len(v), v[0].Type(), []Value(v))
 }
 
