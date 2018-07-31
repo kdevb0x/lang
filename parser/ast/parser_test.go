@@ -333,11 +333,11 @@ func compare(v1, v2 Node) bool {
 		if !ok {
 			return false
 		}
-		if len(v1a) != len(v2a) {
+		if len(v1a.Values) != len(v2a.Values) {
 			return false
 		}
-		for i := range v1a {
-			if !compare(v1a[i], v2a[i]) {
+		for i := range v1a.Values {
+			if !compare(v1a.Values[i], v2a.Values[i]) {
 				return false
 			}
 		}
@@ -3018,11 +3018,13 @@ func TestSimpleArray(t *testing.T) {
 							false,
 						},
 						Val: ArrayLiteral{
-							IntLiteral(1),
-							IntLiteral(2),
-							IntLiteral(3),
-							IntLiteral(4),
-							IntLiteral(5),
+							Values: []Value{
+								IntLiteral(1),
+								IntLiteral(2),
+								IntLiteral(3),
+								IntLiteral(4),
+								IntLiteral(5),
+							},
 						},
 					},
 					FuncCall{
@@ -3080,11 +3082,13 @@ func TestSimpleArrayInference(t *testing.T) {
 							false,
 						},
 						Val: ArrayLiteral{
-							IntLiteral(1),
-							IntLiteral(2),
-							IntLiteral(3),
-							IntLiteral(4),
-							IntLiteral(5),
+							Values: []Value{
+								IntLiteral(1),
+								IntLiteral(2),
+								IntLiteral(3),
+								IntLiteral(4),
+								IntLiteral(5),
+							},
 						},
 					},
 					FuncCall{
@@ -3142,11 +3146,13 @@ func TestArrayMutation(t *testing.T) {
 							false,
 						},
 						InitialValue: ArrayLiteral{
-							IntLiteral(1),
-							IntLiteral(2),
-							IntLiteral(3),
-							IntLiteral(4),
-							IntLiteral(5),
+							Values: []Value{
+								IntLiteral(1),
+								IntLiteral(2),
+								IntLiteral(3),
+								IntLiteral(4),
+								IntLiteral(5),
+							},
 						},
 					},
 					FuncCall{
@@ -3358,11 +3364,13 @@ func TestSimpleSlice(t *testing.T) {
 							false,
 						},
 						Val: ArrayLiteral{
-							IntLiteral(1),
-							IntLiteral(2),
-							IntLiteral(3),
-							IntLiteral(4),
-							IntLiteral(5),
+							Values: []Value{
+								IntLiteral(1),
+								IntLiteral(2),
+								IntLiteral(3),
+								IntLiteral(4),
+								IntLiteral(5),
+							},
 						},
 					},
 					FuncCall{
@@ -3418,11 +3426,13 @@ func TestSimpleSliceInference(t *testing.T) {
 							false,
 						},
 						Val: ArrayLiteral{
-							IntLiteral(1),
-							IntLiteral(2),
-							IntLiteral(3),
-							IntLiteral(4),
-							IntLiteral(5),
+							Values: []Value{
+								IntLiteral(1),
+								IntLiteral(2),
+								IntLiteral(3),
+								IntLiteral(4),
+								IntLiteral(5),
+							},
 						},
 					},
 					LetStmt{
@@ -3493,11 +3503,13 @@ func TestSliceMutation(t *testing.T) {
 							false,
 						},
 						InitialValue: ArrayLiteral{
-							IntLiteral(1),
-							IntLiteral(2),
-							IntLiteral(3),
-							IntLiteral(4),
-							IntLiteral(5),
+							Values: []Value{
+								IntLiteral(1),
+								IntLiteral(2),
+								IntLiteral(3),
+								IntLiteral(4),
+								IntLiteral(5),
+							},
 						},
 					},
 					FuncCall{
@@ -3606,9 +3618,11 @@ func TestSliceParam(t *testing.T) {
 							false,
 						},
 						Val: ArrayLiteral{
-							IntLiteral(44),
-							IntLiteral(55),
-							IntLiteral(88),
+							Values: []Value{
+								IntLiteral(44),
+								IntLiteral(55),
+								IntLiteral(88),
+							},
 						},
 					},
 					FuncCall{
@@ -3701,12 +3715,14 @@ func TestReadSyscall(t *testing.T) {
 							false,
 						},
 						InitialValue: ArrayLiteral{
-							IntLiteral(0),
-							IntLiteral(1),
-							IntLiteral(2),
-							IntLiteral(3),
-							IntLiteral(4),
-							IntLiteral(5),
+							Values: []Value{
+								IntLiteral(0),
+								IntLiteral(1),
+								IntLiteral(2),
+								IntLiteral(3),
+								IntLiteral(4),
+								IntLiteral(5),
+							},
 						},
 					},
 					LetStmt{
@@ -3794,10 +3810,12 @@ func TestSliceLength(t *testing.T) {
 							false,
 						},
 						Val: ArrayLiteral{
-							StringLiteral("3"),
-							StringLiteral("foo"),
-							StringLiteral("hello"),
-							StringLiteral("world"),
+							Values: []Value{
+								StringLiteral("3"),
+								StringLiteral("foo"),
+								StringLiteral("hello"),
+								StringLiteral("world"),
+							},
 						},
 					},
 					FuncCall{
@@ -3852,9 +3870,11 @@ func TestIndexAssignment(t *testing.T) {
 							false,
 						},
 						Val: ArrayLiteral{
-							IntLiteral(3),
-							IntLiteral(4),
-							IntLiteral(5),
+							Values: []Value{
+								IntLiteral(3),
+								IntLiteral(4),
+								IntLiteral(5),
+							},
 						},
 					},
 					MutStmt{
@@ -3951,9 +3971,11 @@ func TestIndexedAddition(t *testing.T) {
 							false,
 						},
 						Val: ArrayLiteral{
-							IntLiteral(3),
-							IntLiteral(4),
-							IntLiteral(5),
+							Values: []Value{
+								IntLiteral(3),
+								IntLiteral(4),
+								IntLiteral(5),
+							},
 						},
 					},
 					MutStmt{
@@ -4271,7 +4293,9 @@ func TestUnbufferedCat2(t *testing.T) {
 							false,
 						},
 						InitialValue: ArrayLiteral{
-							IntLiteral(0),
+							Values: []Value{
+								IntLiteral(0),
+							},
 						},
 					},
 					LetStmt{
@@ -4494,7 +4518,9 @@ func TestUnbufferedCat3(t *testing.T) {
 							false,
 						},
 						InitialValue: ArrayLiteral{
-							IntLiteral(0),
+							Values: []Value{
+								IntLiteral(0),
+							},
 						},
 					},
 					LetStmt{
@@ -4645,10 +4671,12 @@ func TestAssignmentToVariableIndex(t *testing.T) {
 							false,
 						},
 						InitialValue: ArrayLiteral{
-							IntLiteral(1),
-							IntLiteral(3),
-							IntLiteral(4),
-							IntLiteral(5),
+							Values: []Value{
+								IntLiteral(1),
+								IntLiteral(3),
+								IntLiteral(4),
+								IntLiteral(5),
+							},
 						},
 					},
 					LetStmt{
@@ -4750,10 +4778,12 @@ func TestAssignmentToSliceVariableIndex(t *testing.T) {
 							false,
 						},
 						InitialValue: ArrayLiteral{
-							IntLiteral(1),
-							IntLiteral(3),
-							IntLiteral(4),
-							IntLiteral(5),
+							Values: []Value{
+								IntLiteral(1),
+								IntLiteral(3),
+								IntLiteral(4),
+								IntLiteral(5),
+							},
 						},
 					},
 					LetStmt{
@@ -4852,9 +4882,11 @@ func TestCastBuiltin(t *testing.T) {
 							false,
 						},
 						Val: ArrayLiteral{
-							IntLiteral(70),
-							IntLiteral(111),
-							IntLiteral(111),
+							Values: []Value{
+								IntLiteral(70),
+								IntLiteral(111),
+								IntLiteral(111),
+							},
 						},
 					},
 					FuncCall{
@@ -5571,11 +5603,13 @@ func TestSliceFromArray(t *testing.T) {
 							false,
 						},
 						Val: ArrayLiteral{
-							IntLiteral(1),
-							IntLiteral(2),
-							IntLiteral(3),
-							IntLiteral(4),
-							IntLiteral(5),
+							Values: []Value{
+								IntLiteral(1),
+								IntLiteral(2),
+								IntLiteral(3),
+								IntLiteral(4),
+								IntLiteral(5),
+							},
 						},
 					},
 					LetStmt{
@@ -5824,11 +5858,13 @@ func TestArrayArg(t *testing.T) {
 							false,
 						},
 						Val: ArrayLiteral{
-							IntLiteral(1),
-							IntLiteral(2),
-							IntLiteral(3),
-							IntLiteral(4),
-							IntLiteral(5),
+							Values: []Value{
+								IntLiteral(1),
+								IntLiteral(2),
+								IntLiteral(3),
+								IntLiteral(4),
+								IntLiteral(5),
+							},
 						},
 					},
 					MutStmt{
@@ -5840,11 +5876,13 @@ func TestArrayArg(t *testing.T) {
 							false,
 						},
 						InitialValue: ArrayLiteral{
-							IntLiteral(6),
-							IntLiteral(7),
-							IntLiteral(8),
-							IntLiteral(9),
-							IntLiteral(10),
+							Values: []Value{
+								IntLiteral(6),
+								IntLiteral(7),
+								IntLiteral(8),
+								IntLiteral(9),
+								IntLiteral(10),
+							},
 						},
 					},
 					FuncCall{
@@ -5909,15 +5947,25 @@ func TestEnumArray(t *testing.T) {
 						Var: VarWithType{
 							"foo",
 							ArrayType{
-								Base: UserType{TypeLiteral("int64"), "Light"},
+								Base: EnumTypeDefn{
+									"Light",
+									[]EnumOption{
+										EnumOption{"Red", nil, UserType{TypeLiteral("int64"), "Light"}},
+										EnumOption{"Green", nil, UserType{TypeLiteral("int64"), "Light"}},
+										EnumOption{"Amber", nil, UserType{TypeLiteral("int64"), "Light"}},
+									},
+									nil,
+									0,
+								},
 								Size: IntLiteral(2),
 							},
 							false,
 						},
 						Val: ArrayLiteral{
-
-							EnumValue{Constructor: EnumOption{"Red", nil, UserType{TypeLiteral("int64"), "Light"}}},
-							EnumValue{Constructor: EnumOption{"Green", nil, UserType{TypeLiteral("int64"), "Light"}}},
+							Values: []Value{
+								EnumValue{Constructor: EnumOption{"Red", nil, UserType{TypeLiteral("int64"), "Light"}}},
+								EnumValue{Constructor: EnumOption{"Green", nil, UserType{TypeLiteral("int64"), "Light"}}},
+							},
 						},
 					},
 					Assertion{
@@ -5928,7 +5976,180 @@ func TestEnumArray(t *testing.T) {
 									VarWithType{
 										"foo",
 										ArrayType{
-											Base: UserType{TypeLiteral("int64"), "Light"},
+											Base: EnumTypeDefn{
+												"Light",
+												[]EnumOption{
+													EnumOption{"Red", nil, UserType{TypeLiteral("int64"), "Light"}},
+													EnumOption{"Green", nil, UserType{TypeLiteral("int64"), "Light"}},
+													EnumOption{"Amber", nil, UserType{TypeLiteral("int64"), "Light"}},
+												},
+												nil,
+												0,
+											},
+											Size: IntLiteral(2),
+										},
+										false,
+									},
+								},
+							},
+							Right: IntLiteral(2),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("Node %d: got %v want %v (%v, %v)", i, ast[i], v, reflect.TypeOf(ast[i]), reflect.TypeOf(v))
+		}
+	}
+}
+
+func TestEnumArrayExplicit(t *testing.T) {
+	ast, _, _ := buildAst(t, "enumarrayexplicit")
+
+	expected := []Node{
+		EnumTypeDefn{
+			"Light",
+			[]EnumOption{
+				EnumOption{"Red", nil, UserType{TypeLiteral("int64"), "Light"}},
+				EnumOption{"Green", nil, UserType{TypeLiteral("int64"), "Light"}},
+				EnumOption{"Amber", nil, UserType{TypeLiteral("int64"), "Light"}},
+			},
+			nil,
+			0,
+		},
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					LetStmt{
+						Var: VarWithType{
+							"foo",
+							ArrayType{
+								Base: EnumTypeDefn{
+									"Light",
+									[]EnumOption{
+										EnumOption{"Red", nil, UserType{TypeLiteral("int64"), "Light"}},
+										EnumOption{"Green", nil, UserType{TypeLiteral("int64"), "Light"}},
+										EnumOption{"Amber", nil, UserType{TypeLiteral("int64"), "Light"}},
+									},
+									nil,
+									0,
+								},
+								Size: IntLiteral(2),
+							},
+							false,
+						},
+						Val: ArrayLiteral{
+							Values: []Value{
+								EnumValue{Constructor: EnumOption{"Red", nil, UserType{TypeLiteral("int64"), "Light"}}},
+								EnumValue{Constructor: EnumOption{"Green", nil, UserType{TypeLiteral("int64"), "Light"}}},
+							},
+						},
+					},
+					Assertion{
+						Predicate: EqualityComparison{
+							Left: FuncCall{
+								Name: "len",
+								UserArgs: []Value{
+									VarWithType{
+										"foo",
+										ArrayType{
+											Base: EnumTypeDefn{
+												"Light",
+												[]EnumOption{
+													EnumOption{"Red", nil, UserType{TypeLiteral("int64"), "Light"}},
+													EnumOption{"Green", nil, UserType{TypeLiteral("int64"), "Light"}},
+													EnumOption{"Amber", nil, UserType{TypeLiteral("int64"), "Light"}},
+												},
+												nil,
+												0,
+											},
+											Size: IntLiteral(2),
+										},
+										false,
+									},
+								},
+							},
+							Right: IntLiteral(2),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("Node %d: got %v want %v (%v, %v)", i, ast[i], v, reflect.TypeOf(ast[i]), reflect.TypeOf(v))
+		}
+	}
+}
+
+func TestSumTypeArray(t *testing.T) {
+	ast, _, _ := buildAst(t, "sumtypearray")
+
+	expected := []Node{
+		TypeDefn{
+			Name: "TestType",
+			ConcreteType: SumType{
+				TypeLiteral("string"),
+				TypeLiteral("int"),
+			},
+		},
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					LetStmt{
+						Var: VarWithType{
+							"foo",
+							ArrayType{
+								Base: UserType{
+									SumType{
+										TypeLiteral("string"),
+										TypeLiteral("int"),
+									},
+									"TestType",
+								},
+								Size: IntLiteral(2),
+							},
+							false,
+						},
+						Val: ArrayLiteral{
+							Values: []Value{
+								StringLiteral("string"),
+								IntLiteral(33),
+							},
+						},
+					},
+					Assertion{
+						Predicate: EqualityComparison{
+							Left: FuncCall{
+								Name: "len",
+								UserArgs: []Value{
+
+									VarWithType{
+										"foo",
+										ArrayType{
+											Base: UserType{
+												SumType{
+													TypeLiteral("string"),
+													TypeLiteral("int"),
+												},
+												"TestType",
+											},
 											Size: IntLiteral(2),
 										},
 										false,

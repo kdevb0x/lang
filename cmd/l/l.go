@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/driusan/lang/compiler/llvmir"
 	"github.com/driusan/lang/compiler/hlir/vm"
+	"github.com/driusan/lang/compiler/llvmir"
 )
 
 var debug bool

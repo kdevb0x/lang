@@ -4,7 +4,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/driusan/lang/compiler/hlir"
@@ -342,6 +341,9 @@ func TestTestSuite(t *testing.T) {
 		{"swap", "", ""},
 		{"reverse", "", ""},
 		{"digitsinto", "", ""},
+		{"enumarray", "", ""},
+		{"enumarrayexplicit", "", ""},
+		{"sumtypearray", "", ""},
 	}
 
 	for _, tc := range tests {

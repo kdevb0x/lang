@@ -39,10 +39,13 @@ func (a ArrayType) Components() []Type {
 	return v
 }
 
-type ArrayLiteral []Value
+type ArrayLiteral struct {
+	Values []Value
+	Typ    Type
+}
 
 func (v ArrayLiteral) TypeName() string {
-	return fmt.Sprintf("[%v]%v", len(v), v[0].Type())
+	return v.Typ.TypeName()
 }
 
 func (v ArrayLiteral) Node() Node {
@@ -54,20 +57,17 @@ func (v ArrayLiteral) Value() interface{} {
 }
 
 func (v ArrayLiteral) String() string {
-	if len(v) == 0 {
-		return fmt.Sprintf("ArrayLiteral{[%v]nil (%v)}", len(v), []Value(v))
+	if len(v.Values) == 0 {
+		return fmt.Sprintf("ArrayLiteral{[%v]nil (%v)}", len(v.Values), []Value(v.Values))
 	}
-	return fmt.Sprintf("ArrayLiteral{[%v]%v (%v)}", len(v), v[0].Type(), []Value(v))
+	return fmt.Sprintf("ArrayLiteral{[%v]%v (%v)}", len(v.Values), v.Values[0].Type(), []Value(v.Values))
 }
 
 func (v ArrayLiteral) PrettyPrint(lvl int) string {
 	panic("PrettyPrint not implemented")
 }
 func (v ArrayLiteral) Type() Type {
-	return ArrayType{
-		Base: v[0].Type(),
-		Size: IntLiteral(len(v)),
-	}
+	return v.Typ
 }
 
 type ArrayValue struct {

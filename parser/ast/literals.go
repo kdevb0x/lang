@@ -2,6 +2,7 @@ package ast
 
 import (
 	"fmt"
+	"reflect"
 )
 
 func IsLiteral(v Value) bool {
@@ -45,22 +46,29 @@ func (c *Context) IsCompatibleType(typ Type, v Value) error {
 		if !ok {
 			return fmt.Errorf("%v is not compatible with %v", v, typ.TypeName())
 		}
-		if len(v2) != int(t.Size) {
+		if len(v2.Values) != int(t.Size) {
 			return fmt.Errorf("%v is not compatible with %v", v.Type().TypeName(), typ.TypeName())
 		}
 
-		for _, val := range v2 {
+		for i, val := range v2.Values {
 			if err := c.IsCompatibleType(t.Base, val); err != nil {
-				return fmt.Errorf("Array Type error: %v", err)
+				return fmt.Errorf("Array Type error at index %d: %v", i, err)
 			}
 		}
 		return nil
 	case UserType:
 		if IsLiteral(v) {
+			fmt.Printf("!!!\n")
 			return c.IsCompatibleType(t.Typ, v)
 		}
-		if v.Type().TypeName() != typ.TypeName() {
-			return fmt.Errorf("%v is not compatible with %v", v, typ.TypeName())
+		switch t.Typ.(type) {
+		case SumType:
+			return c.IsCompatibleType(t.Typ, v)
+		default:
+			fmt.Printf("%v %v\n", reflect.TypeOf(t), t)
+			if v.Type().TypeName() != typ.TypeName() {
+				return fmt.Errorf("%v is not compatible with %v", v.Type().TypeName(), typ.TypeName())
+			}
 		}
 	case TupleType:
 		tv, ok := v.(TupleValue)
@@ -156,9 +164,9 @@ func (c *Context) IsCompatibleType(typ Type, v Value) error {
 		// Check if each element in the literal is compatible.
 		if st, ok := t.ConcreteType.(SliceType); ok {
 			// Fake an array type comparison instead of a slice type.
-			return c.IsCompatibleType(ArrayType{st.Base, IntLiteral(len(t2))}, v)
+			return c.IsCompatibleType(ArrayType{st.Base, IntLiteral(len(t2.Values))}, v)
 		}
-		for _, el := range t2 { // t2=ArrayLiteral
+		for _, el := range t2.Values { // t2=ArrayLiteral
 			if err := c.IsCompatibleType(el.Type(), el); err != nil {
 				return err
 			}

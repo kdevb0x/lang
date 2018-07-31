@@ -396,4 +396,3 @@ func TestCatPrograms(t *testing.T) {
 		runWithArgs(t, c, dir, []string{"bar.tmp", "foo.tmp"}, "BarFoo", "")
 	}
 }
-

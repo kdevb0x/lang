@@ -341,18 +341,45 @@ func consumeValue(start int, tokens []token.Token, c *Context, forcebrackets boo
 				return 3, StringLiteral(tokens[i+1].String()), nil
 			case token.Char(`{`):
 				tn, v, err := consumeCommaSeparatedValues(i+1, tokens, c)
-				al := ArrayLiteral(v)
-				at := al.Type().TypeName()
-				if _, ok := c.Types[at]; !ok {
-					typdef := ArrayType{
-						Base: v[0].Type(),
-						Size: IntLiteral(len(v)),
+				if err != nil {
+					return 0, nil, err
+				}
+				al := ArrayLiteral{Values: v}
+				at := ArrayType{
+					Base: v[0].Type(),
+					Size: IntLiteral(len(v)),
+				}.TypeName()
+				if typ, ok := c.Types[at]; !ok {
+					var typdef ArrayType
+					switch val := v[0].(type) {
+					case EnumValue:
+						// The Constructor stores it as a fake UserType, not a concrete type. We need to look up the name in
+						// c.Types to get the real type.
+						ut := val.Constructor.ParentType.(UserType)
+						t, ok := c.Types[ut.Name]
+						if !ok {
+							panic(fmt.Sprintf("Unknown enum value type: %v", ut))
+						}
+
+						typdef = ArrayType{
+							Base: t.ConcreteType,
+							Size: IntLiteral(len(v)),
+						}
+					default:
+						//fmt.Printf("v[0]=%v %v %v\n", v[0], reflect.TypeOf(v[0].Type()), v[0].Type())
+						typdef = ArrayType{
+							Base: val.Type(),
+							Size: IntLiteral(len(v)),
+						}
 					}
 
 					c.Types[at] = TypeDefn{
 						Name:         at,
 						ConcreteType: typdef,
 					}
+					al.Typ = typdef
+				} else {
+					al.Typ = typ.ConcreteType
 				}
 				return tn + 2, al, err
 			case token.Char(`[`):

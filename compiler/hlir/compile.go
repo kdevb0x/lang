@@ -547,11 +547,11 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 				case ast.ArrayLiteral:
 					reg := context.NextLocalRegister(s.Var)
 					ops = append(ops, MOV{
-						Src: IntLiteral(len(vr)),
+						Src: IntLiteral(len(vr.Values)),
 						Dst: reg,
 					})
 					info := context.registerInfo[reg]
-					info.SliceSize = uint(len(s.Val.(ast.ArrayLiteral)))
+					info.SliceSize = uint(len(s.Val.(ast.ArrayLiteral).Values))
 					context.registerInfo[reg] = info
 				case ast.Slice:
 					// If we're actively taking a slice, it's similar to assigning
@@ -590,7 +590,7 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 					})
 
 					if i == 0 {
-						context.values[s.Var] = reg
+						context.values[hashableHack(s.Var)] = reg
 						if !oldval {
 							context.tempVars--
 						}
@@ -659,11 +659,11 @@ func compileBlock(block ast.BlockStmt, context *variableLayout) ([]Opcode, error
 				case ast.ArrayLiteral:
 					reg := context.NextLocalRegister(s.Var)
 					ops = append(ops, MOV{
-						Src: IntLiteral(len(vr)),
+						Src: IntLiteral(len(vr.Values)),
 						Dst: reg,
 					})
 					info := context.registerInfo[reg]
-					info.SliceSize = uint(len(s.InitialValue.(ast.ArrayLiteral)))
+					info.SliceSize = uint(len(s.InitialValue.(ast.ArrayLiteral).Values))
 					context.registerInfo[reg] = info
 				case ast.Slice:
 					// If we're actively taking a slice, it's similar to assigning
@@ -1468,11 +1468,11 @@ func evaluateValue(val ast.Value, context *variableLayout) ([]Opcode, []Register
 		}
 		return ops, regs, nil
 	case ast.ArrayLiteral:
-		regs := make([]Register, 0, len(s))
+		regs := make([]Register, 0, len(s.Values))
 		// First generate the LocalValue registers to ensure they're consecutive if there's a variable
 		// or some other expression in one of the literal pieces.
-		for i := 0; i < len(s); i++ {
-			newops, r, err := evaluateValue(s[i], context)
+		for i := 0; i < len(s.Values); i++ {
+			newops, r, err := evaluateValue(s.Values[i], context)
 			if err != nil {
 				return nil, nil, err
 			}

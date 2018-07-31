@@ -168,6 +168,21 @@ func hashableHack(varname ast.VarWithType) ast.VarWithType {
 		// Hack, since SumType is unhashable and can't
 		// be used as a key for c.values
 		varname.Typ = ast.TypeLiteral(t.TypeName())
+	case ast.ArrayType:
+		t.Base = hashableHack2(t.Base)
+		varname.Typ = t
 	}
 	return varname
+}
+
+func hashableHack2(typ ast.Type) ast.Type {
+	switch t := typ.(type) {
+	case ast.SumType, ast.EnumTypeDefn, ast.TupleType, ast.UserType:
+		return ast.TypeLiteral(t.TypeName())
+	case ast.ArrayType:
+		bt := t.Base
+		t.Base = hashableHack2(bt)
+		return t
+	}
+	return typ
 }

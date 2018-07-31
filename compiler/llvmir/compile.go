@@ -141,7 +141,7 @@ func compileBlock(ctx *Context, code ast.BlockStmt) {
 				case ast.ArrayLiteral:
 					// If it's an array literal, get the base from element 0
 					addr := ctx.curblock.NewGetElementPtr(val, constant.NewInt(0, types.I64), constant.NewInt(0, types.I64))
-					ln := constant.NewInt(int64(len(v)), types.I64)
+					ln := constant.NewInt(int64(len(v.Values)), types.I64)
 
 					s := constant.NewStruct(constant.NewUndef(types.NewPointer(getType(t))), ln)
 					finalval = ctx.curblock.NewInsertValue(s, addr, []int64{0})
@@ -630,7 +630,7 @@ func evalValue(ctx *Context, fnc *ir.BasicBlock, val ast.Value, addronly bool, a
 		return constant.NewInt(int64(o), types.I64)
 	case ast.ArrayLiteral:
 		var arr []constant.Constant
-		for _, e := range v {
+		for _, e := range v.Values {
 			sv := evalValue(ctx, fnc, e, false, arrayType, forinit)
 			switch val := sv.(type) {
 			case *constant.Int:
@@ -648,7 +648,7 @@ func evalValue(ctx *Context, fnc *ir.BasicBlock, val ast.Value, addronly bool, a
 
 		var val value.Value = arrc
 		// Now that we've
-		for i, e := range v {
+		for i, e := range v.Values {
 			sv := evalValue(ctx, fnc, e, false, arrayType, forinit)
 			switch vl := sv.(type) {
 			case *constant.Int:
@@ -895,7 +895,7 @@ func getType(typ ast.Type) types.Type {
 func getSliceLength(base ast.Value) constant.Constant {
 	switch t := base.(type) {
 	case ast.ArrayLiteral:
-		return constant.NewInt(int64(len(t)), types.I64)
+		return constant.NewInt(int64(len(t.Values)), types.I64)
 	default:
 		panic(fmt.Sprintf("Don't know how to extract slice length from %v", reflect.TypeOf(t)))
 	}
@@ -912,7 +912,7 @@ func initializeLetStmt(ctx *Context, v ast.LetStmt) {
 		case ast.ArrayLiteral:
 			// If it's an array literal, get the base from element 0
 			addr := ctx.curblock.NewGetElementPtr(val, constant.NewInt(0, types.I64), constant.NewInt(0, types.I64))
-			ln := constant.NewInt(int64(len(v)), types.I64)
+			ln := constant.NewInt(int64(len(v.Values)), types.I64)
 
 			s := constant.NewStruct(constant.NewUndef(types.NewPointer(getType(t.Base))), ln)
 			finalval = ctx.curblock.NewInsertValue(s, addr, []int64{0})

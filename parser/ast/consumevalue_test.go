@@ -239,7 +239,7 @@ func TestConsumeValue(t *testing.T) {
 		},
 		{
 			"{ 1, 2 }",
-			ArrayLiteral{IntLiteral(1), IntLiteral(2)},
+			ArrayLiteral{Values: []Value{IntLiteral(1), IntLiteral(2)}},
 			5,
 		},
 		{
