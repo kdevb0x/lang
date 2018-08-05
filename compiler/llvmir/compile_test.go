@@ -104,6 +104,7 @@ func TestAssertions(t *testing.T) {
 		compileAndRun(t, tst.Name, tst.Stdout, tst.Stderr)
 	}
 }
+
 // TestTestSuite tests everything in the testsuite
 func TestTestSuite(t *testing.T) {
 	tests := []struct {
@@ -195,6 +196,9 @@ func TestTestSuite(t *testing.T) {
 		{"swap", "", ""},
 		{"reverse", "", ""},
 		{"digitsinto", "", ""},
+		{"enumarray", "", ""},
+		{"enumarrayexplicit", "", ""},
+		{"sumtypearray", "", ""},
 	}
 
 	for _, tst := range tests {

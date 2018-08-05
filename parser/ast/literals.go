@@ -2,7 +2,7 @@ package ast
 
 import (
 	"fmt"
-	"reflect"
+//	"reflect"
 )
 
 func IsLiteral(v Value) bool {
@@ -56,16 +56,33 @@ func (c *Context) IsCompatibleType(typ Type, v Value) error {
 			}
 		}
 		return nil
+	case SliceType:
+		// Easy case, for variables
+		if v.Type().TypeName() == t.TypeName() {
+			return nil
+		}
+
+		// Otherwise, an array type with a literal of the same size
+		// where every member is compatible with the base type
+		v2, ok := v.(ArrayLiteral)
+		if !ok {
+			return fmt.Errorf("%v is not compatible with %v", v, typ.TypeName())
+		}
+
+		for i, val := range v2.Values {
+			if err := c.IsCompatibleType(t.Base, val); err != nil {
+				return fmt.Errorf("Array Type error at index %d: %v", i, err)
+			}
+		}
+		return nil
 	case UserType:
 		if IsLiteral(v) {
-			fmt.Printf("!!!\n")
 			return c.IsCompatibleType(t.Typ, v)
 		}
 		switch t.Typ.(type) {
 		case SumType:
 			return c.IsCompatibleType(t.Typ, v)
 		default:
-			fmt.Printf("%v %v\n", reflect.TypeOf(t), t)
 			if v.Type().TypeName() != typ.TypeName() {
 				return fmt.Errorf("%v is not compatible with %v", v.Type().TypeName(), typ.TypeName())
 			}

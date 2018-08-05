@@ -487,6 +487,9 @@ func compileBlock(ctx *Context, code ast.BlockStmt) {
 // the address and not do the load for any array operations.
 func evalValue(ctx *Context, fnc *ir.BasicBlock, val ast.Value, addronly bool, arrayType ast.Type, forinit bool) value.Value {
 	switch t := arrayType.(type) {
+	case ast.UserType:
+		// If it's a user type, user the underlying type
+		return evalValue(ctx, fnc, val, addronly, t.Typ, forinit)
 	case ast.SumType:
 		// If it's a sum type that this is being evaluated for, we need to add the variant and wrap it
 		// in the right structure.
@@ -527,10 +530,16 @@ func evalValue(ctx *Context, fnc *ir.BasicBlock, val ast.Value, addronly bool, a
 		iv := ctx.curblock.NewInsertValue(s, addr, []int64{0})
 		return iv
 	case ast.IntLiteral:
-		if arrayType != nil {
+		switch t := arrayType.(type) {
+		case nil:
+			return constant.NewInt(int64(v), types.I64)
+		case ast.UserType:
+			return evalValue(ctx, fnc, val, addronly, t.Typ, forinit)
+		case ast.ArrayType:
+			return evalValue(ctx, fnc, val, addronly, t.Base, forinit)
+		default:
 			return constant.NewInt(int64(v), getType(arrayType))
 		}
-		return constant.NewInt(int64(v), types.I64)
 	case ast.BoolLiteral:
 		if v {
 			return constant.NewInt(1, types.I1)
@@ -629,9 +638,20 @@ func evalValue(ctx *Context, fnc *ir.BasicBlock, val ast.Value, addronly bool, a
 		o := ctx.GetEnumIndex(v.Constructor)
 		return constant.NewInt(int64(o), types.I64)
 	case ast.ArrayLiteral:
+		var base ast.Type
+		switch at := arrayType.(type) {
+		case ast.ArrayType:
+			base = at.Base
+		case ast.SliceType:
+			base = at.Base
+		case ast.TypeLiteral:
+			base = at
+		default:
+			panic(fmt.Sprintf("Unhandled type for literal: %v", reflect.TypeOf(at)))
+		}
 		var arr []constant.Constant
 		for _, e := range v.Values {
-			sv := evalValue(ctx, fnc, e, false, arrayType, forinit)
+			sv := evalValue(ctx, fnc, e, false, base, forinit)
 			switch val := sv.(type) {
 			case *constant.Int:
 				arr = append(arr, val)
@@ -639,7 +659,8 @@ func evalValue(ctx *Context, fnc *ir.BasicBlock, val ast.Value, addronly bool, a
 				// This is likely a string. We need to insert it as an undef
 				// in order to declare the new array, and then insert the
 				// values after, because the insertvalue isn't a constant.
-				arr = append(arr, constant.NewUndef(val.Type()))
+				//arr = append(arr, constant.NewUndef(val.Type()))
+				arr = append(arr, constant.NewUndef(getType(base)))
 			default:
 				panic(fmt.Sprintf("Unhandled subtype type: %v", reflect.TypeOf(val)))
 			}
@@ -647,9 +668,9 @@ func evalValue(ctx *Context, fnc *ir.BasicBlock, val ast.Value, addronly bool, a
 		arrc := constant.NewArray(arr...)
 
 		var val value.Value = arrc
-		// Now that we've
+		// Now that we've added the constants, insert the others.
 		for i, e := range v.Values {
-			sv := evalValue(ctx, fnc, e, false, arrayType, forinit)
+			sv := evalValue(ctx, fnc, e, false, base, forinit)
 			switch vl := sv.(type) {
 			case *constant.Int:
 				// Do nothing
@@ -880,13 +901,16 @@ func getType(typ ast.Type) types.Type {
 		for _, st := range t {
 			typeOptions = append(typeOptions, getType(st))
 		}
-		return types.NewStruct(types.I64, types.NewStruct(typeOptions...))
+		v := types.NewStruct(types.I64, types.NewStruct(typeOptions...))
+		return v
 	case ast.TupleType:
 		var typeOptions []types.Type
 		for _, st := range t {
 			typeOptions = append(typeOptions, getType(st.Type()))
 		}
 		return types.NewStruct(typeOptions...)
+	case ast.UserType:
+		return getType(t.Typ)
 	default:
 		panic(fmt.Sprintf("Unhandled type %v", reflect.TypeOf(t)))
 	}
@@ -936,7 +960,7 @@ func initializeLetStmt(ctx *Context, v ast.LetStmt) {
 			FromMemory: false,
 		})
 	case ast.ArrayType:
-		val := evalValue(ctx, ctx.curblock, v.Val, false, t.Base, false)
+		val := evalValue(ctx, ctx.curblock, v.Val, false, t, false)
 		ctx.SetVar(v.Var, Register{
 			Value:      val,
 			FromMemory: false,
@@ -985,8 +1009,17 @@ func initializeLetStmt(ctx *Context, v ast.LetStmt) {
 func callFunc(ctx *Context, v ast.FuncCall) value.Value {
 	if v.Name == "len" {
 		v := evalValue(ctx, ctx.curblock, v.UserArgs[0], false, ast.TypeLiteral("uint64"), false)
-		ln := ctx.curblock.NewExtractValue(v, []int64{1})
-		return ln
+		switch v2 := v.(type) {
+		case *ir.InstAlloca:
+			switch t := v2.Elem.(type) {
+			case *types.ArrayType:
+				return constant.NewInt(int64(t.Len), types.I64)
+			}
+			val := ctx.curblock.NewLoad(v2)
+			return ctx.curblock.NewExtractValue(val, []int64{1})
+		default:
+			return ctx.curblock.NewExtractValue(v, []int64{1})
+		}
 	}
 
 	fnc := ctx.Funcs[v.Name]
@@ -1004,8 +1037,6 @@ func callFunc(ctx *Context, v ast.FuncCall) value.Value {
 			val := evalValue(ctx, ctx.curblock, arg, false, nil, false)
 			args = append(args, ctx.convValue(val, arg.Type(), ast.TypeLiteral("int64")))
 		case "PrintString", "PrintByteSlice":
-			// Hack because PrintString takes a i64 and an i8* as parameters,
-			// but variable strings are typed as { i64, i64 }
 			val := evalValue(ctx, ctx.curblock, arg, false, ast.TypeLiteral("uint8"), false)
 			args = append(args, val)
 		case "Create", "Open":

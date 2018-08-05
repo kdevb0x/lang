@@ -18,7 +18,7 @@ func (a ArrayType) Node() Node {
 }
 
 func (a ArrayType) String() string {
-	return fmt.Sprintf("ArrayType{[%d]%v}", a.Size, a.Base.TypeName())
+	return fmt.Sprintf("ArrayType{[%d]%v}", a.Size, a.Base /*.TypeName()*/)
 }
 func (a ArrayType) PrettyPrint(lvl int) string {
 	return fmt.Sprintf("%v[%d]%v", nTabs(lvl), a.Size, a.Base.TypeName())

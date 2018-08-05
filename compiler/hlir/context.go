@@ -81,7 +81,7 @@ func (c *variableLayout) NextLocalRegister(varname ast.VarWithType) Register {
 	// reuse the same variable.
 	_, postInc := c.values[varname]
 	lv := LocalValue(uint(len(c.values) + c.tempVars))
-	c.values[varname] = lv
+	c.values[hashableHack(varname)] = lv
 	if postInc {
 		c.tempVars++
 	}
@@ -168,6 +168,9 @@ func hashableHack(varname ast.VarWithType) ast.VarWithType {
 		// Hack, since SumType is unhashable and can't
 		// be used as a key for c.values
 		varname.Typ = ast.TypeLiteral(t.TypeName())
+	case ast.SliceType:
+		t.Base = hashableHack2(t.Base)
+		varname.Typ = t
 	case ast.ArrayType:
 		t.Base = hashableHack2(t.Base)
 		varname.Typ = t

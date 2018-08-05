@@ -128,15 +128,23 @@ func (c *Context) SetVar(v ast.VarWithType, val Register) {
 }
 
 func hashableHack(v ast.VarWithType) ast.VarWithType {
-	switch t := v.Type().(type) {
+	v.Typ = hashableHack2(v.Typ)
+	return v
+}
+
+func hashableHack2(v ast.Type) ast.Type {
+	switch t := v.(type) {
+	case ast.ArrayType:
+		t.Base = hashableHack2(t.Base)
+		return t
 	case ast.EnumTypeDefn:
-		v.Typ = ast.TypeLiteral(t.Type().TypeName())
+		return ast.TypeLiteral(t.Type().TypeName())
 	case ast.SumType:
-		v.Typ = ast.TypeLiteral(t.TypeName())
+		return ast.TypeLiteral(t.TypeName())
 	case ast.TupleType:
-		v.Typ = ast.TypeLiteral(t.TypeName())
+		return ast.TypeLiteral(t.TypeName())
 	case ast.UserType:
-		v.Typ = ast.TypeLiteral(t.TypeName())
+		return ast.TypeLiteral(t.TypeName())
 	}
 	return v
 }
