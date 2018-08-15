@@ -6129,6 +6129,84 @@ func TestSumTypeArray(t *testing.T) {
 						},
 						Val: ArrayLiteral{
 							Values: []Value{
+								StringLiteral("stringy"),
+								IntLiteral(33),
+							},
+						},
+					},
+					Assertion{
+						Predicate: EqualityComparison{
+							Left: FuncCall{
+								Name: "len",
+								UserArgs: []Value{
+
+									VarWithType{
+										"foo",
+										ArrayType{
+											Base: UserType{
+												SumType{
+													TypeLiteral("string"),
+													TypeLiteral("int"),
+												},
+												"TestType",
+											},
+											Size: IntLiteral(2),
+										},
+										false,
+									},
+								},
+							},
+							Right: IntLiteral(2),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i, v := range expected {
+		if !compare(ast[i], v) {
+			t.Errorf("Node %d: got %v want %v (%v, %v)", i, ast[i], v, reflect.TypeOf(ast[i]), reflect.TypeOf(v))
+		}
+	}
+}
+
+func TestSumTypeArrayMatch(t *testing.T) {
+	ast, _, _ := buildAst(t, "sumtypearraymatch")
+
+	expected := []Node{
+		TypeDefn{
+			Name: "TestType",
+			ConcreteType: SumType{
+				TypeLiteral("string"),
+				TypeLiteral("int"),
+			},
+		},
+		FuncDecl{
+			Name:    "main",
+			Args:    nil,
+			Return:  nil,
+			Effects: nil,
+
+			Body: BlockStmt{
+				[]Node{
+					LetStmt{
+						Var: VarWithType{
+							"foo",
+							ArrayType{
+								Base: UserType{
+									SumType{
+										TypeLiteral("string"),
+										TypeLiteral("int"),
+									},
+									"TestType",
+								},
+								Size: IntLiteral(2),
+							},
+							false,
+						},
+						Val: ArrayLiteral{
+							Values: []Value{
 								StringLiteral("string"),
 								IntLiteral(33),
 							},
@@ -6157,6 +6235,70 @@ func TestSumTypeArray(t *testing.T) {
 								},
 							},
 							Right: IntLiteral(2),
+						},
+					},
+					MatchStmt{
+						Condition: VarWithType{Name: "x", Typ: SumType{TypeLiteral("int"), TypeLiteral("string")}},
+						Cases: []MatchCase{
+							MatchCase{
+								Variable: VarWithType{Name: "x", Typ: TypeLiteral("int")},
+								Body: BlockStmt{
+									[]Node{
+
+										FuncCall{
+											Name: "PrintInt",
+											UserArgs: []Value{
+												VarWithType{"x", TypeLiteral("int"), false},
+											},
+										},
+									},
+								},
+							},
+							MatchCase{
+								Variable: VarWithType{Name: "x", Typ: TypeLiteral("string")},
+								Body: BlockStmt{
+									[]Node{
+										FuncCall{
+											Name: "PrintString",
+											UserArgs: []Value{
+												VarWithType{"x", TypeLiteral("string"), false},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					MatchStmt{
+						Condition: VarWithType{Name: "x", Typ: SumType{TypeLiteral("int"), TypeLiteral("string")}},
+						Cases: []MatchCase{
+							MatchCase{
+								Variable: VarWithType{Name: "x", Typ: TypeLiteral("int")},
+								Body: BlockStmt{
+									[]Node{
+
+										FuncCall{
+											Name: "PrintInt",
+											UserArgs: []Value{
+												VarWithType{"x", TypeLiteral("int"), false},
+											},
+										},
+									},
+								},
+							},
+							MatchCase{
+								Variable: VarWithType{Name: "x", Typ: TypeLiteral("string")},
+								Body: BlockStmt{
+									[]Node{
+										FuncCall{
+											Name: "PrintString",
+											UserArgs: []Value{
+												VarWithType{"x", TypeLiteral("string"), false},
+											},
+										},
+									},
+								},
+							},
 						},
 					},
 				},

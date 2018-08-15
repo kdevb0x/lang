@@ -60,6 +60,7 @@ before getting all invalid programs to be rejected.)
 
 - [ ] Port test sub-command to native code
 	- [ ] ast package
+		- [ ] new ast/vm package, kill hlir/hlirvm
 	- [ ] hlir
 	- [ ] hlir/vm
 

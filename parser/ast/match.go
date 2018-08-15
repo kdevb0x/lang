@@ -69,7 +69,7 @@ func consumeMatchStmt(start int, tokens []token.Token, c *Context) (int, MatchSt
 
 	for i := start + cn + 2; i < len(tokens); {
 		c2 := c.Clone()
-		switch t := l.Condition.Type().(type) {
+		switch t := underlyingType(l.Condition.Type()).(type) {
 		case SumType:
 			n, cs, err := consumeTypeCase(i, tokens, &c2, l.Condition)
 			if err != nil {
@@ -169,6 +169,10 @@ func consumeTypeCase(start int, tokens []token.Token, c *Context, condition Valu
 		v.Typ = t
 		c.Variables[string(v.Name)] = v
 		l.Variable = v
+	case ArrayValue:
+		v.Base.Typ = ArrayType{t, 0}
+		c.Variables[string(v.Base.Name)] = v.Base
+		l.Variable = v
 	default:
 		panic(fmt.Sprintf("Can only destructure single variable sum types, got %v", reflect.TypeOf(v)))
 	}
@@ -179,6 +183,7 @@ func consumeTypeCase(start int, tokens []token.Token, c *Context, condition Valu
 		if tokens[i] == token.Keyword("case") || tokens[i] == token.Char("}") {
 			return i - start, l, nil
 		}
+		fmt.Printf("I AM HERE %v", tokens[i])
 		n, stmt, err := consumeStmt(i, tokens, c)
 		if err != nil {
 			return 0, MatchCase{}, err
@@ -208,4 +213,13 @@ func checkExhaustiveness(t Type, mc []MatchCase, c *Context) error {
 		}
 	}
 	return nil
+}
+
+func underlyingType(t Type) Type {
+	switch ty := t.(type) {
+	case UserType:
+		return underlyingType(ty.Typ)
+	default:
+		return ty
+	}
 }

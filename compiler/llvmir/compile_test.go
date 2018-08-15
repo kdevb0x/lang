@@ -111,6 +111,7 @@ func TestTestSuite(t *testing.T) {
 		Name           string
 		Stdout, Stderr string
 	}{
+		/*
 		{"emptymain", "", ""},
 		{"emptyreturn", "", ""},
 		{"helloworld", "Hello, world!\n", ""},
@@ -199,6 +200,10 @@ func TestTestSuite(t *testing.T) {
 		{"enumarray", "", ""},
 		{"enumarrayexplicit", "", ""},
 		{"sumtypearray", "", ""},
+		*/
+		{"sumtypearraymatch", "stringy33", ""},
+		// needs "default" keyword and variable slice indexing
+		//{"printint", "67\n-568", ""},
 	}
 
 	for _, tst := range tests {
