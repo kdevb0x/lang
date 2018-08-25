@@ -101,7 +101,7 @@ func TestAssertions(t *testing.T) {
 	for _, tc := range tests {
 		as := parseTestCase(t, tc.filename)
 		var result strings.Builder
-		if _, err := Convert(&result, as[0]); err != nil {
+		if _, err := Convert(&result, as[0], nil); err != nil {
 			t.Errorf("%v: %v", tc.filename, err)
 			continue
 		}

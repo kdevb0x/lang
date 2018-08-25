@@ -199,7 +199,7 @@ func Construct(tokens []token.Token) ([]Node, TypeInformation, Callables, error)
 				return nil, nil, nil, err
 			}
 			for _, constructor := range options {
-				constructor.ParentType = UserType{TypeLiteral("int64"), cur.Name}
+				constructor.ParentType = cur//UserType{TypeLiteral("int64"), cur.Name}
 				constructor.Parameters = pv
 				cur.Options = append(cur.Options, constructor)
 			}
@@ -306,7 +306,7 @@ func extractPrototypes(tokens []token.Token, c *Context) error {
 			}
 
 			for _, constructor := range options {
-				constructor.ParentType = UserType{TypeLiteral("int64"), cur.Name}
+				constructor.ParentType = cur //UserType{TypeLiteral("int64"), cur.Name}
 				constructor.Parameters = pv
 
 				cur.Options = append(cur.Options, constructor)
@@ -389,7 +389,7 @@ func extractPrototypes(tokens []token.Token, c *Context) error {
 			}
 			for _, o := range options {
 				//o.ParentType = TypeLiteral(cur.Name)
-				o.ParentType = UserType{TypeLiteral("int64"), cur.Name}
+				o.ParentType = cur//UserType{TypeLiteral("int64"), cur.Name}
 				c.EnumOptions[o.Constructor] = o
 			}
 			c.Types[cur.Name] = TypeDefn{
@@ -637,7 +637,7 @@ func consumeLetStmt(start int, tokens []token.Token, c *Context) (int, Value, er
 				if !ok {
 					return 0, nil, fmt.Errorf("Invalid type: %v", tn)
 				}
-				if et, ok := ct.ConcreteType.(EnumTypeDefn); ok {
+				if et, ok := underlyingType(ct.ConcreteType).(EnumTypeDefn); ok {
 					l.Var.Typ = et
 				} else {
 					l.Var.Typ = ct.ConcreteType

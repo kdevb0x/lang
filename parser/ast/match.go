@@ -183,7 +183,6 @@ func consumeTypeCase(start int, tokens []token.Token, c *Context, condition Valu
 		if tokens[i] == token.Keyword("case") || tokens[i] == token.Char("}") {
 			return i - start, l, nil
 		}
-		fmt.Printf("I AM HERE %v", tokens[i])
 		n, stmt, err := consumeStmt(i, tokens, c)
 		if err != nil {
 			return 0, MatchCase{}, err
@@ -222,4 +221,14 @@ func underlyingType(t Type) Type {
 	default:
 		return ty
 	}
+}
+
+func (m MatchStmt) IsEnumMatch() bool {
+	_, ok := underlyingType(m.Condition.Type()).(EnumTypeDefn)
+	return ok
+}
+
+func (m MatchStmt) IsSumTypeDestructure() bool {
+	_, ok := underlyingType(m.Condition.Type()).(SumType)
+	return ok
 }

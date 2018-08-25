@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	"github.com/driusan/lang/parser/ast"
+	"github.com/driusan/lang/types"
 )
 
 func nTabs(lvl int) string {
@@ -19,8 +20,9 @@ func nTabs(lvl int) string {
 // Convert writes node to w as Go source code
 // Returns a map containing the names of imports which are
 // needed to compile the go code or an error.
-func Convert(w io.Writer, node ast.Node) (map[string]bool, error) {
+func Convert(w io.Writer, node ast.Node, emap types.EnumMap) (map[string]bool, error) {
 	context := NewContext()
+	context.EnumMap = emap
 	err := convert(context, w, node, 0)
 	if err != nil {
 		return nil, err
@@ -36,6 +38,12 @@ func convert(c *Context, w io.Writer, node ast.Node, lvl int) error {
 		return convertFuncDecl(c, w, n, lvl)
 	case ast.TypeDefn:
 		return convertTypeDefn(c, w, n, lvl)
+	case ast.EnumTypeDefn:
+		return convertEnumTypeDefn(c, w, n, lvl)
+	case ast.EnumValue:
+		return convertEnumValue(c, w, n, lvl)
+	case ast.EnumOption:
+		return convertEnumOption(c, w, n, lvl)
 	case ast.FuncCall:
 		return convertFuncCall(c, w, n, lvl)
 	case ast.Assertion:
@@ -92,6 +100,8 @@ func convert(c *Context, w io.Writer, node ast.Node, lvl int) error {
 		return convertBlockStmt(c, w, n, lvl)
 	case ast.IfStmt:
 		return convertIfStmt(c, w, n, lvl)
+	case ast.MatchStmt:
+		return convertMatchStmt(c, w, n, lvl)
 	default:
 		return fmt.Errorf("Converting %v not implemented", reflect.TypeOf(node))
 	}
@@ -299,6 +309,7 @@ func convertBlockStmt(c *Context, w io.Writer, block ast.BlockStmt, lvl int) err
 	}
 	return nil
 }
+
 func convertIfStmt(c *Context, w io.Writer, ifstmt ast.IfStmt, lvl int) error {
 	// FIXME: Deal with shadowing properly and restore variables that were
 	// shadowed to their old name after the if is done.
@@ -323,4 +334,33 @@ func convertIfStmt(c *Context, w io.Writer, ifstmt ast.IfStmt, lvl int) error {
 		fmt.Fprintf(w, "%v}\n", indent)
 	}
 	return nil
+}
+
+func convertMatchStmt(c *Context, w io.Writer, matchstmt ast.MatchStmt, lvl int) error {
+	indent := nTabs(lvl)
+	switch {
+	case matchstmt.IsEnumMatch():
+		fmt.Fprintf(w, "%vswitch ", indent)
+		if err := convert(c, w, matchstmt.Condition, 0); err != nil {
+			return err
+		}
+		fmt.Fprintf(w, " {\n")
+		for _, cse := range matchstmt.Cases {
+			fmt.Fprintf(w, "%vcase ", indent)
+			if err := convert(c, w, cse.Variable, lvl); err != nil {
+				return err
+			}
+			fmt.Fprintf(w, ":\n")
+			if err := convert(c, w, cse.Body, lvl+1); err != nil {
+				return err
+			}
+			fmt.Fprintf(w, "\n")
+		}
+		fmt.Fprintf(w, "%v}\n", indent)
+		return nil
+	case matchstmt.IsSumTypeDestructure():
+		return fmt.Errorf("Sum type destructuring not implemented")
+	default:
+		return fmt.Errorf("Match switch not implemented")
+	}
 }

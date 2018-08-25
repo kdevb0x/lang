@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/driusan/lang/parser/ast"
+	"github.com/driusan/lang/types"
 )
 
 type Context struct {
@@ -17,6 +18,8 @@ type Context struct {
 
 	// Force GetVarName to create a new variable name
 	newVar bool
+
+	EnumMap types.EnumMap
 }
 
 func NewContext() *Context {
@@ -27,7 +30,7 @@ func NewContext() *Context {
 }
 
 func (c *Context) GetVarName(x ast.VarWithType) string {
-	if v, ok := c.variables[x]; !c.newVar && ok {
+	if v, ok := c.variables[hashHack(x)]; !c.newVar && ok {
 		return v
 	}
 	hasname := func(x string) bool {
@@ -39,7 +42,7 @@ func (c *Context) GetVarName(x ast.VarWithType) string {
 		return false
 	}
 	if !hasname(x.Name.String()) {
-		c.variables[x] = x.Name.String()
+		c.variables[hashHack(x)] = x.Name.String()
 		return x.Name.String()
 	}
 
@@ -47,6 +50,15 @@ func (c *Context) GetVarName(x ast.VarWithType) string {
 	for hasname(fmt.Sprintf("%s%d", x.Name.String(), i)) {
 		i++
 	}
-	c.variables[x] = fmt.Sprintf("%s%d", x.Name.String(), i)
-	return c.variables[x]
+	c.variables[hashHack(x)] = fmt.Sprintf("%s%d", x.Name.String(), i)
+	return c.variables[hashHack(x)]
+}
+
+func hashHack(t ast.VarWithType) ast.VarWithType {
+	switch t.Type().(type) {
+	case ast.EnumTypeDefn:
+		t.Typ = ast.TypeLiteral(t.Type().TypeName())
+		return t
+	}
+	return t
 }
